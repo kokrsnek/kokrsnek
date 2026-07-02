@@ -67,7 +67,7 @@
   }
   .search-btn{
     position:fixed;
-    bottom:22px; right:18px;
+    bottom:90px; right:18px;
     top:auto;
     z-index:20;
     width:38px; height:38px;
@@ -277,7 +277,7 @@
     position:fixed;
     top:auto !important;
     bottom:0; left:0; right:0;
-    padding:10px 70px 28px 22px;
+    padding:10px 16px 28px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     z-index:5;
     background:linear-gradient(transparent, var(--bg) 50%);
@@ -286,12 +286,14 @@
   .topbar .label{
     font-family:'Rajdhani', sans-serif;
     font-weight:700;
-    font-size:14px;
-    letter-spacing:0.06em;
+    font-size:clamp(18px, 6.5vw, 36px);
+    letter-spacing:0.04em;
     color:var(--accent);
     text-transform:uppercase;
-    max-width:calc(100% - 50px);
+    width:100%;
+    max-width:100%;
     text-align:center;
+    white-space:nowrap;
   }
   .topbar .today{
     font-family:'JetBrains Mono', monospace;
@@ -612,7 +614,7 @@ function renderTimeline(){
         <div class="title-row">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
         ${isNow ? `<span class="badge">probíhá teď</span>` : ``}
-        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="${ev.photoAlbum}" target="_blank" rel="noopener">${photoSVG()}Album fotek</a>` : ``}
+        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="${ev.photoAlbum.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${photoSVG()}Album fotek</a>` : ``}
       </div>
     `;
     slot.dataset.idx = i;
@@ -668,8 +670,9 @@ async function fetchGoogleCalendarEvents(){
         if(p) photoAlbum = p.fileUrl;
       }
       if(!photoAlbum && it.description){
-        const m = it.description.match(/https?:\/\/photos\.google\.com\/\S+|https?:\/\/photos\.app\.goo\.gl\/\S+/);
-        if(m) photoAlbum = m[0];
+        const clean = it.description.replace(/<[^>]+>/g, ' '); // strip HTML tags from description
+        const m = clean.match(/https?:\/\/photos(?:\.app)?\.goo\.gl\/[^\s"'<>]+|https?:\/\/photos\.google\.com\/[^\s"'<>]+/);
+        if(m) photoAlbum = m[0].replace(/&amp;/g,'&');
       }
       const title = (it.summary||'(bez názvu)').trim();
       // Matching alba — case-insensitive, bez přebytečných mezer
