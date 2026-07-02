@@ -65,8 +65,7 @@
   }
   .search-btn{
     position:fixed;
-    bottom:22px; right:18px;
-    top:auto;
+    top:14px; right:18px;
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
@@ -270,12 +269,11 @@
 
   .topbar{
     position:fixed;
-    top:auto !important;
-    bottom:0; left:0; right:0;
-    padding:10px 70px 28px 22px;
+    top:0; left:0; right:0;
+    padding:14px 22px 8px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     z-index:5;
-    background:linear-gradient(transparent, var(--bg) 50%);
+    background:linear-gradient(var(--bg) 50%, transparent);
     pointer-events:none;
   }
   .topbar .label{
@@ -504,27 +502,7 @@ function fmtTime(d, end){
   return end ? `${t(d)} – ${t(end)}` : t(d);
 }
 
-function isMultiDay(ev){
-  const startDay = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
-  const endDay   = new Date(ev.end.getFullYear(),   ev.end.getMonth(),   ev.end.getDate());
-  return endDay - startDay >= 86400000;
-}
-
-function fmtDateRange(ev){
-  if(!isMultiDay(ev)) return fmtDate(ev.start);
-  const endDisplay = new Date(ev.end.getTime() - 1); // all-day events end at midnight of next day
-  if(ev.start.getMonth() === endDisplay.getMonth())
-    return `${ev.start.getDate()}. – ${endDisplay.getDate()}. ${MONTHS[endDisplay.getMonth()]}`;
-  return `${fmtDate(ev.start)} – ${fmtDate(endDisplay)}`;
-}
-
-function fmtTimeRow(ev){
-  if(isMultiDay(ev)){
-    const endDisplay = new Date(ev.end.getTime() - 1);
-    return `${fmtFull(ev.start)} – ${fmtFull(endDisplay)}`;
-  }
-  return fmtTime(ev.start, ev.end);
-}
+const now = new Date();
 function at(daysOffset, h, m, durMin){
   const d = new Date(now);
   d.setDate(d.getDate()+daysOffset);
@@ -600,8 +578,8 @@ function renderTimeline(){
     slot.innerHTML = `
       <div class="card">
         <div class="eyebrow"><span class="pip"></span>${eyebrowText}</div>
-        <div class="date-row">${fmtDateRange(ev)}</div>
-        <div class="time-row">${fmtTimeRow(ev)}</div>
+        <div class="date-row">${fmtDate(ev.start)}</div>
+        <div class="time-row">${fmtTime(ev.start, ev.end)}</div>
         <div class="title-row">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
         ${isNow ? `<span class="badge">probíhá teď</span>` : ``}
@@ -618,41 +596,31 @@ function renderTimeline(){
 
 renderTimeline();
 
-// Manuální fotoalba ke konkrétním událostem (podle názvu)
-const PHOTO_ALBUMS = {
-  "32. výročí": "https://photos.app.goo.gl/CxEwjUJ2ULtoajTv8",
-};
+// =====================================================
+// GOOGLE CALENDAR KONFIGURACE
 // =====================================================
 const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(){
+  const timeMin = new Date(now.getTime() - 60*86400000).toISOString();
+  const timeMax = new Date(now.getTime() + 180*86400000).toISOString();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
+    + `?key=${GOOGLE_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=100`
+    + `&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
   const statusEl = document.getElementById('calStatus');
   statusEl.textContent = 'Načítám kalendář…';
   statusEl.style.display = 'block';
   try{
-    let allItems = [];
-    let pageToken = null;
-    const timeMin = '2000-01-01T00:00:00Z'; // všechny události od roku 2000
-    do {
-      let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
-        + `?key=${GOOGLE_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=2500`
-        + `&timeMin=${encodeURIComponent(timeMin)}`;
-      if(pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if(!res.ok){
-        statusEl.textContent = `Chyba ${res.status}: ${data.error?.message || JSON.stringify(data.error)}`;
-        return;
-      }
-      const items = (data.items||[]).filter(it => it.start&&(it.start.dateTime||it.start.date));
-      allItems = allItems.concat(items);
-      pageToken = data.nextPageToken || null;
-    } while(pageToken);
-
-    if(!allItems.length){ statusEl.textContent = 'Kalendář načten, ale žádné události.'; return; }
-
-    rawEvents = allItems.map(it => {
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!res.ok){
+      statusEl.textContent = `Chyba ${res.status}: ${data.error?.message || JSON.stringify(data.error)}`;
+      return;
+    }
+    const items = (data.items||[]).filter(it => it.start&&(it.start.dateTime||it.start.date));
+    if(!items.length){ statusEl.textContent = 'Kalendář načten, ale žádné události v daném období.'; return; }
+    rawEvents = items.map(it => {
       const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
       const end   = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
       let photoAlbum = null;
@@ -661,14 +629,11 @@ async function fetchGoogleCalendarEvents(){
         if(p) photoAlbum = p.fileUrl;
       }
       if(!photoAlbum && it.description){
-        const m = it.description.match(/https?:\/\/photos\.google\.com\/\S+|https?:\/\/photos\.app\.goo\.gl\/\S+/);
+        const m = it.description.match(/https?:\/\/photos\.google\.com\/\S+/);
         if(m) photoAlbum = m[0];
       }
-      const title = it.summary||'(bez názvu)';
-      if(!photoAlbum && PHOTO_ALBUMS[title]) photoAlbum = PHOTO_ALBUMS[title];
-      return { start, end, title, place: it.location||'', photoAlbum };
+      return { start, end, title: it.summary||'(bez názvu)', place: it.location||'', photoAlbum };
     }).sort((a,b)=>a.start-b.start);
-
     statusEl.style.display = 'none';
     renderTimeline();
   }catch(e){
