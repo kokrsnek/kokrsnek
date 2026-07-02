@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KoKrŠNeK">
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href="manifest.json">
+<title>KoKrŠNeK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050505;
+    --card:#0B0B0B;
+    --line:#07273A;
+    --ink:#0E5FA8;
+    --muted:#1A5A8A;
+    --accent:#1AA3FF;       /* HUD blue - "now" */
+    --accent-soft:rgba(26,163,255,0.1);
+    --past:#14507A;
+    --past-soft:#050D12;
+    --link:#42B4FF;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background-color:var(--bg);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    overscroll-behavior-y: none;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(26,163,255,0.035) 0px,
+      rgba(26,163,255,0.035) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode:screen;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:51;
+    box-shadow: inset 0 0 140px rgba(0,0,0,0.85);
+  }
+  .app{
+    height:100vh;
+    width:100%;
+    overflow-y:auto;
+    scroll-snap-type:y mandatory;
+    position:relative;
+  }
+  .search-btn{
+    position:fixed;
+    top:14px; right:18px;
+    z-index:20;
+    width:38px; height:38px;
+    border-radius:50%;
+    background:rgba(11,11,11,0.7);
+    border:1px solid rgba(26,163,255,0.45);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    pointer-events:auto;
+  }
+  #gearBtn{
+    right:64px;
+  }
+  #gearBtn.connected{
+    border-color:rgba(26,163,255,0.9);
+    background:rgba(14,95,168,0.25);
+  }
+  .search-btn svg{
+    width:18px; height:18px;
+    stroke:var(--accent);
+    fill:none;
+    stroke-width:2;
+    stroke-linecap:round;
+  }
+
+  .search-overlay{
+    position:fixed;
+    inset:0;
+    z-index:40;
+    background:rgba(0,0,0,0.88);
+    backdrop-filter:blur(2px);
+    display:flex;
+    flex-direction:column;
+    padding:18px 18px 0;
+    transform:translateY(-100%);
+    transition:transform .15s ease;
+  }
+  .search-overlay.open{ transform:translateY(0); }
+
+  .config-overlay{
+    position:fixed;
+    inset:0;
+    z-index:40;
+    background:rgba(0,0,0,0.94);
+    backdrop-filter:blur(2px);
+    display:flex;
+    flex-direction:column;
+    padding:22px 20px;
+    transform:translateY(-100%);
+    transition:transform .15s ease;
+  }
+  .config-overlay.open{ transform:translateY(0); }
+  .config-title{
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:18px;
+  }
+  .config-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  .config-input{
+    width:100%;
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:10px 12px;
+    border-radius:4px;
+    outline:none;
+    margin-bottom:14px;
+    box-sizing:border-box;
+  }
+  .config-input:focus{ border-color:rgba(26,163,255,0.9); }
+  .config-status{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    margin:8px 0 14px;
+    min-height:18px;
+  }
+  .config-status.ok{ color:#1AA3FF; }
+  .config-status.err{ color:#FF4444; }
+  .config-btns{
+    display:flex; gap:10px; margin-top:4px;
+  }
+
+  .search-row{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .search-row input[type="text"]{
+    flex:1;
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size:15px;
+    padding:11px 12px;
+    border-radius:4px;
+    outline:none;
+  }
+  .search-row input[type="text"]::placeholder{ color:var(--muted); }
+  .search-close{
+    width:38px; height:38px;
+    border-radius:50%;
+    background:transparent;
+    border:1px solid rgba(26,163,255,0.4);
+    color:var(--accent);
+    font-size:18px;
+    line-height:1;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  .date-row-search{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:18px;
+  }
+  .date-row-search input[type="date"]{
+    flex:1;
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:4px;
+    outline:none;
+    color-scheme:dark;
+  }
+  .cal-btn{
+    flex-shrink:0;
+    background:var(--accent);
+    color:#000;
+    border:none;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:9px 12px;
+    border-radius:4px;
+    cursor:pointer;
+    text-decoration:none;
+    white-space:nowrap;
+  }
+
+  .search-results{
+    flex:1;
+    overflow-y:auto;
+    display:flex; flex-direction:column; gap:8px;
+    padding-bottom:24px;
+  }
+  .result-item{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    border:1px solid rgba(26,163,255,0.22);
+    border-radius:4px;
+    padding:10px 12px;
+    cursor:pointer;
+  }
+  .result-item:active{ background:rgba(26,163,255,0.08); }
+  .result-main{ flex:1; min-width:0; }
+  .result-title{
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+    text-transform:uppercase;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .result-meta{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .map-pin{
+    flex-shrink:0;
+    width:30px; height:30px;
+    border-radius:50%;
+    border:1px solid rgba(26,163,255,0.4);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .map-pin svg{ width:14px; height:14px; stroke:var(--accent); fill:none; stroke-width:2; }
+  .no-results{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--muted);
+    text-align:center;
+    margin-top:24px;
+  }
+
+  .topbar{
+    position:fixed;
+    top:0; left:0; right:0;
+    padding:14px 22px 8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    z-index:5;
+    background:linear-gradient(var(--bg) 50%, transparent);
+    pointer-events:none;
+  }
+  .topbar .label{
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.06em;
+    color:var(--accent);
+    text-transform:uppercase;
+    max-width:calc(100% - 50px);
+    text-align:center;
+  }
+  .topbar .today{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .slot{
+    height:33.34dvh;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
+    position:relative;
+    padding:0 26px;
+  }
+
+  .dot{
+    position:absolute;
+    left:50%; top:50%;
+    width:9px; height:9px;
+    border-radius:50%;
+    background:var(--line);
+    transform:translate(-50%,-50%);
+    z-index:1;
+  }
+
+  .card{
+    position:relative;
+    z-index:2;
+    width:100%;
+    max-width:380px;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:5px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .eyebrow .pip{
+    width:5px; height:5px;
+    background:var(--muted);
+    display:inline-block;
+  }
+
+  .date-row{
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700;
+    color:var(--ink);
+    line-height:1.05;
+    margin:0 0 1px;
+  }
+  .time-row{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    margin-bottom:4px;
+    letter-spacing:0.04em;
+  }
+  .title-row{
+    font-family:'JetBrains Mono', monospace;
+    font-size:30px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    margin:0 0 4px;
+    line-height:1.15;
+  }
+  .place-row{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+  .place-row::before{ content:"// "; }
+
+  /* --- NOW (center, dominant) --- */
+  .slot.now .card{
+    background:linear-gradient(180deg, rgba(26,163,255,0.05), rgba(0,0,0,0));
+    border:1px solid rgba(26,163,255,0.45);
+    border-radius:2px;
+    padding:16px 20px 14px;
+    position:relative;
+    text-align:center;
+  }
+  .slot.now .card::before,
+  .slot.now .card::after{
+    content:"";
+    position:absolute;
+    width:10px; height:10px;
+    border:1.5px solid var(--accent);
+  }
+  .slot.now .card::before{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+  .slot.now .card::after{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
+  .slot.now .eyebrow{ color:var(--accent); justify-content:center; }
+  .slot.now .eyebrow .pip{ background:var(--accent); box-shadow:0 0 6px var(--accent); }
+  .slot.now .date-row{ font-size:22px; }
+  .slot.now .title-row{
+    font-size:32px;
+    font-weight:700;
+    color:var(--ink);
+    border-bottom:2px solid var(--accent);
+    display:inline-block;
+    padding-bottom:2px;
+  }
+  .slot.now .badge{
+    display:inline-block;
+    margin-top:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:#000;
+    background:var(--accent);
+    padding:3px 9px;
+    box-shadow:0 0 10px rgba(26,163,255,0.6);
+  }
+
+  /* --- FUTURE (above now, quieter, smaller) --- */
+  .slot.future .card{
+    opacity:0.7;
+    text-align:center;
+  }
+  .slot.future .dot{ background:var(--line); }
+  .slot.future .date-row{ font-size:15px; color:var(--muted); }
+  .slot.future .title-row{ font-size:26px; font-weight:700; color:#3E7EA8; }
+  .slot.future .eyebrow{ justify-content:center; }
+
+  /* --- PAST (below now, muted, with photo link) --- */
+  .slot.past .card{
+    text-align:center;
+    opacity:0.6;
+  }
+  .slot.past .dot{ background:var(--past); }
+  .slot.past .date-row{ font-size:14px; color:var(--past); }
+  .slot.past .title-row{ font-size:25px; font-weight:700; color:#2C5E80; }
+  .slot.past .eyebrow{ justify-content:center; color:var(--past); }
+  .slot.past .eyebrow .pip{ background:var(--past); }
+
+  .photo-link{
+    margin-top:9px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color:var(--link);
+    background:var(--past-soft);
+    border:1px solid rgba(26,163,255,0.3);
+    padding:6px 12px;
+    text-decoration:none;
+    transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  .photo-link:active{ transform:scale(0.97); background:#071A26; box-shadow:0 0 10px rgba(26,163,255,0.4); }
+  .photo-link svg{ width:13px; height:13px; flex-shrink:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .hint .arrow{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<button class="search-btn" id="searchBtn" aria-label="Hledat">
+  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+</button>
+
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off">
+    <button class="search-close" id="searchClose" aria-label="Zavřít">×</button>
+  </div>
+  <div class="date-row-search">
+    <input type="date" id="searchDate">
+    <button class="cal-btn" id="calBtn">Otevřít kalendář</button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<div class="topbar">
+  <span class="label">KoKrŠNeK - tak život chode</span>
+  <span class="today" id="todayLabel"></span>
+</div>
+
+<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#0B0B0B;border:1px solid rgba(255,80,80,0.5);color:#FF6060;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:4px;"></div>
+
+<div class="app" id="app">
+</div>
+
+<script>
+const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
+const DAYS = ["ne","po","út","st","čt","pá","so"];
+
+function fmtDate(d){
+  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+}
+function fmtFull(d){
+  return `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtTime(d, end){
+  const t = (x)=> x.getHours().toString().padStart(2,'0')+":"+x.getMinutes().toString().padStart(2,'0');
+  return end ? `${t(d)} – ${t(end)}` : t(d);
+}
+
+const now = new Date();
+function at(daysOffset, h, m, durMin){
+  const d = new Date(now);
+  d.setDate(d.getDate()+daysOffset);
+  d.setHours(h, m, 0, 0);
+  const end = new Date(d.getTime() + durMin*60000);
+  return {start:d, end};
+}
+
+// --- mock data: shown until a real Google Calendar is connected ---
+let rawEvents = [
+  { ...at(-14, 19, 0, 120), title:"Večeře u Nguyenů", place:"Praha 5", photoAlbum:"https://photos.google.com/share/example-vecere" },
+  { ...at(-9, 9, 0, 480),  title:"Konference UX Praha", place:"Forum Karlín", photoAlbum:"https://photos.google.com/share/example-konference" },
+  { ...at(-5, 16, 30, 90), title:"Narozeniny Báry", place:"Café Letná", photoAlbum:"https://photos.google.com/share/example-narozeniny" },
+  { ...at(-1, 18, 0, 60),  title:"Běh kolem Vltavy", place:"Náplavka", photoAlbum:"https://photos.google.com/share/example-beh" },
+  { ...at(0, 17, 30, 60),  title:"Schůzka s týmem", place:"Kancelář, Smíchov" },           // NOW
+  { ...at(2, 10, 0, 45),   title:"Zubař", place:"MUDr. Veselá" },
+  { ...at(5, 20, 0, 150),  title:"Kino: nový film", place:"Bio Oko" },
+  { ...at(9, 8, 0, 600),   title:"Výlet do hor", place:"Krkonoše" },
+  { ...at(16, 12, 0, 90),  title:"Oběd s mámou", place:"Vinohrady" },
+];
+
+const todayLabelEl = document.getElementById('todayLabel');
+todayLabelEl.textContent = fmtFull(now);
+
+const app = document.getElementById('app');
+let centerIndex = 0;
+
+function photoSVG(){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+    <circle cx="8.5" cy="10" r="1.5"/>
+    <path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/>
+  </svg>`;
+}
+
+function fmtRelativeFuture(d){
+  const diffDays = Math.round((d - new Date(now.getFullYear(),now.getMonth(),now.getDate())) / 86400000);
+  if (diffDays === 1) return "Zítra";
+  if (diffDays <= 7) return `Za ${diffDays} dní`;
+  return "Nadcházející";
+}
+
+function renderTimeline(){
+  app.innerHTML = "";
+
+  if (rawEvents.length === 0){
+    app.innerHTML = `<div class="slot"><div class="card" style="text-align:center;"><div class="title-row">Žádné události</div></div></div>`;
+    return;
+  }
+
+  centerIndex = 0;
+  for (let i=0;i<rawEvents.length;i++){
+    if (rawEvents[i].end >= now){ centerIndex = i; break; }
+    centerIndex = i;
+  }
+
+  const orderedIndices = [];
+  for (let i = rawEvents.length - 1; i > centerIndex; i--) orderedIndices.push(i); // future, furthest first (top)
+  orderedIndices.push(centerIndex); // now (center)
+  for (let i = centerIndex - 1; i >= 0; i--) orderedIndices.push(i); // past, nearest-past first (just below now)
+
+  orderedIndices.forEach((i) => {
+    const ev = rawEvents[i];
+    const isNow = i === centerIndex;
+    const isPast = i < centerIndex;
+    const kind = isNow ? "now" : (isPast ? "past" : "future");
+
+    const slot = document.createElement('div');
+    slot.className = `slot ${kind}`;
+
+    const eyebrowText = isNow ? "Teď" : (isPast ? "Skončilo" : fmtRelativeFuture(ev.start));
+
+    slot.innerHTML = `
+      <div class="card">
+        <div class="eyebrow"><span class="pip"></span>${eyebrowText}</div>
+        <div class="date-row">${fmtDate(ev.start)}</div>
+        <div class="time-row">${fmtTime(ev.start, ev.end)}</div>
+        <div class="title-row">${ev.title}</div>
+        ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
+        ${isNow ? `<span class="badge">probíhá teď</span>` : ``}
+        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="${ev.photoAlbum}" target="_blank" rel="noopener">${photoSVG()}Album fotek</a>` : ``}
+      </div>
+    `;
+    slot.dataset.idx = i;
+    app.appendChild(slot);
+  });
+
+  const nowSlot = document.querySelector('.slot.now');
+  if (nowSlot) nowSlot.scrollIntoView({block:"center"});
+}
+
+renderTimeline();
+
+// =====================================================
+// GOOGLE CALENDAR KONFIGURACE
+// =====================================================
+const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
+const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
+
+async function fetchGoogleCalendarEvents(){
+  const timeMin = new Date(now.getTime() - 60*86400000).toISOString();
+  const timeMax = new Date(now.getTime() + 180*86400000).toISOString();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
+    + `?key=${GOOGLE_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=100`
+    + `&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
+  const statusEl = document.getElementById('calStatus');
+  statusEl.textContent = 'Načítám kalendář…';
+  statusEl.style.display = 'block';
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!res.ok){
+      statusEl.textContent = `Chyba ${res.status}: ${data.error?.message || JSON.stringify(data.error)}`;
+      return;
+    }
+    const items = (data.items||[]).filter(it => it.start&&(it.start.dateTime||it.start.date));
+    if(!items.length){ statusEl.textContent = 'Kalendář načten, ale žádné události v daném období.'; return; }
+    rawEvents = items.map(it => {
+      const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
+      const end   = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
+      let photoAlbum = null;
+      if(it.attachments){
+        const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
+        if(p) photoAlbum = p.fileUrl;
+      }
+      if(!photoAlbum && it.description){
+        const m = it.description.match(/https?:\/\/photos\.google\.com\/\S+/);
+        if(m) photoAlbum = m[0];
+      }
+      return { start, end, title: it.summary||'(bez názvu)', place: it.location||'', photoAlbum };
+    }).sort((a,b)=>a.start-b.start);
+    statusEl.style.display = 'none';
+    renderTimeline();
+  }catch(e){
+    statusEl.textContent = `Síťová chyba: ${e.message}`;
+  }
+}
+
+fetchGoogleCalendarEvents();
+
+
+const searchBtn = document.getElementById('searchBtn');
+const searchOverlay = document.getElementById('searchOverlay');
+const searchClose = document.getElementById('searchClose');
+const searchInput = document.getElementById('searchInput');
+const searchDate = document.getElementById('searchDate');
+const calBtn = document.getElementById('calBtn');
+const searchResults = document.getElementById('searchResults');
+
+function mapUrl(place){
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+}
+function calDayUrl(d){
+  const y = d.getFullYear();
+  const m = (d.getMonth()+1).toString().padStart(2,'0');
+  const day = d.getDate().toString().padStart(2,'0');
+  return `https://calendar.google.com/calendar/u/0/r/day/${y}/${m}/${day}`;
+}
+function pinSVG(){
+  return `<svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12a7 7 0 1 1 14 0c0 4.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>`;
+}
+
+function renderResults(query){
+  const q = query.trim().toLowerCase();
+  searchResults.innerHTML = "";
+  if (!q){ return; }
+  const matches = rawEvents
+    .map((ev, i) => ({ev, i}))
+    .filter(({ev}) => ev.title.toLowerCase().includes(q) || (ev.place && ev.place.toLowerCase().includes(q)));
+
+  if (matches.length === 0){
+    searchResults.innerHTML = `<div class="no-results">Žádná událost neodpovídá hledání</div>`;
+    return;
+  }
+
+  matches.forEach(({ev, i}) => {
+    const row = document.createElement('div');
+    row.className = 'result-item';
+    row.innerHTML = `
+      <div class="result-main">
+        <div class="result-title">${ev.title}</div>
+        <div class="result-meta">${fmtDate(ev.start)} · ${fmtTime(ev.start, ev.end)}${ev.place ? ' · '+ev.place : ''}</div>
+      </div>
+      ${ev.place ? `<a class="map-pin" href="${mapUrl(ev.place)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${pinSVG()}</a>` : ``}
+    `;
+    row.addEventListener('click', () => {
+      const target = document.querySelector(`.slot[data-idx="${i}"]`);
+      if (target){ target.scrollIntoView({block:"center"}); }
+      closeSearch();
+    });
+    searchResults.appendChild(row);
+  });
+}
+
+function openSearch(){
+  // Remove readonly briefly (iOS trick to reliably open keyboard)
+  searchInput.removeAttribute('readonly');
+  searchOverlay.classList.add('open');
+  // Focus synchronously within the click handler — required for mobile keyboard
+  searchInput.focus();
+  searchInput.click();
+}
+function closeSearch(){
+  searchOverlay.classList.remove('open');
+  searchInput.value = "";
+  searchResults.innerHTML = "";
+}
+
+searchBtn.addEventListener('click', openSearch);
+searchClose.addEventListener('click', closeSearch);
+searchInput.addEventListener('input', () => renderResults(searchInput.value));
+calBtn.addEventListener('click', () => {
+  const val = searchDate.value;
+  const d = val ? new Date(val + 'T00:00:00') : new Date();
+  window.open(calDayUrl(d), '_blank');
+});
+// --- PWA Service Worker ---
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
