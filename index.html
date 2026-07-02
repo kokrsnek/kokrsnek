@@ -7,33 +7,45 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KoKrŠNeK">
-<meta name="theme-color" content="#1A0A02">
+<meta name="theme-color" content="#020A02">
 <link rel="manifest" href="manifest.json">
 <title>KoKrŠNeK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#1A0A02;
-    --card:#120700;
-    --line:#5C3310;
-    --ink:#E8C97A;          /* zlatá - hlavní text */
-    --muted:#8B6530;
-    --accent:#C4922A;       /* zlatá mosaz - "now" */
-    --accent-soft:rgba(196,146,42,0.15);
-    --past:#6B4C1E;
-    --past-soft:#1C0E04;
-    --link:#D4A843;
+    --bg:#020A02;
+    --card:#040F04;
+    --line:#1A3A1A;
+    --ink:#4CAF50;
+    --muted:#2D6B2D;
+    --accent:#6FD96F;
+    --accent-soft:rgba(111,217,111,0.1);
+    --past:#1E4A1E;
+    --past-soft:#010801;
+    --link:#8FE88F;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{
     margin:0; padding:0; height:100%;
     background-color:var(--bg);
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%231A0A02'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23251005' opacity='0.6'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23100500' opacity='0.5'/%3E%3C/svg%3E");
     color:var(--ink);
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     overscroll-behavior-y: none;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.35) 0px,
+      rgba(0,0,0,0.35) 1px,
+      transparent 1px,
+      transparent 3px
+    );
   }
   body::after{
     content:"";
@@ -41,7 +53,7 @@
     inset:0;
     pointer-events:none;
     z-index:51;
-    box-shadow: inset 0 0 120px rgba(0,0,0,0.7);
+    box-shadow: inset 0 0 140px rgba(0,0,0,0.9), inset 0 0 80px rgba(111,217,111,0.04);
   }
   .app{
     height:100vh;
@@ -59,8 +71,8 @@
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
-    background:rgba(26,10,2,0.85);
-    border:1px solid rgba(196,146,42,0.55);
+    background:rgba(4,15,4,0.85);
+    border:1px solid rgba(111,217,111,0.45);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     pointer-events:auto;
@@ -69,8 +81,8 @@
     right:64px;
   }
   #gearBtn.connected{
-    border-color:rgba(196,146,42,0.95);
-    background:rgba(196,146,42,0.12);
+    border-color:rgba(111,217,111,0.9);
+    background:rgba(111,217,111,0.1);
   }
   .search-btn svg{
     width:18px; height:18px;
@@ -85,9 +97,9 @@
     bottom:0; left:0; right:0;
     top:auto;
     z-index:40;
-    background:rgba(18,7,0,0.97);
+    background:rgba(2,10,2,0.97);
     backdrop-filter:blur(4px);
-    border-top:1px solid rgba(196,146,42,0.35);
+    border-top:1px solid rgba(111,217,111,0.3);
     display:flex;
     flex-direction:column;
     padding:18px 18px 32px;
@@ -101,7 +113,7 @@
     position:fixed;
     inset:0;
     z-index:40;
-    background:rgba(18,7,0,0.97);
+    background:rgba(2,10,2,0.97);
     backdrop-filter:blur(2px);
     display:flex;
     flex-direction:column;
@@ -111,7 +123,7 @@
   }
   .config-overlay.open{ transform:translateY(0); }
   .config-title{
-    font-family:'Rye', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-weight:700;
     font-size:18px;
     letter-spacing:0.1em;
@@ -120,7 +132,7 @@
     margin-bottom:18px;
   }
   .config-label{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     letter-spacing:0.08em;
     text-transform:uppercase;
@@ -129,10 +141,10 @@
   }
   .config-input{
     width:100%;
-    background:#120700;
-    border:1px solid rgba(196,146,42,0.45);
+    background:#040F04;
+    border:1px solid rgba(111,217,111,0.4);
     color:var(--ink);
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:13px;
     padding:10px 12px;
     border-radius:1px;
@@ -140,15 +152,15 @@
     margin-bottom:14px;
     box-sizing:border-box;
   }
-  .config-input:focus{ border-color:rgba(196,146,42,0.95); }
+  .config-input:focus{ border-color:rgba(111,217,111,0.9); }
   .config-status{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:12px;
     color:var(--muted);
     margin:8px 0 14px;
     min-height:18px;
   }
-  .config-status.ok{ color:#C4922A; }
+  .config-status.ok{ color:#6FD96F; }
   .config-status.err{ color:#FF4444; }
   .config-btns{
     display:flex; gap:10px; margin-top:4px;
@@ -160,10 +172,10 @@
   }
   .search-row input[type="text"]{
     flex:1;
-    background:#120700;
-    border:1px solid rgba(196,146,42,0.45);
+    background:#040F04;
+    border:1px solid rgba(111,217,111,0.4);
     color:var(--ink);
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:15px;
     padding:11px 12px;
     border-radius:1px;
@@ -174,7 +186,7 @@
     width:38px; height:38px;
     border-radius:50%;
     background:transparent;
-    border:1px solid rgba(196,146,42,0.45);
+    border:1px solid rgba(111,217,111,0.4);
     color:var(--accent);
     font-size:18px;
     line-height:1;
@@ -188,10 +200,10 @@
   }
   .date-row-search input[type="date"]{
     flex:1;
-    background:#120700;
-    border:1px solid rgba(196,146,42,0.45);
+    background:#040F04;
+    border:1px solid rgba(111,217,111,0.4);
     color:var(--ink);
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:14px;
     padding:9px 10px;
     border-radius:1px;
@@ -203,7 +215,7 @@
     background:var(--accent);
     color:#000;
     border:none;
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:12px;
     text-transform:uppercase;
     letter-spacing:0.05em;
@@ -223,15 +235,15 @@
   .result-item{
     display:flex; align-items:center; justify-content:space-between;
     gap:10px;
-    border:1px solid rgba(196,146,42,0.3);
+    border:1px solid rgba(111,217,111,0.25);
     border-radius:1px;
     padding:10px 12px;
     cursor:pointer;
   }
-  .result-item:active{ background:rgba(196,146,42,0.06); }
+  .result-item:active{ background:rgba(111,217,111,0.08); }
   .result-main{ flex:1; min-width:0; }
   .result-title{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:14px;
     font-weight:700;
     color:var(--ink);
@@ -239,7 +251,7 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .result-meta{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     color:var(--muted);
     margin-top:2px;
@@ -248,12 +260,12 @@
     flex-shrink:0;
     width:30px; height:30px;
     border-radius:50%;
-    border:1px solid rgba(196,146,42,0.45);
+    border:1px solid rgba(111,217,111,0.4);
     display:flex; align-items:center; justify-content:center;
   }
   .map-pin svg{ width:14px; height:14px; stroke:var(--accent); fill:none; stroke-width:2; }
   .no-results{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:13px;
     color:var(--muted);
     text-align:center;
@@ -271,10 +283,10 @@
     pointer-events:none;
   }
   .topbar .label{
-    font-family:'Rye', cursive;
-    font-weight:700;
-    font-size:clamp(18px, 6.5vw, 36px);
-    letter-spacing:0.04em;
+    font-family:'VT323', monospace;
+    font-weight:400;
+    font-size:clamp(22px, 7vw, 42px);
+    letter-spacing:0.08em;
     color:var(--accent);
     text-transform:uppercase;
     width:100%;
@@ -283,14 +295,14 @@
     white-space:nowrap;
   }
   .topbar .today{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     letter-spacing:0.06em;
     color:var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .topbar .nameday{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     letter-spacing:0.04em;
     color:var(--muted);
@@ -327,7 +339,7 @@
   }
 
   .eyebrow{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:10.5px;
     letter-spacing:0.18em;
     text-transform:uppercase;
@@ -344,40 +356,41 @@
   }
 
   .date-row{
-    font-family:'Rye', cursive;
-    font-weight:700;
+    font-family:'VT323', monospace;
+    font-weight:400;
     color:var(--ink);
     line-height:1.05;
     margin:0 0 1px;
+    letter-spacing:0.06em;
   }
   .time-row{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     color:var(--muted);
     margin-bottom:4px;
     letter-spacing:0.04em;
   }
   .title-row{
-    font-family:'Special Elite', cursive;
-    font-size:30px;
-    font-weight:700;
+    font-family:'VT323', monospace;
+    font-size:34px;
+    font-weight:400;
     text-transform:uppercase;
-    letter-spacing:0.03em;
+    letter-spacing:0.06em;
     margin:0 0 4px;
-    line-height:1.15;
+    line-height:1.1;
   }
   .place-row{
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11.5px;
     color:var(--muted);
     margin-bottom:2px;
   }
-  .place-row::before{ content:"// "; }
+  .place-row::before{ content:"> "; }
 
   /* --- NOW (center, dominant) --- */
   .slot.now .card{
-    background:linear-gradient(180deg, rgba(196,146,42,0.1), rgba(0,0,0,0));
-    border:2px solid rgba(196,146,42,0.6);
+    background:linear-gradient(180deg, rgba(111,217,111,0.1), rgba(0,0,0,0));
+    border:2px solid rgba(111,217,111,0.45);
     border-radius:1px;
     padding:16px 20px 14px;
     position:relative;
@@ -385,20 +398,20 @@
   }
   .slot.now .card::before,
   .slot.now .card::after{
-    content:"✦";
+    content:"";
     position:absolute;
-    color:var(--accent);
-    font-size:12px;
-    opacity:0.8;
+    width:10px; height:10px;
+    border:1.5px solid var(--accent);
   }
-  .slot.now .card::before{ top:5px; left:8px; }
-  .slot.now .card::after{ bottom:5px; right:8px; }
+  .slot.now .card::before{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+  .slot.now .card::after{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
   .slot.now .eyebrow{ color:var(--accent); justify-content:center; }
   .slot.now .eyebrow .pip{ background:var(--accent); }
   .slot.now .date-row{ font-size:20px; }
   .slot.now .title-row{
-    font-size:28px;
-    font-weight:700;
+    font-family:'VT323', monospace;
+    font-size:36px;
+    font-weight:400;
     color:var(--ink);
     border-bottom:2px solid var(--accent);
     display:inline-block;
@@ -407,14 +420,14 @@
   .slot.now .badge{
     display:inline-block;
     margin-top:8px;
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:10px;
     letter-spacing:0.12em;
     text-transform:uppercase;
     color:#000;
     background:var(--accent);
     padding:3px 9px;
-    box-shadow:0 0 10px rgba(196,146,42,0.6);
+    box-shadow:0 0 10px rgba(111,217,111,0.45);
   }
 
   /* --- FUTURE (above now, quieter, smaller) --- */
@@ -424,7 +437,7 @@
   }
   .slot.future .dot{ background:var(--line); }
   .slot.future .date-row{ font-size:15px; color:var(--muted); }
-  .slot.future .title-row{ font-size:26px; font-weight:700; color:#8B6530; }
+  .slot.future .title-row{ font-size:26px; font-weight:700; color:#2D6B2D; }
   .slot.future .eyebrow{ justify-content:center; }
 
   /* --- PAST (below now, muted, with photo link) --- */
@@ -434,7 +447,7 @@
   }
   .slot.past .dot{ background:var(--past); }
   .slot.past .date-row{ font-size:14px; color:var(--past); }
-  .slot.past .title-row{ font-size:25px; font-weight:700; color:#6B4C1E; }
+  .slot.past .title-row{ font-size:25px; font-weight:700; color:#1A4A1A; }
   .slot.past .eyebrow{ justify-content:center; color:var(--past); }
   .slot.past .eyebrow .pip{ background:var(--past); }
 
@@ -443,18 +456,18 @@
     display:inline-flex;
     align-items:center;
     gap:6px;
-    font-family:'Special Elite', cursive;
+    font-family:'Share Tech Mono', monospace;
     font-size:11px;
     letter-spacing:0.04em;
     text-transform:uppercase;
     color:var(--link);
     background:var(--past-soft);
-    border:1px solid rgba(196,146,42,0.35);
+    border:1px solid rgba(111,217,111,0.3);
     padding:6px 12px;
     text-decoration:none;
     transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .photo-link:active{ transform:scale(0.97); background:#1C0E04; box-shadow:0 0 10px rgba(196,146,42,0.45); }
+  .photo-link:active{ transform:scale(0.97); background:#010801; box-shadow:0 0 10px rgba(111,217,111,0.4); }
   .photo-link svg{ width:13px; height:13px; flex-shrink:0; }
 
   @media (prefers-reduced-motion: reduce){
@@ -481,12 +494,12 @@
 </div>
 
 <div class="topbar">
-  <span class="label">✦ KoKrŠNeK - tak život chode ✦</span>
+  <span class="label">KoKrŠNeK - tak život chode</span>
   <span class="today" id="todayLabel"></span>
   <span class="nameday" id="namedayLabel"></span>
 </div>
 
-<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#120700;border:1px solid rgba(196,146,42,0.5);color:#E8C97A;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:1px;"></div>
+<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#040F04;border:1px solid rgba(111,217,111,0.5);color:#C8F0C8;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:1px;"></div>
 
 <div class="app" id="app">
 </div>
@@ -768,7 +781,7 @@ async function fetchGoogleCalendarEvents(){
 
     const withAlbum = rawEvents.filter(e => e.photoAlbum).length;
     statusEl.textContent = `✓ Načteno ${rawEvents.length} událostí${withAlbum ? `, ${withAlbum} s albem` : ''}`;
-    statusEl.style.color = '#C4922A';
+    statusEl.style.color = '#6FD96F';
     setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
     renderTimeline();
   }catch(e){
