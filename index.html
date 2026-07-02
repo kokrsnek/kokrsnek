@@ -67,7 +67,7 @@
   }
   .search-btn{
     position:fixed;
-    bottom:90px; right:18px;
+    bottom:110px; right:18px;
     top:auto;
     z-index:20;
     width:38px; height:38px;
@@ -508,7 +508,7 @@ const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","ř
 const DAYS = ["ne","po","út","st","čt","pá","so"];
 
 function fmtDate(d){
-  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  return `${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 function fmtFull(d){
   return `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
@@ -526,9 +526,9 @@ function isMultiDay(ev){
 
 function fmtDateRange(ev){
   if(!isMultiDay(ev)) return fmtDate(ev.start);
-  const endDisplay = new Date(ev.end.getTime() - 1); // all-day events end at midnight of next day
-  if(ev.start.getMonth() === endDisplay.getMonth())
-    return `${ev.start.getDate()}. – ${endDisplay.getDate()}. ${MONTHS[endDisplay.getMonth()]}`;
+  const endDisplay = new Date(ev.end.getTime() - 1);
+  if(ev.start.getMonth() === endDisplay.getMonth() && ev.start.getFullYear() === endDisplay.getFullYear())
+    return `${ev.start.getDate()}. – ${endDisplay.getDate()}. ${MONTHS[endDisplay.getMonth()]} ${endDisplay.getFullYear()}`;
   return `${fmtDate(ev.start)} – ${fmtDate(endDisplay)}`;
 }
 
