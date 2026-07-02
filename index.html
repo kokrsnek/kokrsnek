@@ -854,9 +854,12 @@ calBtn.addEventListener('click', () => {
   const d = val ? new Date(val + 'T00:00:00') : new Date();
   window.open(calDayUrl(d), '_blank');
 });
-// --- PWA Service Worker ---
+// Odregistruje starý service worker a vyčistí cache
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
 </script>
 </body>
