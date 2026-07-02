@@ -870,9 +870,13 @@ calBtn.addEventListener('click', () => {
 // Odregistruje starý service worker a vyčistí cache
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
+    if (regs.length > 0) {
+      regs.forEach(r => r.unregister());
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+      // Force reload after clearing SW to get fresh content
+      window.location.reload(true);
+    }
   });
-  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
 </script>
 </body>
