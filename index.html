@@ -65,7 +65,8 @@
   }
   .search-btn{
     position:fixed;
-    top:14px; right:18px;
+    bottom:22px; right:18px;
+    top:auto;
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
@@ -269,11 +270,12 @@
 
   .topbar{
     position:fixed;
-    top:0; left:0; right:0;
-    padding:14px 22px 8px;
+    top:auto !important;
+    bottom:0; left:0; right:0;
+    padding:10px 70px 28px 22px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     z-index:5;
-    background:linear-gradient(var(--bg) 50%, transparent);
+    background:linear-gradient(transparent, var(--bg) 50%);
     pointer-events:none;
   }
   .topbar .label{
@@ -631,10 +633,12 @@ async function fetchGoogleCalendarEvents(){
   try{
     let allItems = [];
     let pageToken = null;
+    const timeMin = '2000-01-01T00:00:00Z'; // všechny události od roku 2000
     do {
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
+      let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
         + `?key=${GOOGLE_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=2500`
-        + (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+        + `&timeMin=${encodeURIComponent(timeMin)}`;
+      if(pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
       const res = await fetch(url);
       const data = await res.json();
       if(!res.ok){
