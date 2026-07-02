@@ -671,12 +671,19 @@ async function fetchGoogleCalendarEvents(){
         const m = it.description.match(/https?:\/\/photos\.google\.com\/\S+|https?:\/\/photos\.app\.goo\.gl\/\S+/);
         if(m) photoAlbum = m[0];
       }
-      const title = it.summary||'(bez názvu)';
-      if(!photoAlbum && PHOTO_ALBUMS[title]) photoAlbum = PHOTO_ALBUMS[title];
+      const title = (it.summary||'(bez názvu)').trim();
+      // Matching alba — case-insensitive, bez přebytečných mezer
+      if(!photoAlbum){
+        const key = Object.keys(PHOTO_ALBUMS).find(k => k.trim().toLowerCase() === title.toLowerCase());
+        if(key) photoAlbum = PHOTO_ALBUMS[key];
+      }
       return { start, end, title, place: it.location||'', photoAlbum };
     }).sort((a,b)=>a.start-b.start);
 
-    statusEl.style.display = 'none';
+    const withAlbum = rawEvents.filter(e => e.photoAlbum).length;
+    statusEl.textContent = `✓ Načteno ${rawEvents.length} událostí${withAlbum ? `, ${withAlbum} s albem` : ''}`;
+    statusEl.style.color = '#1AA3FF';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
     renderTimeline();
   }catch(e){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
