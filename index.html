@@ -14,16 +14,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#050505;
-    --card:#0B0B0B;
-    --line:#07273A;
-    --ink:#0E5FA8;
-    --muted:#1A5A8A;
-    --accent:#1AA3FF;       /* HUD blue - "now" */
-    --accent-soft:rgba(26,163,255,0.1);
-    --past:#14507A;
-    --past-soft:#050D12;
-    --link:#42B4FF;
+    --bg:#0F1117;
+    --card:#1A1D27;
+    --line:#2A2D3A;
+    --ink:#E8EAF0;
+    --muted:#7B80A0;
+    --accent:#4A7FE8;
+    --accent-soft:rgba(74,127,232,0.15);
+    --past:#5A607A;
+    --past-soft:#141620;
+    --link:#6B9FFF;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{
@@ -41,20 +41,11 @@
     z-index:50;
     background:repeating-linear-gradient(
       to bottom,
-      rgba(26,163,255,0.035) 0px,
-      rgba(26,163,255,0.035) 1px,
+      rgba(0,0,0,0.18) 0px,
+      rgba(0,0,0,0.18) 1px,
       transparent 1px,
       transparent 3px
     );
-    mix-blend-mode:screen;
-  }
-  body::after{
-    content:"";
-    position:fixed;
-    inset:0;
-    pointer-events:none;
-    z-index:51;
-    box-shadow: inset 0 0 140px rgba(0,0,0,0.85);
   }
   .app{
     height:100vh;
@@ -72,7 +63,7 @@
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
-    background:rgba(11,11,11,0.7);
+    background:rgba(4,15,4,0.85);
     border:1px solid rgba(26,163,255,0.45);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
@@ -83,7 +74,7 @@
   }
   #gearBtn.connected{
     border-color:rgba(26,163,255,0.9);
-    background:rgba(14,95,168,0.25);
+    background:rgba(26,163,255,0.1);
   }
   .search-btn svg{
     width:18px; height:18px;
@@ -98,7 +89,7 @@
     bottom:0; left:0; right:0;
     top:auto;
     z-index:40;
-    background:rgba(5,5,5,0.97);
+    background:rgba(2,10,2,0.97);
     backdrop-filter:blur(4px);
     border-top:1px solid rgba(26,163,255,0.3);
     display:flex;
@@ -114,7 +105,7 @@
     position:fixed;
     inset:0;
     z-index:40;
-    background:rgba(0,0,0,0.94);
+    background:rgba(2,10,2,0.97);
     backdrop-filter:blur(2px);
     display:flex;
     flex-direction:column;
@@ -124,7 +115,7 @@
   }
   .config-overlay.open{ transform:translateY(0); }
   .config-title{
-    font-family:'Rajdhani', sans-serif;
+    font-family:'JetBrains Mono', monospace;
     font-weight:700;
     font-size:18px;
     letter-spacing:0.1em;
@@ -134,7 +125,7 @@
   }
   .config-label{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     letter-spacing:0.08em;
     text-transform:uppercase;
     color:var(--muted);
@@ -142,13 +133,13 @@
   }
   .config-input{
     width:100%;
-    background:#0B0B0B;
+    background:#050505;
     border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
-    font-size:13px;
+    font-size:19px;
     padding:10px 12px;
-    border-radius:4px;
+    border-radius:1px;
     outline:none;
     margin-bottom:14px;
     box-sizing:border-box;
@@ -156,12 +147,12 @@
   .config-input:focus{ border-color:rgba(26,163,255,0.9); }
   .config-status{
     font-family:'JetBrains Mono', monospace;
-    font-size:12px;
+    font-size:18px;
     color:var(--muted);
     margin:8px 0 14px;
     min-height:18px;
   }
-  .config-status.ok{ color:#1AA3FF; }
+  .config-status.ok{ color:#6FD96F; }
   .config-status.err{ color:#FF4444; }
   .config-btns{
     display:flex; gap:10px; margin-top:4px;
@@ -173,13 +164,13 @@
   }
   .search-row input[type="text"]{
     flex:1;
-    background:#0B0B0B;
+    background:#050505;
     border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
-    font-size:15px;
+    font-size:22px;
     padding:11px 12px;
-    border-radius:4px;
+    border-radius:1px;
     outline:none;
   }
   .search-row input[type="text"]::placeholder{ color:var(--muted); }
@@ -201,13 +192,13 @@
   }
   .date-row-search input[type="date"]{
     flex:1;
-    background:#0B0B0B;
+    background:#050505;
     border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
-    font-size:14px;
+    font-size:21px;
     padding:9px 10px;
-    border-radius:4px;
+    border-radius:1px;
     outline:none;
     color-scheme:dark;
   }
@@ -217,11 +208,11 @@
     color:#000;
     border:none;
     font-family:'JetBrains Mono', monospace;
-    font-size:12px;
+    font-size:18px;
     text-transform:uppercase;
     letter-spacing:0.05em;
     padding:9px 12px;
-    border-radius:4px;
+    border-radius:1px;
     cursor:pointer;
     text-decoration:none;
     white-space:nowrap;
@@ -236,8 +227,8 @@
   .result-item{
     display:flex; align-items:center; justify-content:space-between;
     gap:10px;
-    border:1px solid rgba(26,163,255,0.22);
-    border-radius:4px;
+    border:1px solid rgba(26,163,255,0.25);
+    border-radius:1px;
     padding:10px 12px;
     cursor:pointer;
   }
@@ -245,7 +236,7 @@
   .result-main{ flex:1; min-width:0; }
   .result-title{
     font-family:'JetBrains Mono', monospace;
-    font-size:14px;
+    font-size:21px;
     font-weight:700;
     color:var(--ink);
     text-transform:uppercase;
@@ -253,7 +244,7 @@
   }
   .result-meta{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     color:var(--muted);
     margin-top:2px;
   }
@@ -267,7 +258,7 @@
   .map-pin svg{ width:14px; height:14px; stroke:var(--accent); fill:none; stroke-width:2; }
   .no-results{
     font-family:'JetBrains Mono', monospace;
-    font-size:13px;
+    font-size:19px;
     color:var(--muted);
     text-align:center;
     margin-top:24px;
@@ -285,9 +276,9 @@
   }
   .topbar .label{
     font-family:'Rajdhani', sans-serif;
-    font-weight:700;
-    font-size:clamp(18px, 6.5vw, 36px);
-    letter-spacing:0.04em;
+    font-weight:400;
+    font-size:clamp(22px, 7vw, 42px);
+    letter-spacing:0.08em;
     color:var(--accent);
     text-transform:uppercase;
     width:100%;
@@ -297,14 +288,14 @@
   }
   .topbar .today{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     letter-spacing:0.06em;
     color:var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .topbar .nameday{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     letter-spacing:0.04em;
     color:var(--muted);
   }
@@ -341,7 +332,7 @@
 
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
+    font-size:16px;
     letter-spacing:0.18em;
     text-transform:uppercase;
     color:var(--muted);
@@ -358,40 +349,41 @@
 
   .date-row{
     font-family:'Rajdhani', sans-serif;
-    font-weight:700;
+    font-weight:400;
     color:var(--ink);
     line-height:1.05;
     margin:0 0 1px;
+    letter-spacing:0.06em;
   }
   .time-row{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     color:var(--muted);
     margin-bottom:4px;
     letter-spacing:0.04em;
   }
   .title-row{
-    font-family:'JetBrains Mono', monospace;
-    font-size:30px;
-    font-weight:700;
+    font-family:'Rajdhani', sans-serif;
+    font-size:51px;
+    font-weight:400;
     text-transform:uppercase;
-    letter-spacing:0.03em;
+    letter-spacing:0.06em;
     margin:0 0 4px;
-    line-height:1.15;
+    line-height:1.1;
   }
   .place-row{
     font-family:'JetBrains Mono', monospace;
-    font-size:11.5px;
+    font-size:17px;
     color:var(--muted);
     margin-bottom:2px;
   }
-  .place-row::before{ content:"// "; }
+  .place-row::before{ content:"> "; }
 
   /* --- NOW (center, dominant) --- */
   .slot.now .card{
-    background:linear-gradient(180deg, rgba(26,163,255,0.05), rgba(0,0,0,0));
-    border:1px solid rgba(26,163,255,0.45);
-    border-radius:2px;
+    background:linear-gradient(180deg, rgba(26,163,255,0.1), rgba(0,0,0,0));
+    border:2px solid rgba(26,163,255,0.45);
+    border-radius:1px;
     padding:16px 20px 14px;
     position:relative;
     text-align:center;
@@ -406,11 +398,12 @@
   .slot.now .card::before{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
   .slot.now .card::after{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
   .slot.now .eyebrow{ color:var(--accent); justify-content:center; }
-  .slot.now .eyebrow .pip{ background:var(--accent); box-shadow:0 0 6px var(--accent); }
-  .slot.now .date-row{ font-size:22px; }
+  .slot.now .eyebrow .pip{ background:var(--accent);  }
+  .slot.now .date-row{ font-size:30px; }
   .slot.now .title-row{
-    font-size:32px;
-    font-weight:700;
+    font-family:'Rajdhani', sans-serif;
+    font-size:54px;
+    font-weight:400;
     color:var(--ink);
     border-bottom:2px solid var(--accent);
     display:inline-block;
@@ -420,13 +413,13 @@
     display:inline-block;
     margin-top:8px;
     font-family:'JetBrains Mono', monospace;
-    font-size:10px;
+    font-size:15px;
     letter-spacing:0.12em;
     text-transform:uppercase;
     color:#000;
     background:var(--accent);
     padding:3px 9px;
-    box-shadow:0 0 10px rgba(26,163,255,0.6);
+    box-shadow:0 0 10px rgba(26,163,255,0.45);
   }
 
   /* --- FUTURE (above now, quieter, smaller) --- */
@@ -435,8 +428,8 @@
     text-align:center;
   }
   .slot.future .dot{ background:var(--line); }
-  .slot.future .date-row{ font-size:15px; color:var(--muted); }
-  .slot.future .title-row{ font-size:26px; font-weight:700; color:#3E7EA8; }
+  .slot.future .date-row{ font-size:22px; color:var(--muted); }
+  .slot.future .title-row{ font-size:39px; font-weight:700; color:#2D6B2D; }
   .slot.future .eyebrow{ justify-content:center; }
 
   /* --- PAST (below now, muted, with photo link) --- */
@@ -445,8 +438,8 @@
     opacity:0.6;
   }
   .slot.past .dot{ background:var(--past); }
-  .slot.past .date-row{ font-size:14px; color:var(--past); }
-  .slot.past .title-row{ font-size:25px; font-weight:700; color:#2C5E80; }
+  .slot.past .date-row{ font-size:21px; color:var(--past); }
+  .slot.past .title-row{ font-size:37px; font-weight:700; color:#1A4A1A; }
   .slot.past .eyebrow{ justify-content:center; color:var(--past); }
   .slot.past .eyebrow .pip{ background:var(--past); }
 
@@ -456,7 +449,7 @@
     align-items:center;
     gap:6px;
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
+    font-size:16px;
     letter-spacing:0.04em;
     text-transform:uppercase;
     color:var(--link);
@@ -498,7 +491,7 @@
   <span class="nameday" id="namedayLabel"></span>
 </div>
 
-<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#0B0B0B;border:1px solid rgba(255,80,80,0.5);color:#FF6060;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:4px;"></div>
+<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#050505;border:1px solid rgba(26,163,255,0.5);color:#CDEBFF;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:1px;"></div>
 
 <div class="app" id="app">
 </div>
@@ -780,7 +773,7 @@ async function fetchGoogleCalendarEvents(){
 
     const withAlbum = rawEvents.filter(e => e.photoAlbum).length;
     statusEl.textContent = `✓ Načteno ${rawEvents.length} událostí${withAlbum ? `, ${withAlbum} s albem` : ''}`;
-    statusEl.style.color = '#1AA3FF';
+    statusEl.style.color = '#6FD96F';
     setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
     renderTimeline();
   }catch(e){
@@ -866,9 +859,16 @@ calBtn.addEventListener('click', () => {
   const d = val ? new Date(val + 'T00:00:00') : new Date();
   window.open(calDayUrl(d), '_blank');
 });
-// --- PWA Service Worker ---
+// Odregistruje starý service worker a vyčistí cache
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    if (regs.length > 0) {
+      regs.forEach(r => r.unregister());
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+      // Force reload after clearing SW to get fresh content
+      window.location.reload(true);
+    }
+  });
 }
 </script>
 </body>
