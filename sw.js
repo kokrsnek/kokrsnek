@@ -1,34 +1,38 @@
-const CACHE = 'kokrsnek-v2';
-const ASSETS = [
-  './index.html',
-  './manifest.json'
-];
+const CACHE = 'kokrsnek-v3';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
-  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
+// Network first pro HTML, cache first pro ostatní
 self.addEventListener('fetch', e => {
-  // Network first, fallback to cache
+  const url = new URL(e.request.url);
+  const isHTML = e.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/';
+
+  if (isHTML) {
+    // Vždy ze sítě, nikdy z cache
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // Ostatní soubory (ikony, fonty) — cache first
   e.respondWith(
-    fetch(e.request)
-      .then(res => {
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
-      })
-      .catch(() => caches.match(e.request))
+      });
+    })
   );
 });
