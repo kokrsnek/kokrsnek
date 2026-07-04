@@ -451,6 +451,13 @@
 </head>
 <body>
 
+<button class="search-btn" id="notifBtn" aria-label="Povolit notifikace" onclick="requestNotifPermission()" style="right:110px;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+</button>
+
 <button class="search-btn" id="searchBtn" aria-label="Hledat">
   <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
 </button>
@@ -857,11 +864,7 @@ async function checkUpcomingNotifications(){
   };
 
   if (!('Notification' in window)){ dbg('Notifikace nejsou podporovány'); return; }
-
-  if (Notification.permission === 'default'){
-    await Notification.requestPermission();
-  }
-  if (Notification.permission !== 'granted'){ dbg('Notifikace nejsou povoleny — povol je v nastavení prohlížeče'); return; }
+  if (Notification.permission !== 'granted'){ dbg('Notifikace nejsou povoleny'); return; }
 
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -873,11 +876,11 @@ async function checkUpcomingNotifications(){
     return diffDays > 0 && diffDays <= 5;
   });
 
-  if (!upcoming.length){ dbg('Žádná událost do 5 dní'); return; }
+  if (!upcoming.length){ return; }
 
   const lastNotif = localStorage.getItem('lastNotifDate');
   const todayStr = today.toISOString().slice(0,10);
-  if (lastNotif === todayStr){ dbg(`Notifikace dnes již odeslána (${upcoming.length} události)`); return; }
+  if (lastNotif === todayStr) return;
   localStorage.setItem('lastNotifDate', todayStr);
 
   upcoming.forEach(ev => {
@@ -894,8 +897,32 @@ async function checkUpcomingNotifications(){
   });
 }
 
+async function requestNotifPermission(){
+  if (!('Notification' in window)) return;
+  const perm = await Notification.requestPermission();
+  const btn = document.getElementById('notifBtn');
+  if (perm === 'granted'){
+    btn.style.display = 'none';
+    localStorage.removeItem('lastNotifDate'); // reset aby notifikace přišla
+    checkUpcomingNotifications();
+  } else {
+    btn.textContent = '🔕';
+    btn.title = 'Notifikace zakázány v nastavení';
+  }
+}
+
+// Zobraz tlačítko jen pokud notifikace nejsou povoleny
+window.addEventListener('load', () => {
+  const btn = document.getElementById('notifBtn');
+  if (!('Notification' in window) || Notification.permission === 'denied'){
+    btn.style.display = 'none';
+  } else if (Notification.permission === 'granted'){
+    btn.style.display = 'none';
+    setTimeout(checkUpcomingNotifications, 1500);
+  }
+});
+
 renderTimeline();
-setTimeout(checkUpcomingNotifications, 1500);
 </script>
 </body>
 </html>
