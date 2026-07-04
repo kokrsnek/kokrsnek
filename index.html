@@ -1016,12 +1016,12 @@ function checkUpcomingNotifications(){
     backdrop.innerHTML = `
       <div class="ev-modal">
         <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-        <div class="ev-modal-label">Už se těšíš?</div>
+        <div class="ev-modal-label" style="font-size:clamp(16px,5.5vw,26px);letter-spacing:0.06em;color:var(--accent);text-align:center;padding:4px 0;">Už se těšíš?</div>
         <div class="ev-modal-title">${ev.title}</div>
         <div class="ev-modal-label">Kdy</div>
         <div class="ev-modal-value">${fmtDateRange(ev)} · ${daysText}</div>
         ${ev.place ? `<div class="ev-modal-label">Místo</div><div class="ev-modal-value">${ev.place}</div>` : ''}
-        <div class="ev-modal-value" style="margin-top:16px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Kokršneci na tebe ano.</div>
+        <div class="ev-modal-value" style="margin-top:16px;font-size:clamp(16px,5.5vw,26px);color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Kokršneci na tebe ano.</div>
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block; width:100%; margin-top:16px;
           background:var(--accent); border:none;
