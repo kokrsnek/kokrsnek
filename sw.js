@@ -1,4 +1,4 @@
-const CACHE = 'kokrsnek-v1';
+const CACHE = 'kokrsnek-v2';
 const ASSETS = [
   './index.html',
   './manifest.json'
