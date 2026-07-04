@@ -855,9 +855,10 @@ calBtn.addEventListener('click', () => {
   const d = val ? new Date(val + 'T00:00:00') : new Date();
   window.open(calDayUrl(d), '_blank');
 });
-// --- PWA Service Worker ---
+// Odstraň všechny staré service workery
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
 
 // --- Notifikace 5 dní před událostí ---
