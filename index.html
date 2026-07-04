@@ -75,6 +75,8 @@
     position:fixed;
     bottom:0; left:0; right:0;
     top:auto;
+    width:100%;
+    box-sizing:border-box;
     z-index:40;
     background:rgba(5,5,5,0.97);
     backdrop-filter:blur(4px);
@@ -1049,12 +1051,16 @@ function checkUpcomingNotifications(){
 }
 
 window.addEventListener('load', () => {
-  setTimeout(checkUpcomingNotifications, 1500);
+  localStorage.removeItem('lastNotifDate'); // vždy zkontroluj při spuštění
+  setTimeout(checkUpcomingNotifications, 2000);
 });
 
 document.getElementById('homeBtn').addEventListener('click', () => {
-  const nowSlot = document.querySelector('.slot.now');
-  if (nowSlot) nowSlot.scrollIntoView({block:'center', behavior:'smooth'});
+  const app = document.getElementById('app');
+  const nowSlot = app.querySelector('.slot.now');
+  if (nowSlot) {
+    app.scrollTo({ top: nowSlot.offsetTop - (app.clientHeight / 2) + (nowSlot.clientHeight / 2), behavior: 'smooth' });
+  }
 });
 
 renderTimeline();
