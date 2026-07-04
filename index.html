@@ -953,17 +953,23 @@ function renderResults(query){
 
 let _scrollY = 0;
 function openSearch(){
-  _scrollY = document.querySelector('.app').scrollTop;
+  _scrollY = window.scrollY || document.documentElement.scrollTop;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollY}px`;
+  document.body.style.width = '100%';
+  document.body.style.overflowY = 'hidden';
   searchOverlay.classList.add('open');
-  document.querySelector('.app').style.overflow = 'hidden';
   searchInput.removeAttribute('readonly');
   searchInput.focus();
   searchInput.click();
 }
 function closeSearch(){
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  document.body.style.overflowY = '';
+  window.scrollTo(0, _scrollY);
   searchOverlay.classList.remove('open');
-  document.querySelector('.app').style.overflow = '';
-  document.querySelector('.app').scrollTop = _scrollY;
   searchInput.value = "";
   searchResults.innerHTML = "";
 }
@@ -996,11 +1002,6 @@ function checkUpcomingNotifications(){
   });
 
   if (!upcoming.length) return;
-
-  const lastNotif = localStorage.getItem('lastNotifDate');
-  const todayStr = today.toISOString().slice(0,10);
-  if (lastNotif === todayStr) return;
-  localStorage.setItem('lastNotifDate', todayStr);
 
   upcoming.forEach((ev, idx) => {
     const evDay = new Date(ev.start);
@@ -1051,16 +1052,17 @@ function checkUpcomingNotifications(){
 }
 
 window.addEventListener('load', () => {
-  localStorage.removeItem('lastNotifDate'); // vždy zkontroluj při spuštění
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
 document.getElementById('homeBtn').addEventListener('click', () => {
   const app = document.getElementById('app');
   const nowSlot = app.querySelector('.slot.now');
-  if (nowSlot) {
-    app.scrollTo({ top: nowSlot.offsetTop - (app.clientHeight / 2) + (nowSlot.clientHeight / 2), behavior: 'smooth' });
-  }
+  if (!nowSlot) return;
+  const slotH = nowSlot.offsetHeight;
+  const appH = app.clientHeight;
+  const target = nowSlot.offsetTop - (appH / 2) + (slotH / 2);
+  app.scrollTo({ top: target, behavior: 'smooth' });
 });
 
 renderTimeline();
