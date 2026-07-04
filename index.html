@@ -406,26 +406,23 @@
     box-shadow:0 0 10px rgba(26,163,255,0.6);
   }
 
-  /* --- FUTURE (above now, quieter, smaller) --- */
+  /* --- FUTURE (above now) --- */
   .slot.future .card{
-    opacity:0.7;
     text-align:center;
   }
-  .slot.future .dot{ background:var(--line); }
-  .slot.future .date-row{ font-size:15px; color:var(--muted); }
-  .slot.future .title-row{ font-size:26px; font-weight:700; color:#3E7EA8; }
-  .slot.future .eyebrow{ justify-content:center; }
+  .slot.future .date-row{ font-size:22px; }
+  .slot.future .title-row{ font-size:32px; font-weight:700; color:var(--ink); }
+  .slot.future .eyebrow{ justify-content:center; color:var(--accent); }
+  .slot.future .eyebrow .pip{ background:var(--accent); }
 
-  /* --- PAST (below now, muted, with photo link) --- */
+  /* --- PAST (below now, with photo link) --- */
   .slot.past .card{
     text-align:center;
-    opacity:0.6;
   }
-  .slot.past .dot{ background:var(--past); }
-  .slot.past .date-row{ font-size:14px; color:var(--past); }
-  .slot.past .title-row{ font-size:25px; font-weight:700; color:#2C5E80; }
-  .slot.past .eyebrow{ justify-content:center; color:var(--past); }
-  .slot.past .eyebrow .pip{ background:var(--past); }
+  .slot.past .date-row{ font-size:22px; }
+  .slot.past .title-row{ font-size:32px; font-weight:700; color:var(--ink); }
+  .slot.past .eyebrow{ justify-content:center; color:var(--accent); }
+  .slot.past .eyebrow .pip{ background:var(--accent); }
 
   .photo-link{
     margin-top:9px;
