@@ -535,10 +535,6 @@
     <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off">
     <button class="search-close" id="searchClose" aria-label="Zavřít">×</button>
   </div>
-  <div class="date-row-search">
-    <input type="date" id="searchDate">
-    <button class="cal-btn" id="calBtn">Otevřít kalendář</button>
-  </div>
   <div class="search-results" id="searchResults"></div>
 </div>
 
@@ -954,15 +950,15 @@ function renderResults(query){
 }
 
 function openSearch(){
-  // Remove readonly briefly (iOS trick to reliably open keyboard)
-  searchInput.removeAttribute('readonly');
   searchOverlay.classList.add('open');
-  // Focus synchronously within the click handler — required for mobile keyboard
+  document.body.style.overflow = 'hidden';
+  searchInput.removeAttribute('readonly');
   searchInput.focus();
   searchInput.click();
 }
 function closeSearch(){
   searchOverlay.classList.remove('open');
+  document.body.style.overflow = '';
   searchInput.value = "";
   searchResults.innerHTML = "";
 }
@@ -1021,7 +1017,7 @@ function checkUpcomingNotifications(){
         <div class="ev-modal-label">Kdy</div>
         <div class="ev-modal-value">${fmtDateRange(ev)} · ${daysText}</div>
         ${ev.place ? `<div class="ev-modal-label">Místo</div><div class="ev-modal-value">${ev.place}</div>` : ''}
-        <div class="ev-modal-value" style="margin-top:16px;font-size:clamp(12px,4vw,20px);color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;text-align:center;white-space:nowrap;">Kokršneci na tebe ano.</div>
+        <div class="ev-modal-value" style="margin-top:16px;font-size:clamp(11px,3.5vw,18px);color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kokršneci na tebe ano.</div>
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block; width:100%; margin-top:16px;
           background:var(--accent); border:none;
