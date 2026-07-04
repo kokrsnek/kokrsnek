@@ -444,6 +444,10 @@
   .photo-link:active{ transform:scale(0.97); background:#071A26; box-shadow:0 0 10px rgba(26,163,255,0.4); }
   .photo-link svg{ width:13px; height:13px; flex-shrink:0; }
 
+  @keyframes slideDown{
+    from{ transform:translateY(-20px); opacity:0; }
+    to{ transform:translateY(0); opacity:1; }
+  }
   @media (prefers-reduced-motion: reduce){
     .hint .arrow{ animation:none; }
   }
@@ -853,19 +857,8 @@ if ('serviceWorker' in navigator) {
 }
 
 // --- Notifikace 5 dní před událostí ---
-async function checkUpcomingNotifications(){
-  const dbg = (msg) => {
-    const el = document.getElementById('calStatus');
-    el.style.display = 'block';
-    el.style.color = '#4DB8FF';
-    el.style.borderColor = 'rgba(77,184,255,0.4)';
-    el.textContent = '🔔 ' + msg;
-    setTimeout(() => el.style.display = 'none', 6000);
-  };
-
-  if (!('Notification' in window)){ dbg('Notifikace nejsou podporovány'); return; }
-  if (Notification.permission !== 'granted'){ dbg('Notifikace nejsou povoleny'); return; }
-
+// --- Upozornění na blížící se události (in-app banner) ---
+function checkUpcomingNotifications(){
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -876,71 +869,71 @@ async function checkUpcomingNotifications(){
     return diffDays > 0 && diffDays <= 5;
   });
 
-  if (!upcoming.length){ return; }
+  if (!upcoming.length) return;
 
   const lastNotif = localStorage.getItem('lastNotifDate');
   const todayStr = today.toISOString().slice(0,10);
   if (lastNotif === todayStr) return;
   localStorage.setItem('lastNotifDate', todayStr);
 
-  upcoming.forEach(ev => {
+  upcoming.forEach((ev, idx) => {
     const evDay = new Date(ev.start);
     evDay.setHours(0,0,0,0);
     const diffDays = Math.round((evDay - today) / 86400000);
     const daysText = diffDays === 1 ? 'zítra' : `za ${diffDays} dní`;
-    new Notification(`Už se těšíš?`, {
-      body: `${ev.title} — ${daysText} (${fmtDate(ev.start)})\n\nKokršneci na tebe ano.`,
-      icon: 'icon-192v2.png',
-      badge: 'icon-192v2.png',
-    });
-    dbg(`Notifikace odeslána: ${ev.title} ${daysText}`);
+
+    const banner = document.createElement('div');
+    banner.style.cssText = `
+      position:fixed; top:${16 + idx * 90}px; left:16px; right:16px;
+      z-index:100; background:#1A1D27;
+      border:1px solid rgba(77,184,255,0.5);
+      border-radius:4px; padding:14px 16px;
+      font-family:'JetBrains Mono',monospace;
+      box-shadow:0 4px 20px rgba(0,0,0,0.6);
+      animation: slideDown .3s ease;
+    `;
+    banner.innerHTML = `
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4DB8FF;margin-bottom:4px;">Už se těšíš?</div>
+      <div style="font-size:14px;font-weight:700;color:#E8F4FF;margin-bottom:2px;">${ev.title}</div>
+      <div style="font-size:12px;color:#7AAFD4;">${daysText} · ${fmtDate(ev.start)}</div>
+      <div style="font-size:11px;color:#5A7A9A;margin-top:4px;">Kokršneci na tebe ano.</div>
+      <button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#4DB8FF;font-size:18px;cursor:pointer;line-height:1;">×</button>
+    `;
+    document.body.appendChild(banner);
+    setTimeout(() => banner.style.opacity === '' && banner.remove(), 8000);
   });
+
+  // Pokus se také o systémovou notifikaci pokud je povolena
+  if ('Notification' in window && Notification.permission === 'granted'){
+    upcoming.forEach(ev => {
+      const evDay = new Date(ev.start);
+      evDay.setHours(0,0,0,0);
+      const diffDays = Math.round((evDay - today) / 86400000);
+      const daysText = diffDays === 1 ? 'zítra' : `za ${diffDays} dní`;
+      new Notification(`Už se těšíš?`, {
+        body: `${ev.title} — ${daysText} (${fmtDate(ev.start)})\n\nKokršneci na tebe ano.`,
+        icon: 'icon-192v2.png',
+      });
+    });
+  }
 }
 
 async function requestNotifPermission(){
   if (!('Notification' in window)) return;
-  const perm = await Notification.requestPermission();
-  const btn = document.getElementById('notifBtn');
-  if (perm === 'granted'){
-    btn.style.display = 'none';
-    localStorage.removeItem('lastNotifDate'); // reset aby notifikace přišla
-    checkUpcomingNotifications();
-  } else {
-    btn.textContent = '🔕';
-    btn.title = 'Notifikace zakázány v nastavení';
-  }
+  await Notification.requestPermission();
+  document.getElementById('notifBtn').style.display = 'none';
+  localStorage.removeItem('lastNotifDate');
+  checkUpcomingNotifications();
 }
 
-// Zobraz tlačítko jen pokud notifikace nejsou povoleny
 window.addEventListener('load', () => {
   const btn = document.getElementById('notifBtn');
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = window.navigator.standalone === true;
-
-  // Na iOS fungují notifikace jen jako nainstalovaná PWA
-  if (isIOS && !isStandalone){
-    btn.style.display = 'none'; // v Safari nezobrazujeme
-    return;
-  }
-
-  if (!('Notification' in window)){
-    btn.style.display = 'none';
-    return;
-  }
-
-  if (Notification.permission === 'denied'){
-    btn.style.display = 'none';
-    return;
-  }
-
-  if (Notification.permission === 'granted'){
+  if ('Notification' in window && Notification.permission === 'default'){
+    btn.style.display = 'flex';
+  } else {
     btn.style.display = 'none';
     setTimeout(checkUpcomingNotifications, 1500);
-    return;
   }
-
-  // Zobraz tlačítko pro povolení
-  btn.style.display = 'flex';
 });
 
 renderTimeline();
