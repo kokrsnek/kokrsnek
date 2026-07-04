@@ -521,7 +521,11 @@
 </head>
 <body>
 
-<button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;">
+<button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
+  var app=document.getElementById('app');
+  var now=app.querySelector('.slot.now');
+  if(now){now.scrollIntoView({block:'center',behavior:'smooth'});}
+">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
     <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/>
     <path d="M9 21V12h6v9"/>
@@ -890,6 +894,7 @@ async function fetchGoogleCalendarEvents(){
 
     statusEl.style.display = 'none';
     renderTimeline();
+    setTimeout(checkUpcomingNotifications, 1000);
   }catch(e){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
@@ -1003,6 +1008,11 @@ function checkUpcomingNotifications(){
 
   if (!upcoming.length) return;
 
+  const todayStr = today.toISOString().slice(0,10);
+  const lastShown = localStorage.getItem('notifShownDate');
+  if (lastShown === todayStr) return;
+  localStorage.setItem('notifShownDate', todayStr);
+
   upcoming.forEach((ev, idx) => {
     const evDay = new Date(ev.start);
     evDay.setHours(0,0,0,0);
@@ -1053,16 +1063,6 @@ function checkUpcomingNotifications(){
 
 window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
-});
-
-document.getElementById('homeBtn').addEventListener('click', () => {
-  const app = document.getElementById('app');
-  const nowSlot = app.querySelector('.slot.now');
-  if (!nowSlot) return;
-  const slotH = nowSlot.offsetHeight;
-  const appH = app.clientHeight;
-  const target = nowSlot.offsetTop - (appH / 2) + (slotH / 2);
-  app.scrollTo({ top: target, behavior: 'smooth' });
 });
 
 renderTimeline();
