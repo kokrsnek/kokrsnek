@@ -695,8 +695,6 @@ function renderTimeline(){
   if (nowSlot) nowSlot.scrollIntoView({block:"center"});
 }
 
-renderTimeline();
-
 // Manuální fotoalba ke konkrétním událostem (podle názvu)
 const PHOTO_ALBUMS = {
   "32. výročí": "https://photos.app.goo.gl/CxEwjUJ2ULtoajTv8",
@@ -845,6 +843,56 @@ calBtn.addEventListener('click', () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// --- Notifikace 5 dní před událostí ---
+async function checkUpcomingNotifications(){
+  if (!('Notification' in window)) return;
+
+  // Požádej o povolení pokud ještě není uděleno
+  if (Notification.permission === 'default'){
+    await Notification.requestPermission();
+  }
+  if (Notification.permission !== 'granted') return;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Najdi nejbližší budoucí události do 5 dní
+  const upcoming = rawEvents.filter(ev => {
+    const evDay = new Date(ev.start);
+    evDay.setHours(0,0,0,0);
+    const diffDays = Math.round((evDay - today) / 86400000);
+    return diffDays > 0 && diffDays <= 5;
+  });
+
+  if (!upcoming.length) return;
+
+  // Zobraz max 1 notifikaci za den (aby nespamovalo)
+  const lastNotif = localStorage.getItem('lastNotifDate');
+  const todayStr = today.toISOString().slice(0,10);
+  if (lastNotif === todayStr) return;
+  localStorage.setItem('lastNotifDate', todayStr);
+
+  upcoming.forEach(ev => {
+    const evDay = new Date(ev.start);
+    evDay.setHours(0,0,0,0);
+    const diffDays = Math.round((evDay - today) / 86400000);
+    const daysText = diffDays === 1 ? 'zítra' : `za ${diffDays} dní`;
+    new Notification(`Už se těšíš?`, {
+      body: `${ev.title} — ${daysText} (${fmtDate(ev.start)})\n\nKokršneci na tebe ano.`,
+      icon: 'icon-192v2.png',
+      badge: 'icon-192v2.png',
+    });
+  });
+}
+
+// Spusť kontrolu po načtení kalendáře — voláme po renderTimeline
+const _origRender = renderTimeline;
+function renderTimeline(){
+  _origRender();
+  setTimeout(checkUpcomingNotifications, 1000);
+}
+renderTimeline();
 </script>
 </body>
 </html>
