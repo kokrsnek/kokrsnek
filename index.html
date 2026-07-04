@@ -949,16 +949,19 @@ function renderResults(query){
   });
 }
 
+let _scrollY = 0;
 function openSearch(){
+  _scrollY = document.querySelector('.app').scrollTop;
   searchOverlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.querySelector('.app').style.overflow = 'hidden';
   searchInput.removeAttribute('readonly');
   searchInput.focus();
   searchInput.click();
 }
 function closeSearch(){
   searchOverlay.classList.remove('open');
-  document.body.style.overflow = '';
+  document.querySelector('.app').style.overflow = '';
+  document.querySelector('.app').scrollTop = _scrollY;
   searchInput.value = "";
   searchResults.innerHTML = "";
 }
