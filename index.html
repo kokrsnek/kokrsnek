@@ -963,25 +963,34 @@ function renderResults(query){
 
 let _scrollY = 0;
 function openSearch(){
-  _scrollY = window.scrollY || document.documentElement.scrollTop;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${_scrollY}px`;
-  document.body.style.width = '100%';
-  document.body.style.overflowY = 'hidden';
   searchOverlay.classList.add('open');
   searchInput.removeAttribute('readonly');
   searchInput.focus();
   searchInput.click();
 }
 function closeSearch(){
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.width = '';
-  document.body.style.overflowY = '';
-  window.scrollTo(0, _scrollY);
   searchOverlay.classList.remove('open');
+  searchOverlay.style.transform = '';
   searchInput.value = "";
   searchResults.innerHTML = "";
+}
+
+// iOS Visual Viewport fix — zabrání posunutí overlay při otevření klávesnice
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    if (searchOverlay.classList.contains('open')) {
+      const vv = window.visualViewport;
+      const offsetTop = window.innerHeight - vv.height - vv.offsetTop;
+      searchOverlay.style.transform = `translateY(${-offsetTop}px)`;
+      searchOverlay.style.bottom = '0px';
+    }
+  });
+  window.visualViewport.addEventListener('scroll', () => {
+    if (searchOverlay.classList.contains('open')) {
+      const vv = window.visualViewport;
+      searchOverlay.style.transform = `translateY(${-vv.offsetTop}px)`;
+    }
+  });
 }
 
 searchBtn.addEventListener('click', openSearch);
