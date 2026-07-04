@@ -914,12 +914,33 @@ async function requestNotifPermission(){
 // Zobraz tlačítko jen pokud notifikace nejsou povoleny
 window.addEventListener('load', () => {
   const btn = document.getElementById('notifBtn');
-  if (!('Notification' in window) || Notification.permission === 'denied'){
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+
+  // Na iOS fungují notifikace jen jako nainstalovaná PWA
+  if (isIOS && !isStandalone){
+    btn.style.display = 'none'; // v Safari nezobrazujeme
+    return;
+  }
+
+  if (!('Notification' in window)){
     btn.style.display = 'none';
-  } else if (Notification.permission === 'granted'){
+    return;
+  }
+
+  if (Notification.permission === 'denied'){
+    btn.style.display = 'none';
+    return;
+  }
+
+  if (Notification.permission === 'granted'){
     btn.style.display = 'none';
     setTimeout(checkUpcomingNotifications, 1500);
+    return;
   }
+
+  // Zobraz tlačítko pro povolení
+  btn.style.display = 'flex';
 });
 
 renderTimeline();
