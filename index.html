@@ -766,12 +766,8 @@ async function fetchGoogleCalendarEvents(){
       return { start, end, title, place: it.location||'', photoAlbum };
     }).sort((a,b)=>a.start-b.start);
 
-    const withAlbum = rawEvents.filter(e => e.photoAlbum).length;
-    statusEl.textContent = `✓ Načteno ${rawEvents.length} událostí${withAlbum ? `, ${withAlbum} s albem` : ''}`;
-    statusEl.style.color = '#1AA3FF';
-    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    statusEl.style.display = 'none';
     renderTimeline();
-    setTimeout(checkUpcomingNotifications, 1500);
   }catch(e){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
