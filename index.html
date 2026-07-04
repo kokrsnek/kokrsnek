@@ -756,6 +756,7 @@ async function fetchGoogleCalendarEvents(){
     statusEl.style.color = '#1AA3FF';
     setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
     renderTimeline();
+    setTimeout(checkUpcomingNotifications, 1500);
   }catch(e){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
@@ -886,13 +887,8 @@ async function checkUpcomingNotifications(){
   });
 }
 
-// Spusť kontrolu po načtení kalendáře — voláme po renderTimeline
-const _origRender = renderTimeline;
-function renderTimeline(){
-  _origRender();
-  setTimeout(checkUpcomingNotifications, 1000);
-}
 renderTimeline();
+setTimeout(checkUpcomingNotifications, 1500);
 </script>
 </body>
 </html>
