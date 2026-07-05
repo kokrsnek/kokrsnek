@@ -1014,15 +1014,18 @@ function checkUpcomingNotifications(){
   today.setHours(0,0,0,0);
   const todayStr = today.toISOString().slice(0,10);
 
-  // Debug - zobraz stav
+  // Debug - zobraz VŽDY při zavolání
   const dbg = document.getElementById('calStatus');
+  if(!dbg) return;
   dbg.style.display = 'block';
   dbg.style.color = '#4DB8FF';
   dbg.style.borderColor = 'rgba(77,184,255,0.4)';
+  dbg.style.fontSize = '13px';
+  dbg.textContent = `🔔 Kontrola: ${rawEvents.length} událostí, dnes=${todayStr}`;
 
   if (!rawEvents.length){
     dbg.textContent = '⚠ Notifikace: kalendář nenačten (0 událostí)';
-    setTimeout(()=>dbg.style.display='none', 5000);
+    setTimeout(()=>dbg.style.display='none', 8000);
     return;
   }
 
@@ -1034,8 +1037,8 @@ function checkUpcomingNotifications(){
   });
 
   if (!upcoming.length){
-    dbg.textContent = `⚠ Notifikace: žádná událost do 5 dní (${rawEvents.length} načteno, dnes=${todayStr})`;
-    setTimeout(()=>dbg.style.display='none', 5000);
+    dbg.textContent = `⚠ Žádná událost do 5 dní (${rawEvents.length} načteno)`;
+    setTimeout(()=>dbg.style.display='none', 8000);
     return;
   }
 
