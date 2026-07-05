@@ -1012,6 +1012,19 @@ if ('serviceWorker' in navigator) {
 function checkUpcomingNotifications(){
   const today = new Date();
   today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+
+  // Debug - zobraz stav
+  const dbg = document.getElementById('calStatus');
+  dbg.style.display = 'block';
+  dbg.style.color = '#4DB8FF';
+  dbg.style.borderColor = 'rgba(77,184,255,0.4)';
+
+  if (!rawEvents.length){
+    dbg.textContent = '⚠ Notifikace: kalendář nenačten (0 událostí)';
+    setTimeout(()=>dbg.style.display='none', 5000);
+    return;
+  }
 
   const upcoming = rawEvents.filter(ev => {
     const evDay = new Date(ev.start);
@@ -1020,12 +1033,20 @@ function checkUpcomingNotifications(){
     return diffDays > 0 && diffDays <= 5;
   });
 
-  if (!upcoming.length) return;
+  if (!upcoming.length){
+    dbg.textContent = `⚠ Notifikace: žádná událost do 5 dní (${rawEvents.length} načteno, dnes=${todayStr})`;
+    setTimeout(()=>dbg.style.display='none', 5000);
+    return;
+  }
 
-  const todayStr = today.toISOString().slice(0,10);
   const lastShown = localStorage.getItem('notifShownDate');
-  if (lastShown === todayStr) return;
+  if (lastShown === todayStr){
+    dbg.textContent = `⚠ Notifikace: dnes již zobrazena`;
+    setTimeout(()=>dbg.style.display='none', 3000);
+    return;
+  }
   localStorage.setItem('notifShownDate', todayStr);
+  dbg.style.display = 'none';
 
   upcoming.forEach((ev, idx) => {
     const evDay = new Date(ev.start);
