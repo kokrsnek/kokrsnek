@@ -1076,10 +1076,13 @@ function checkUpcomingNotifications(){
 }
 
 window.addEventListener('load', () => {
-  setTimeout(checkUpcomingNotifications, 2000);
+  // notifikace se spustí až po načtení kalendáře v fetchGoogleCalendarEvents
 });
 
 renderTimeline();
+// Notifikace se spustí po načtení kalendáře (viz fetchGoogleCalendarEvents)
+// Záloha pokud kalendář selže a zůstanou mock data
+setTimeout(checkUpcomingNotifications, 3000);
 </script>
 </body>
 </html>
