@@ -1089,16 +1089,17 @@ window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
-// Splash screen
-setTimeout(() => {
+// Splash screen - skryjeme až po vykreslení timeline
+function hideSplash(){
   const splash = document.getElementById('splash');
   if(splash){
     splash.style.opacity = '0';
     setTimeout(() => splash.remove(), 600);
   }
-}, 3000);
+}
 
 renderTimeline();
+setTimeout(hideSplash, 3000);
 </script>
 </body>
 </html>
