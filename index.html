@@ -963,34 +963,25 @@ function renderResults(query){
 
 let _scrollY = 0;
 function openSearch(){
+  _scrollY = window.scrollY || document.documentElement.scrollTop;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollY}px`;
+  document.body.style.width = '100%';
+  document.body.style.overflowY = 'hidden';
   searchOverlay.classList.add('open');
   searchInput.removeAttribute('readonly');
   searchInput.focus();
   searchInput.click();
 }
 function closeSearch(){
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  document.body.style.overflowY = '';
+  window.scrollTo(0, _scrollY);
   searchOverlay.classList.remove('open');
-  searchOverlay.style.transform = '';
   searchInput.value = "";
   searchResults.innerHTML = "";
-}
-
-// iOS Visual Viewport fix — zabrání posunutí overlay při otevření klávesnice
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    if (searchOverlay.classList.contains('open')) {
-      const vv = window.visualViewport;
-      const offsetTop = window.innerHeight - vv.height - vv.offsetTop;
-      searchOverlay.style.transform = `translateY(${-offsetTop}px)`;
-      searchOverlay.style.bottom = '0px';
-    }
-  });
-  window.visualViewport.addEventListener('scroll', () => {
-    if (searchOverlay.classList.contains('open')) {
-      const vv = window.visualViewport;
-      searchOverlay.style.transform = `translateY(${-vv.offsetTop}px)`;
-    }
-  });
 }
 
 searchBtn.addEventListener('click', openSearch);
@@ -1012,9 +1003,6 @@ if ('serviceWorker' in navigator) {
 function checkUpcomingNotifications(){
   const today = new Date();
   today.setHours(0,0,0,0);
-  const todayStr = today.toISOString().slice(0,10);
-
-  if (!rawEvents.length) return;
 
   const upcoming = rawEvents.filter(ev => {
     const evDay = new Date(ev.start);
@@ -1025,6 +1013,7 @@ function checkUpcomingNotifications(){
 
   if (!upcoming.length) return;
 
+  const todayStr = today.toISOString().slice(0,10);
   const lastShown = localStorage.getItem('notifShownDate');
   if (lastShown === todayStr) return;
   localStorage.setItem('notifShownDate', todayStr);
@@ -1078,13 +1067,10 @@ function checkUpcomingNotifications(){
 }
 
 window.addEventListener('load', () => {
-  // notifikace se spustí až po načtení kalendáře v fetchGoogleCalendarEvents
+  setTimeout(checkUpcomingNotifications, 2000);
 });
 
 renderTimeline();
-// Notifikace se spustí po načtení kalendáře (viz fetchGoogleCalendarEvents)
-// Záloha pokud kalendář selže a zůstanou mock data
-setTimeout(checkUpcomingNotifications, 3000);
 </script>
 </body>
 </html>
