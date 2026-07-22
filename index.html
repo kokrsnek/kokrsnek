@@ -924,9 +924,6 @@ async function fetchGoogleCalendarEvents(){
   }
 }
 
-fetchGoogleCalendarEvents();
-
-
 const searchBtn = document.getElementById('searchBtn');
 const searchOverlay = document.getElementById('searchOverlay');
 const searchClose = document.getElementById('searchClose');
@@ -1089,17 +1086,20 @@ window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
-// Splash screen - skryjeme až po vykreslení timeline
+// Splash screen - nejdřív 2 sekundy splash, pak teprve načti data
 function hideSplash(){
   const splash = document.getElementById('splash');
   if(splash){
     splash.style.opacity = '0';
-    setTimeout(() => splash.remove(), 600);
+    setTimeout(() => {
+      splash.remove();
+      renderTimeline();
+      fetchGoogleCalendarEvents();
+    }, 600);
   }
 }
 
-renderTimeline();
-setTimeout(hideSplash, 3000);
+setTimeout(hideSplash, 2000);
 </script>
 </body>
 </html>
