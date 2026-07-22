@@ -521,6 +521,24 @@
 </head>
 <body>
 
+<div id="splash" style="
+  position:fixed; inset:0; z-index:200;
+  background:#050505;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:28px;
+  transition:opacity .6s ease;
+">
+  <img src="icon-192v2.png" style="width:140px;height:140px;object-fit:contain;border-radius:24px;" alt="KoKrŠNeK logo">
+  <div style="
+    font-family:'JetBrains Mono',monospace;
+    font-size:clamp(15px,4.5vw,22px);
+    color:#E8F4FF;
+    letter-spacing:0.06em;
+    text-align:center;
+    line-height:1.5;
+  ">Vítají tě<br><span style="color:#4DB8FF;font-weight:700;font-size:clamp(18px,5.5vw,28px);letter-spacing:0.1em;">KoKrŠNeci</span></div>
+</div>
+
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
   var app=document.getElementById('app');
   var now=app.querySelector('.slot.now');
@@ -1069,6 +1087,15 @@ function checkUpcomingNotifications(){
 window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
+
+// Splash screen
+setTimeout(() => {
+  const splash = document.getElementById('splash');
+  if(splash){
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 600);
+  }
+}, 3000);
 
 renderTimeline();
 </script>
