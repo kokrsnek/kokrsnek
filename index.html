@@ -25,6 +25,20 @@
     --past-soft:#050D12;
     --link:#7ECDFF;
   }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F0F7FF;
+      --card:#FFFFFF;
+      --line:#B8D4F0;
+      --ink:#0A2A4A;
+      --muted:#4A7AAA;
+      --accent:#1A6FCC;
+      --accent-soft:rgba(26,111,204,0.1);
+      --past:#6A9AC0;
+      --past-soft:#E8F2FF;
+      --link:#1A6FCC;
+    }
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{
     margin:0; padding:0; height:100%;
@@ -658,6 +672,125 @@ function checkAlbumAccess(url){
   setTimeout(() => document.getElementById('albumPwdInput')?.focus(), 100);
 }
 
+// =====================================================
+// BARVY GOOGLE KALENDÁŘE
+// =====================================================
+const GCAL_COLORS = {
+  '1':'#7986CB','2':'#33B679','3':'#8E24AA','4':'#E67C73',
+  '5':'#F6BF26','6':'#F4511E','7':'#039BE5','8':'#3F51B5',
+  '9':'#0B8043','10':'#D50000','11':'#616161'
+};
+function getEventColor(ev){
+  if(ev.raw && ev.raw.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
+  return 'var(--accent)';
+}
+
+// =====================================================
+// POČÍTADLO DNÍ
+// =====================================================
+function getDaysText(ev){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const evDay = new Date(ev.start); evDay.setHours(0,0,0,0);
+  const diff = Math.round((evDay - today) / 86400000);
+  if(diff === 0) return 'dnes';
+  if(diff === 1) return 'zítra';
+  if(diff === -1) return 'včera';
+  if(diff > 0) return `za ${diff} dní`;
+  return `před ${Math.abs(diff)} dny`;
+}
+
+// =====================================================
+// SDÍLENÍ UDÁLOSTI
+// =====================================================
+async function shareEvent(ev){
+  const text = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}`;
+  if(navigator.share){
+    try{ await navigator.share({ title: ev.title, text }); return; }catch(e){}
+  }
+  await navigator.clipboard.writeText(text);
+  const btn = document.getElementById('shareEvBtn');
+  if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = '⬆ Sdílet'; },2000); }
+}
+
+// =====================================================
+// EXPORT DO KALENDÁŘE (.ics)
+// =====================================================
+function exportICS(ev){
+  const fmt = d => d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',
+    `DTSTART:${fmt(ev.start)}`,
+    `DTEND:${fmt(ev.end)}`,
+    `SUMMARY:${ev.title}`,
+    ev.place ? `LOCATION:${ev.place}` : '',
+    'END:VEVENT','END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  const blob = new Blob([ics], {type:'text/calendar'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${ev.title.replace(/[^a-z0-9]/gi,'_')}.ics`;
+  a.click();
+}
+
+// =====================================================
+// VÝROČÍ
+// =====================================================
+function checkAnniversaries(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const thisYear = today.getFullYear();
+  const annivs = rawEvents.filter(ev => {
+    const evDay = new Date(ev.start); evDay.setHours(0,0,0,0);
+    const years = thisYear - evDay.getFullYear();
+    return years > 0 &&
+      evDay.getMonth() === today.getMonth() &&
+      evDay.getDate() === today.getDate();
+  });
+  if(!annivs.length) return;
+  annivs.forEach(ev => {
+    const years = thisYear - new Date(ev.start).getFullYear();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+    backdrop.innerHTML = `
+      <div class="ev-modal" style="text-align:center;">
+        <div class="ev-modal-title">🎂 Výročí!</div>
+        <div class="ev-modal-label">Před ${years} ${years===1?'rokem':years<5?'lety':'lety'}</div>
+        <div class="ev-modal-value" style="font-size:18px;font-weight:700;margin:8px 0;">${ev.title}</div>
+        <div class="ev-modal-value" style="color:var(--muted);">${fmtDate(ev.start)}</div>
+        <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
+          display:block;width:100%;margin-top:16px;
+          background:var(--accent);border:none;color:#000;
+          font-family:'JetBrains Mono',monospace;font-size:13px;
+          padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">OK</button>
+      </div>`;
+    document.body.appendChild(backdrop);
+  });
+}
+
+// =====================================================
+// POČASÍ (Open-Meteo, bez API klíče)
+// =====================================================
+async function fetchWeather(place, dateStr){
+  try{
+    // Geocoding přes Nominatim
+    const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
+      {headers:{'User-Agent':'KoKrSNeK-PWA'}});
+    const geoData = await geo.json();
+    if(!geoData.length) return null;
+    const {lat, lon} = geoData[0];
+    // Počasí přes Open-Meteo
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
+    const wxData = await wx.json();
+    if(!wxData.daily) return null;
+    const code = wxData.daily.weathercode[0];
+    const max = Math.round(wxData.daily.temperature_2m_max[0]);
+    const min = Math.round(wxData.daily.temperature_2m_min[0]);
+    const rain = wxData.daily.precipitation_sum[0];
+    const icon = code<=1?'☀️':code<=3?'⛅':code<=48?'🌫':code<=67?'🌧':code<=77?'❄️':code<=82?'🌦':'⛈';
+    return `${icon} ${min}–${max}°C${rain>0?' · '+rain+'mm':''}`;
+  }catch(e){ return null; }
+}
+
 const now = new Date();
 
 function at(daysOffset, h, m, durMin){
@@ -826,18 +959,24 @@ function showEventDetail(idx){
   // Konferenční odkaz
   const confLink = r.hangoutLink || (r.conferenceData && r.conferenceData.entryPoints && r.conferenceData.entryPoints[0] && r.conferenceData.entryPoints[0].uri);
   
+  const color = getEventColor(ev);
+  const isFuture = ev.start > now;
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = (e) => { if(e.target===backdrop) backdrop.remove(); };
 
   backdrop.innerHTML = `
-    <div class="ev-modal">
+    <div class="ev-modal" id="evModal_${idx}">
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title">${ev.title}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+        <div class="ev-modal-title" style="margin-bottom:0;">${ev.title}</div>
+      </div>
       ${rows.map(r=>`
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
+      ${isFuture && ev.place ? `<div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wx_${idx}"><span style="color:var(--muted);">Načítám…</span></div>` : ''}
       ${ev.photoAlbum ? `
         <div class="ev-modal-label">Fotoalbum</div>
         <a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
@@ -849,9 +988,28 @@ function showEventDetail(idx){
         <div class="ev-modal-label">Online meeting</div>
         <a class="ev-modal-link" href="${confLink}" target="_blank" rel="noopener">Připojit se</a>
       ` : ''}
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
+          color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
+          padding:8px;border-radius:6px;cursor:pointer;">⬆ Sdílet</button>
+        <button onclick="exportICS(rawEvents[${idx}])" style="
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
+          color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
+          padding:8px;border-radius:6px;cursor:pointer;">📅 Do kalendáře</button>
+      </div>
     </div>
   `;
   document.body.appendChild(backdrop);
+
+  // Načti počasí pokud je to budoucí událost s místem
+  if(isFuture && ev.place){
+    const dateStr = ev.start.toISOString().split('T')[0];
+    fetchWeather(ev.place, dateStr).then(wx => {
+      const el = document.getElementById(`wx_${idx}`);
+      if(el) el.textContent = wx || 'Počasí není dostupné';
+    });
+  }
 }
 
 function renderTimeline(){
@@ -883,10 +1041,12 @@ function renderTimeline(){
     slot.className = `slot ${kind}`;
 
     const eyebrowText = isNow ? "Teď" : (isPast ? "Skončilo" : fmtRelativeFuture(ev.start));
+    const color = getEventColor(ev);
+    const countdown = (!isNow && !isPast) ? `<span style="font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;">${getDaysText(ev)}</span>` : '';
 
     slot.innerHTML = `
       <div class="card">
-        <div class="eyebrow"><span class="pip"></span>${eyebrowText}</div>
+        <div class="eyebrow"><span class="pip" style="background:${color};"></span>${eyebrowText}${countdown}</div>
         <div class="date-row">${fmtDateRange(ev)}</div>
         <div class="time-row">${fmtTimeRow(ev)}</div>
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
@@ -962,6 +1122,7 @@ async function fetchGoogleCalendarEvents(){
     statusEl.style.display = 'none';
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
+    setTimeout(checkAnniversaries, 1500);
   }catch(e){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
