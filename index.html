@@ -506,11 +506,6 @@
   }
   .title-clickable:hover{ border-color:var(--accent); }
 
-  @keyframes splashHide{
-    0%{ opacity:1; visibility:visible; }
-    80%{ opacity:1; visibility:visible; }
-    100%{ opacity:0; visibility:hidden; display:none; }
-  }
   @keyframes slideDown{
     from{ transform:translateY(-20px); opacity:0; }
     to{ transform:translateY(0); opacity:1; }
@@ -525,25 +520,6 @@
 </style>
 </head>
 <body>
-
-<div id="splash" style="
-  position:fixed; inset:0; z-index:200;
-  background:#050505;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:28px;
-  animation: splashHide 3s ease forwards;
-  pointer-events:none;
-">
-  <img src="icon-192v2.png" style="width:140px;height:140px;object-fit:contain;border-radius:24px;" alt="KoKrŠNeK logo">
-  <div style="
-    font-family:'JetBrains Mono',monospace;
-    font-size:clamp(15px,4.5vw,22px);
-    color:#E8F4FF;
-    letter-spacing:0.06em;
-    text-align:center;
-    line-height:1.5;
-  ">Vítají tě<br><span style="color:#4DB8FF;font-weight:700;font-size:clamp(18px,5.5vw,28px);letter-spacing:0.1em;">KoKrŠNeci</span></div>
-</div>
 
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
   var app=document.getElementById('app');
@@ -620,6 +596,58 @@ function fmtTimeRow(ev){
   }
   return fmtTime(ev.start, ev.end);
 }
+// =====================================================
+// HESLO PRO PŘÍSTUP K FOTOALBŮM — otázka + odpověď
+const ALBUM_QUESTION = "Jaká je přezdívka šerifa?";
+const ALBUM_ANSWER   = "šuraj"; // porovnává se case-insensitive
+// =====================================================
+
+function checkAlbumAccess(url){
+  const saved = sessionStorage.getItem('albumAccess');
+  if(saved === 'ok'){
+    window.open(url, '_blank');
+    return;
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = (e) => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:6px;">🔒 Fotoalbum</div>
+      <div class="ev-modal-label" style="margin-bottom:12px;font-size:14px;">${ALBUM_QUESTION}</div>
+      <input id="albumPwdInput" type="text" placeholder="Tvoje odpověď…" style="
+        width:100%; box-sizing:border-box;
+        background:#0B0B0B; border:1px solid rgba(26,163,255,0.4);
+        color:var(--ink); font-family:'JetBrains Mono',monospace;
+        font-size:16px; padding:10px 12px; border-radius:4px; outline:none;
+        margin-bottom:8px;
+      ">
+      <div id="albumPwdErr" style="color:#FF6060;font-size:12px;font-family:'JetBrains Mono',monospace;min-height:18px;margin-bottom:8px;"></div>
+      <button onclick="
+        var ans=document.getElementById('albumPwdInput').value.trim().toLowerCase();
+        var err=document.getElementById('albumPwdErr');
+        if(ans==='${ALBUM_ANSWER}'){
+          sessionStorage.setItem('albumAccess','ok');
+          this.closest('.ev-modal-backdrop').remove();
+          window.open('${url}','_blank');
+        } else {
+          err.textContent='Špatná odpověď, zkus to znovu.';
+          document.getElementById('albumPwdInput').value='';
+          document.getElementById('albumPwdInput').focus();
+        }
+      " style="
+        background:var(--accent); border:none; color:#000;
+        font-family:'JetBrains Mono',monospace; font-size:13px;
+        padding:10px 28px; border-radius:6px; cursor:pointer; font-weight:700; width:100%;
+      ">Otevřít album</button>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  setTimeout(() => document.getElementById('albumPwdInput')?.focus(), 100);
+}
+
 const now = new Date();
 
 function at(daysOffset, h, m, durMin){
@@ -802,7 +830,7 @@ function showEventDetail(idx){
       `).join('')}
       ${ev.photoAlbum ? `
         <div class="ev-modal-label">Fotoalbum</div>
-        <a class="ev-modal-link" href="${ev.photoAlbum}" target="_blank" rel="noopener">
+        <a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>
           Otevřít album
         </a>
@@ -854,7 +882,7 @@ function renderTimeline(){
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
         ${isNow ? `<span class="badge">probíhá teď</span>` : ``}
-        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="${ev.photoAlbum.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${photoSVG()}Album fotek</a>` : ``}
+        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       </div>
     `;
     slot.dataset.idx = i;
@@ -928,6 +956,9 @@ async function fetchGoogleCalendarEvents(){
     statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
 }
+
+fetchGoogleCalendarEvents();
+
 
 const searchBtn = document.getElementById('searchBtn');
 const searchOverlay = document.getElementById('searchOverlay');
@@ -1092,7 +1123,6 @@ window.addEventListener('load', () => {
 });
 
 renderTimeline();
-setTimeout(fetchGoogleCalendarEvents, 3100);
 </script>
 </body>
 </html>
