@@ -725,6 +725,9 @@ function exportICS(ev){
 // =====================================================
 function checkAnniversaries(){
   const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+  if(localStorage.getItem('annivShownDate') === todayStr) return;
+
   const thisYear = today.getFullYear();
   const annivs = rawEvents.filter(ev => {
     const evDay = new Date(ev.start); evDay.setHours(0,0,0,0);
@@ -734,6 +737,9 @@ function checkAnniversaries(){
       evDay.getDate() === today.getDate();
   });
   if(!annivs.length) return;
+
+  localStorage.setItem('annivShownDate', todayStr);
+
   annivs.forEach(ev => {
     const years = thisYear - new Date(ev.start).getFullYear();
     const backdrop = document.createElement('div');
