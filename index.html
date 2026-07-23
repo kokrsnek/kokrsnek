@@ -507,8 +507,9 @@
   .title-clickable:hover{ border-color:var(--accent); }
 
   @keyframes splashHide{
-    from{ opacity:1; }
-    to{ opacity:0; visibility:hidden; }
+    0%{ opacity:1; visibility:visible; }
+    80%{ opacity:1; visibility:visible; }
+    100%{ opacity:0; visibility:hidden; display:none; }
   }
   @keyframes slideDown{
     from{ transform:translateY(-20px); opacity:0; }
@@ -530,7 +531,7 @@
   background:#050505;
   display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:28px;
-  animation: splashHide 0.5s ease 2s forwards;
+  animation: splashHide 3s ease forwards;
   pointer-events:none;
 ">
   <img src="icon-192v2.png" style="width:140px;height:140px;object-fit:contain;border-radius:24px;" alt="KoKrŠNeK logo">
@@ -1091,7 +1092,7 @@ window.addEventListener('load', () => {
 });
 
 renderTimeline();
-setTimeout(fetchGoogleCalendarEvents, 2600);
+setTimeout(fetchGoogleCalendarEvents, 3100);
 </script>
 </body>
 </html>
