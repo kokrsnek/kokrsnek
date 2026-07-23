@@ -602,10 +602,20 @@ const ALBUM_QUESTION = "Jaká je přezdívka šerifa?";
 const ALBUM_ANSWER   = "šuraj"; // porovnává se case-insensitive
 // =====================================================
 
+function openAlbumUrl(url){
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function checkAlbumAccess(url){
   const saved = sessionStorage.getItem('albumAccess');
   if(saved === 'ok'){
-    window.open(url, '_blank');
+    openAlbumUrl(url);
     return;
   }
 
@@ -631,7 +641,7 @@ function checkAlbumAccess(url){
         if(ans==='${ALBUM_ANSWER}'){
           sessionStorage.setItem('albumAccess','ok');
           this.closest('.ev-modal-backdrop').remove();
-          window.open('${url}','_blank');
+          openAlbumUrl('${url}');
         } else {
           err.textContent='Špatná odpověď, zkus to znovu.';
           document.getElementById('albumPwdInput').value='';
