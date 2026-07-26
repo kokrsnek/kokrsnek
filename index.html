@@ -533,18 +533,18 @@
     overflow-y:auto;
     background:var(--bg);
     -webkit-overflow-scrolling:touch;
-    padding:80px 0 120px;
+    padding-bottom:120px;
     box-sizing:border-box;
   }
   .albums-header{
-    position:fixed;
-    top:0; left:100vw; right:0;
-    width:100vw;
+    position:sticky;
+    top:0;
+    width:100%;
     padding:14px 20px 10px;
-    background:linear-gradient(var(--bg) 50%, transparent);
+    background:var(--bg);
     z-index:10;
-    pointer-events:none;
     box-sizing:border-box;
+    border-bottom:1px solid rgba(26,163,255,0.15);
   }
   .albums-header .label{
     font-family:'Rajdhani', sans-serif;
@@ -627,6 +627,29 @@
 </head>
 <body>
 
+<div class="h-wrap" id="hWrap">
+
+<!-- PANEL 1: Timeline -->
+<div class="h-panel" id="timelinePanel">
+<div class="app" id="app">
+</div>
+</div><!-- end timeline panel -->
+
+<!-- PANEL 2: Alba fotek -->
+<div class="h-panel" id="albumsPanel">
+  <div class="albums-page" id="albumsList">
+    <div class="albums-header">
+      <span class="label">📷 Alba fotek</span>
+    </div>
+    <div id="albumsContent"></div>
+  </div>
+</div>
+
+</div><!-- end h-wrap -->
+
+<!-- Fixed UI outside h-wrap so transform doesn't affect them -->
+<button class="back-btn" id="backBtn" onclick="showTimeline()" title="Zpět na timeline">‹</button>
+
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
   fetchGoogleCalendarEvents().then(() => {
     var app=document.getElementById('app');
@@ -654,11 +677,6 @@
   <div class="search-results" id="searchResults"></div>
 </div>
 
-<div class="h-wrap" id="hWrap">
-
-<!-- PANEL 1: Timeline -->
-<div class="h-panel" id="timelinePanel">
-
 <div class="topbar">
   <span class="label">KoKrŠNeK - tak život chode</span>
   <span class="today" id="todayLabel"></span>
@@ -666,23 +684,6 @@
 </div>
 
 <div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#0B0B0B;border:1px solid rgba(255,80,80,0.5);color:#FF6060;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:4px;"></div>
-
-<div class="app" id="app">
-</div>
-
-</div><!-- end timeline panel -->
-
-<!-- PANEL 2: Alba fotek -->
-<div class="h-panel" id="albumsPanel">
-  <div class="albums-header">
-    <span class="label">📷 Alba fotek</span>
-  </div>
-  <div class="albums-page" id="albumsList"></div>
-</div>
-
-</div><!-- end h-wrap -->
-
-<button class="back-btn" id="backBtn" onclick="showTimeline()" title="Zpět na timeline">‹</button>
 
 <script>
 const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
@@ -1438,9 +1439,10 @@ function showTimeline(){
 }
 
 function renderAlbums(){
-  const list = document.getElementById('albumsList');
+  const list = document.getElementById('albumsContent');
+  const curNow = new Date();
   const withAlbums = rawEvents
-    .filter(ev => ev.photoAlbum && ev.end < now)
+    .filter(ev => ev.photoAlbum && ev.end < curNow)
     .sort((a,b) => b.start - a.start);
   if(!withAlbums.length){
     list.innerHTML = '<div class="albums-empty">Zatím žádná fotoalba</div>';
