@@ -689,8 +689,13 @@ function getDaysText(ev){
 // =====================================================
 async function shareEvent(ev){
   const r = ev.raw || {};
-  const link = r.htmlLink || '';
-  const text = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${link ? '\n'+link : ''}`;
+  // htmlLink z Google Calendar API, nebo sestavíme z ID
+  let link = r.htmlLink || '';
+  if(!link && r.id){
+    const eid = btoa(r.id + ' ' + GOOGLE_CALENDAR_ID).replace(/=/g,'');
+    link = `https://www.google.com/calendar/event?eid=${eid}`;
+  }
+  const text = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${link ? '\n\n'+link : ''}`;
   if(navigator.share){
     try{
       await navigator.share({ title: ev.title, text, url: link || undefined });
