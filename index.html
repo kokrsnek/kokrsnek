@@ -1034,9 +1034,21 @@ function renderTimeline(){
     const slot = document.createElement('div');
     slot.className = `slot ${kind}`;
 
-    const eyebrowText = isNow ? "Teď" : (isPast ? "Skončilo" : fmtRelativeFuture(ev.start));
     const color = getEventColor(ev);
-    const countdown = (!isNow && !isPast) ? `<span style="font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;">${getDaysText(ev)}</span>` : '';
+
+    // Zjisti jestli událost probíhá právě teď nebo dnes
+    const evStart = new Date(ev.start); evStart.setHours(0,0,0,0);
+    const today = new Date(now); today.setHours(0,0,0,0);
+    const isToday = evStart.getTime() === today.getTime() || (ev.start <= now && ev.end >= now);
+    const isHappeningNow = ev.start <= now && ev.end >= now;
+
+    let eyebrowText;
+    if(isNow && isToday) eyebrowText = "Teď";
+    else if(isNow && !isToday) eyebrowText = "Nadcházející";
+    else if(isPast) eyebrowText = "Skončilo";
+    else eyebrowText = fmtRelativeFuture(ev.start);
+
+    const countdown = (!isPast) ? `<span style="font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;">${getDaysText(ev)}</span>` : '';
 
     slot.innerHTML = `
       <div class="card">
@@ -1045,7 +1057,7 @@ function renderTimeline(){
         <div class="time-row">${fmtTimeRow(ev)}</div>
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
-        ${isNow ? `<span class="badge">probíhá teď</span>` : ``}
+        ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
         ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       </div>
     `;
