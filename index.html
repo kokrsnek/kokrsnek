@@ -39,11 +39,12 @@
     height:100vh;
     width:100%;
     overflow-y:auto;
-    scroll-snap-type:y mandatory;
+    scroll-snap-type:y proximity;
     position:relative;
     padding-bottom:160px;
     scroll-padding-bottom:160px;
     box-sizing:border-box;
+    -webkit-overflow-scrolling:touch;
   }
   .search-btn{
     position:fixed;
@@ -299,7 +300,6 @@
     align-items:center;
     justify-content:center;
     scroll-snap-align:center;
-    scroll-snap-stop:always;
     position:relative;
     padding:8px 26px;
     box-sizing:border-box;
