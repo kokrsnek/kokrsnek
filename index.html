@@ -1433,12 +1433,16 @@ window.addEventListener('load', () => {
 const albumsOverlay = document.getElementById('albumsOverlay');
 const backBtn = document.getElementById('backBtn');
 document.getElementById('albumsBtn').addEventListener('click', showAlbums);
+document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
 let txStart = 0, tyStart = 0, swiping = false;
 
 function showAlbums(){
+  const overlay = document.getElementById('albumsOverlay');
+  if(!overlay){ alert('overlay nenalezen!'); return; }
   renderAlbums();
-  albumsOverlay.classList.add('open');
-  backBtn.style.display = 'flex';
+  overlay.classList.add('open');
+  const bb = document.getElementById('backBtn');
+  if(bb) bb.style.display = 'flex';
 }
 function showTimeline(){
   albumsOverlay.classList.remove('open');
