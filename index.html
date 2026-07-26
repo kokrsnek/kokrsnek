@@ -519,9 +519,11 @@
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    pointer-events:none;
   }
   .albums-overlay.open{
     transform:translateX(0);
+    pointer-events:auto;
   }
   .albums-topbar{
     padding:56px 20px 14px;
@@ -1430,6 +1432,7 @@ window.addEventListener('load', () => {
 // --- SWIPE & ALBUMS OVERLAY ---
 const albumsOverlay = document.getElementById('albumsOverlay');
 const backBtn = document.getElementById('backBtn');
+document.getElementById('albumsBtn').addEventListener('click', showAlbums);
 let txStart = 0, tyStart = 0, swiping = false;
 
 function showAlbums(){
