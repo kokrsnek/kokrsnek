@@ -690,14 +690,14 @@ function getDaysText(ev){
 async function shareEvent(ev){
   const r = ev.raw || {};
   const link = r.htmlLink || '';
-  const text = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${link ? '\n\n'+link : ''}`;
+  const textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}`;
   if(navigator.share){
     try{
-      await navigator.share({ title: ev.title, text, url: link || undefined });
+      await navigator.share({ title: ev.title, text: textBase, url: link || undefined });
       return;
     }catch(e){}
   }
-  await navigator.clipboard.writeText(text);
+  await navigator.clipboard.writeText(textBase + (link ? '\n\n'+link : ''));
   const btn = document.getElementById('shareEvBtn');
   if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = 'Sdílet'; },2000); }
 }
