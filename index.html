@@ -508,26 +508,42 @@
   }
   .title-clickable:hover{ border-color:var(--accent); }
 
-  /* --- HORIZONTAL SWIPE WRAPPER --- */
-  .h-wrap{
-    display:flex;
-    width:200vw;
-    height:100vh;
+  /* --- ALBUMS OVERLAY --- */
+  .albums-overlay{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    background:var(--bg);
+    transform:translateX(100%);
     transition:transform .35s ease;
-    will-change:transform;
-  }
-  .h-wrap.show-albums{
-    transform:translateX(-50%);
-  }
-  .h-panel{
-    width:100vw;
-    height:100vh;
+    display:flex;
+    flex-direction:column;
     overflow:hidden;
-    flex-shrink:0;
-    position:relative;
   }
-
-  /* --- ALBUMS PAGE --- */
+  .albums-overlay.open{
+    transform:translateX(0);
+  }
+  .albums-topbar{
+    padding:56px 20px 14px;
+    background:var(--bg);
+    border-bottom:1px solid rgba(26,163,255,0.15);
+    text-align:center;
+    flex-shrink:0;
+  }
+  .albums-topbar .label{
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.06em;
+    color:var(--accent);
+    text-transform:uppercase;
+  }
+  .albums-list{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:120px;
+  }
   .albums-page{
     height:100vh;
     overflow-y:auto;
@@ -537,14 +553,9 @@
     box-sizing:border-box;
   }
   .albums-header{
-    position:sticky;
-    top:0;
-    width:100%;
-    padding:14px 20px 10px;
+    padding:60px 20px 14px;
     background:var(--bg);
-    z-index:10;
-    box-sizing:border-box;
-    border-bottom:1px solid rgba(26,163,255,0.15);
+    text-align:center;
   }
   .albums-header .label{
     font-family:'Rajdhani', sans-serif;
@@ -609,8 +620,6 @@
     font-size:20px;
     line-height:1;
   }
-  .h-wrap.show-albums ~ .back-btn,
-  .show-albums-mode .back-btn{ display:flex; }
 
   @keyframes slideDown{
     from{ transform:translateY(-20px); opacity:0; }
@@ -627,25 +636,16 @@
 </head>
 <body>
 
-<div class="h-wrap" id="hWrap">
-
-<!-- PANEL 1: Timeline -->
-<div class="h-panel" id="timelinePanel">
 <div class="app" id="app">
 </div>
-</div><!-- end timeline panel -->
 
-<!-- PANEL 2: Alba fotek -->
-<div class="h-panel" id="albumsPanel">
-  <div class="albums-page" id="albumsList">
-    <div class="albums-header">
-      <span class="label">📷 Alba fotek</span>
-    </div>
-    <div id="albumsContent"></div>
+<!-- Albums overlay -->
+<div class="albums-overlay" id="albumsOverlay">
+  <div class="albums-topbar">
+    <span class="label">📷 Alba fotek</span>
   </div>
+  <div class="albums-list" id="albumsContent"></div>
 </div>
-
-</div><!-- end h-wrap -->
 
 <!-- Fixed UI outside h-wrap so transform doesn't affect them -->
 <button class="back-btn" id="backBtn" onclick="showTimeline()" title="Zpět na timeline">‹</button>
@@ -1423,18 +1423,18 @@ window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
-// --- SWIPE & ALBUMS ---
-const hWrap = document.getElementById('hWrap');
+// --- SWIPE & ALBUMS OVERLAY ---
+const albumsOverlay = document.getElementById('albumsOverlay');
 const backBtn = document.getElementById('backBtn');
 let txStart = 0, tyStart = 0, swiping = false;
 
 function showAlbums(){
-  hWrap.classList.add('show-albums');
-  backBtn.style.display = 'flex';
   renderAlbums();
+  albumsOverlay.classList.add('open');
+  backBtn.style.display = 'flex';
 }
 function showTimeline(){
-  hWrap.classList.remove('show-albums');
+  albumsOverlay.classList.remove('open');
   backBtn.style.display = 'none';
 }
 
@@ -1460,15 +1460,15 @@ function renderAlbums(){
   `).join('');
 }
 
-const timelinePanel = document.getElementById('timelinePanel');
-timelinePanel.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
-timelinePanel.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>15&&dy<40)swiping=true; },{passive:true});
-timelinePanel.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart>60)showAlbums(); swiping=false; });
+// Swipe doprava = otevři alba, doleva = zavři
+const appEl = document.getElementById('app');
+appEl.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
+appEl.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>20&&dy<50)swiping=true; },{passive:true});
+appEl.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart>70)showAlbums(); swiping=false; });
 
-const albumsPanel = document.getElementById('albumsPanel');
-albumsPanel.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
-albumsPanel.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>15&&dy<40)swiping=true; },{passive:true});
-albumsPanel.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart<-60)showTimeline(); swiping=false; });
+albumsOverlay.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
+albumsOverlay.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>20&&dy<50)swiping=true; },{passive:true});
+albumsOverlay.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart<-70)showTimeline(); swiping=false; });
 
 renderTimeline();
 </script>
