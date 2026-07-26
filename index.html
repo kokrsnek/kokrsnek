@@ -508,6 +508,110 @@
   }
   .title-clickable:hover{ border-color:var(--accent); }
 
+  /* --- HORIZONTAL SWIPE WRAPPER --- */
+  .h-wrap{
+    display:flex;
+    width:200vw;
+    height:100vh;
+    transition:transform .35s ease;
+    will-change:transform;
+  }
+  .h-wrap.show-albums{
+    transform:translateX(-50%);
+  }
+  .h-panel{
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    flex-shrink:0;
+    position:relative;
+  }
+
+  /* --- ALBUMS PAGE --- */
+  .albums-page{
+    height:100vh;
+    overflow-y:auto;
+    background:var(--bg);
+    -webkit-overflow-scrolling:touch;
+    padding:80px 0 120px;
+    box-sizing:border-box;
+  }
+  .albums-header{
+    position:fixed;
+    top:0; left:100vw; right:0;
+    width:100vw;
+    padding:14px 20px 10px;
+    background:linear-gradient(var(--bg) 50%, transparent);
+    z-index:10;
+    pointer-events:none;
+    box-sizing:border-box;
+  }
+  .albums-header .label{
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.06em;
+    color:var(--accent);
+    text-transform:uppercase;
+    text-align:center;
+    display:block;
+  }
+  .album-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 20px;
+    border-bottom:1px solid rgba(26,163,255,0.1);
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .album-item:active{ background:rgba(26,163,255,0.06); }
+  .album-dot{
+    width:10px; height:10px; border-radius:50%;
+    flex-shrink:0;
+    background:var(--accent);
+  }
+  .album-info{ flex:1; min-width:0; }
+  .album-date{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; color:var(--muted);
+    margin-bottom:3px;
+    letter-spacing:0.03em;
+  }
+  .album-title{
+    font-family:'JetBrains Mono',monospace;
+    font-size:15px; font-weight:700;
+    color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .album-arrow{
+    color:var(--accent); font-size:18px; flex-shrink:0;
+  }
+  .albums-empty{
+    text-align:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px; color:var(--muted);
+    margin-top:40px;
+  }
+  .back-btn{
+    position:fixed;
+    bottom:110px; left:18px;
+    z-index:20;
+    width:38px; height:38px;
+    border-radius:50%;
+    background:rgba(11,11,11,0.7);
+    border:1px solid rgba(26,163,255,0.45);
+    display:none;
+    align-items:center; justify-content:center;
+    cursor:pointer;
+    pointer-events:auto;
+    color:var(--accent);
+    font-size:20px;
+    line-height:1;
+  }
+  .h-wrap.show-albums ~ .back-btn,
+  .show-albums-mode .back-btn{ display:flex; }
+
   @keyframes slideDown{
     from{ transform:translateY(-20px); opacity:0; }
     to{ transform:translateY(0); opacity:1; }
@@ -550,6 +654,11 @@
   <div class="search-results" id="searchResults"></div>
 </div>
 
+<div class="h-wrap" id="hWrap">
+
+<!-- PANEL 1: Timeline -->
+<div class="h-panel" id="timelinePanel">
+
 <div class="topbar">
   <span class="label">KoKrŠNeK - tak život chode</span>
   <span class="today" id="todayLabel"></span>
@@ -560,6 +669,20 @@
 
 <div class="app" id="app">
 </div>
+
+</div><!-- end timeline panel -->
+
+<!-- PANEL 2: Alba fotek -->
+<div class="h-panel" id="albumsPanel">
+  <div class="albums-header">
+    <span class="label">📷 Alba fotek</span>
+  </div>
+  <div class="albums-page" id="albumsList"></div>
+</div>
+
+</div><!-- end h-wrap -->
+
+<button class="back-btn" id="backBtn" onclick="showTimeline()" title="Zpět na timeline">‹</button>
 
 <script>
 const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
@@ -1298,6 +1421,52 @@ function checkUpcomingNotifications(){
 window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
+
+// --- SWIPE & ALBUMS ---
+const hWrap = document.getElementById('hWrap');
+const backBtn = document.getElementById('backBtn');
+let txStart = 0, tyStart = 0, swiping = false;
+
+function showAlbums(){
+  hWrap.classList.add('show-albums');
+  backBtn.style.display = 'flex';
+  renderAlbums();
+}
+function showTimeline(){
+  hWrap.classList.remove('show-albums');
+  backBtn.style.display = 'none';
+}
+
+function renderAlbums(){
+  const list = document.getElementById('albumsList');
+  const withAlbums = rawEvents
+    .filter(ev => ev.photoAlbum && ev.end < now)
+    .sort((a,b) => b.start - a.start);
+  if(!withAlbums.length){
+    list.innerHTML = '<div class="albums-empty">Zatím žádná fotoalba</div>';
+    return;
+  }
+  list.innerHTML = withAlbums.map(ev => `
+    <div class="album-item" onclick="checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
+      <div class="album-dot" style="background:${getEventColor(ev)};"></div>
+      <div class="album-info">
+        <div class="album-date">${fmtDate(ev.start)}</div>
+        <div class="album-title">${ev.title}</div>
+      </div>
+      <div class="album-arrow">›</div>
+    </div>
+  `).join('');
+}
+
+const timelinePanel = document.getElementById('timelinePanel');
+timelinePanel.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
+timelinePanel.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>15&&dy<40)swiping=true; },{passive:true});
+timelinePanel.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart>60)showAlbums(); swiping=false; });
+
+const albumsPanel = document.getElementById('albumsPanel');
+albumsPanel.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
+albumsPanel.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>15&&dy<40)swiping=true; },{passive:true});
+albumsPanel.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart<-60)showTimeline(); swiping=false; });
 
 renderTimeline();
 </script>
