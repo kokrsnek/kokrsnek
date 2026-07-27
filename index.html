@@ -1265,6 +1265,12 @@ async function fetchGoogleCalendarEvents(){
       }
       return { start, end, title, place: it.location||'', photoAlbum, raw: it };
     }).sort((a,b)=>a.start-b.start);
+
+    // DEBUG - dočasně ukáže colorId hodnoty
+    const eventsWithColor = rawEvents.filter(e=>e.raw?.colorId);
+    const sample = rawEvents.slice(0,3).map(e=>`${e.title.slice(0,12)}: ${e.raw?.colorId||'–'}`).join('\n');
+    alert(`Barevné události: ${eventsWithColor.length}/${rawEvents.length}\n\nUkázka:\n${sample}\n\nDefaultColor: ${calendarDefaultColor}`);
+
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
     setTimeout(checkAnniversaries, 1500);
