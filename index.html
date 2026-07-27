@@ -789,31 +789,23 @@ const GCAL_COLORS = {
   '9':'#0B8043','10':'#D50000','11':'#616161'
 };
 
-let calendarDefaultColor = 'var(--accent)';
+const AUTO_COLORS = [
+  '#4DB8FF','#33B679','#F6BF26','#E67C73','#8E24AA',
+  '#F4511E','#039BE5','#0B8043','#7986CB','#FF7043',
+  '#26C6DA','#AB47BC','#66BB6A','#FFA726','#EC407A'
+];
 
-async function fetchCalendarColor(){
-  try{
-    // Načti přesné barvy z Google Colors API
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/colors?key=${GOOGLE_API_KEY}`);
-    const data = await res.json();
-    if(data.event){
-      Object.entries(data.event).forEach(([id, c]) => {
-        if(c.background) GCAL_COLORS[id] = c.background;
-      });
-    }
-    // Barva kalendáře
-    const calRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}?key=${GOOGLE_API_KEY}`);
-    const calData = await calRes.json();
-    if(calData.backgroundColor) calendarDefaultColor = calData.backgroundColor;
-  }catch(e){}
+function hashColor(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++) h = (Math.imul(31,h)+str.charCodeAt(i))|0;
+  return AUTO_COLORS[Math.abs(h) % AUTO_COLORS.length];
 }
 
+async function fetchCalendarColor(){ /* Google API key neposkytuje barvy pro veřejné kalendáře */ }
+
 function getEventColor(ev){
-  if(ev.raw){
-    // colorId na události
-    if(ev.raw.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
-  }
-  return calendarDefaultColor;
+  if(ev.raw?.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
+  return hashColor(ev.title || '');
 }
 
 // =====================================================
@@ -1265,12 +1257,6 @@ async function fetchGoogleCalendarEvents(){
       }
       return { start, end, title, place: it.location||'', photoAlbum, raw: it };
     }).sort((a,b)=>a.start-b.start);
-
-    // DEBUG - dočasně ukáže colorId hodnoty
-    const eventsWithColor = rawEvents.filter(e=>e.raw?.colorId);
-    const sample = rawEvents.slice(0,3).map(e=>`${e.title.slice(0,12)}: ${e.raw?.colorId||'–'}`).join('\n');
-    alert(`Barevné události: ${eventsWithColor.length}/${rawEvents.length}\n\nUkázka:\n${sample}\n\nDefaultColor: ${calendarDefaultColor}`);
-
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
     setTimeout(checkAnniversaries, 1500);
