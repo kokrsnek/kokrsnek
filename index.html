@@ -788,18 +788,31 @@ const GCAL_COLORS = {
   '5':'#F6BF26','6':'#F4511E','7':'#039BE5','8':'#3F51B5',
   '9':'#0B8043','10':'#D50000','11':'#616161'
 };
+
 let calendarDefaultColor = 'var(--accent)';
 
 async function fetchCalendarColor(){
   try{
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}?key=${GOOGLE_API_KEY}`);
+    // Načti přesné barvy z Google Colors API
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/colors?key=${GOOGLE_API_KEY}`);
     const data = await res.json();
-    if(data.backgroundColor) calendarDefaultColor = data.backgroundColor;
+    if(data.event){
+      Object.entries(data.event).forEach(([id, c]) => {
+        if(c.background) GCAL_COLORS[id] = c.background;
+      });
+    }
+    // Barva kalendáře
+    const calRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}?key=${GOOGLE_API_KEY}`);
+    const calData = await calRes.json();
+    if(calData.backgroundColor) calendarDefaultColor = calData.backgroundColor;
   }catch(e){}
 }
 
 function getEventColor(ev){
-  if(ev.raw && ev.raw.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
+  if(ev.raw){
+    // colorId na události
+    if(ev.raw.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
+  }
   return calendarDefaultColor;
 }
 
@@ -1259,8 +1272,7 @@ async function fetchGoogleCalendarEvents(){
   }
 }
 
-fetchCalendarColor();
-fetchGoogleCalendarEvents();
+fetchCalendarColor().then(() => fetchGoogleCalendarEvents());
 
 
 const searchBtn = document.getElementById('searchBtn');
