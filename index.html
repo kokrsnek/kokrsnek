@@ -681,7 +681,6 @@
   <span class="nameday" id="namedayLabel"></span>
 </div>
 
-<div id="calStatus" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;z-index:30;background:#0B0B0B;border:1px solid rgba(255,80,80,0.5);color:#FF6060;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;border-radius:4px;"></div>
 
 <script>
 const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
@@ -1200,9 +1199,7 @@ const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(){
-  const statusEl = document.getElementById('calStatus');
-  statusEl.textContent = 'Načítám kalendář…';
-  statusEl.style.display = 'block';
+  // status removed
   try{
     let allItems = [];
     let pageToken = null;
@@ -1215,7 +1212,6 @@ async function fetchGoogleCalendarEvents(){
       const res = await fetch(url);
       const data = await res.json();
       if(!res.ok){
-        statusEl.textContent = `Chyba ${res.status}: ${data.error?.message || JSON.stringify(data.error)}`;
         return;
       }
       const items = (data.items||[]).filter(it => it.start&&(it.start.dateTime||it.start.date));
@@ -1223,7 +1219,7 @@ async function fetchGoogleCalendarEvents(){
       pageToken = data.nextPageToken || null;
     } while(pageToken);
 
-    if(!allItems.length){ statusEl.textContent = 'Kalendář načten, ale žádné události.'; return; }
+    if(!allItems.length){ return; }
 
     rawEvents = allItems.map(it => {
       const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
@@ -1246,13 +1242,10 @@ async function fetchGoogleCalendarEvents(){
       }
       return { start, end, title, place: it.location||'', photoAlbum, raw: it };
     }).sort((a,b)=>a.start-b.start);
-
-    statusEl.style.display = 'none';
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
     setTimeout(checkAnniversaries, 1500);
   }catch(e){
-    statusEl.textContent = `Síťová chyba: ${e.message}`;
   }
 }
 
