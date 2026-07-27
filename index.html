@@ -7,34 +7,32 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KoKrŠNeK">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#F2ECD8">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
 <link rel="manifest" href="manifest.json">
 <title>KoKrŠNeK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    color-scheme: light;
-    --bg:#F2ECD8;
-    --card:#FAF5E6;
-    --line:#C8B89A;
-    --ink:#1A1208;
-    --muted:#6B5A42;
-    --accent:#1A1208;
-    --accent-soft:rgba(26,18,8,0.08);
-    --past:#8B7355;
-    --past-soft:#EDE5D0;
-    --link:#3D2B1A;
+    color-scheme: dark;
+    --bg:#050505;
+    --card:#0B0B0B;
+    --line:#1A3A5C;
+    --ink:#E8F4FF;
+    --muted:#7AAFD4;
+    --accent:#4DB8FF;
+    --accent-soft:rgba(77,184,255,0.12);
+    --past:#5A8FAD;
+    --past-soft:#050D12;
+    --link:#7ECDFF;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{
     margin:0; padding:0; height:100%;
     background-color:var(--bg);
-    background-image:
-      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(26,18,8,0.07) 27px, rgba(26,18,8,0.07) 28px);
     color:var(--ink);
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     overscroll-behavior-y: none;
   }
   .app{
@@ -55,8 +53,8 @@
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
-    background:rgba(242,236,216,0.85);
-    border:1px solid rgba(26,18,8,0.45);
+    background:rgba(11,11,11,0.7);
+    border:1px solid rgba(26,163,255,0.45);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     pointer-events:auto;
@@ -65,7 +63,7 @@
     right:64px;
   }
   #gearBtn.connected{
-    border-color:rgba(26,18,8,0.9);
+    border-color:rgba(26,163,255,0.9);
     background:rgba(14,95,168,0.25);
   }
   .search-btn svg{
@@ -83,9 +81,9 @@
     width:100%;
     box-sizing:border-box;
     z-index:40;
-    background:rgba(242,236,216,0.97);
+    background:rgba(5,5,5,0.97);
     backdrop-filter:blur(4px);
-    border-top:1px solid rgba(26,18,8,0.3);
+    border-top:1px solid rgba(26,163,255,0.3);
     display:flex;
     flex-direction:column;
     padding:18px 18px 32px;
@@ -99,7 +97,7 @@
     position:fixed;
     inset:0;
     z-index:40;
-    background:rgba(242,236,216,0.97);
+    background:rgba(0,0,0,0.94);
     backdrop-filter:blur(2px);
     display:flex;
     flex-direction:column;
@@ -109,7 +107,7 @@
   }
   .config-overlay.open{ transform:translateY(0); }
   .config-title{
-    font-family:'Playfair Display', serif;
+    font-family:'Rajdhani', sans-serif;
     font-weight:700;
     font-size:18px;
     letter-spacing:0.1em;
@@ -118,7 +116,7 @@
     margin-bottom:18px;
   }
   .config-label{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     letter-spacing:0.08em;
     text-transform:uppercase;
@@ -127,10 +125,10 @@
   }
   .config-input{
     width:100%;
-    background:#FAF5E6;
-    border:1px solid rgba(26,18,8,0.4);
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:13px;
     padding:10px 12px;
     border-radius:4px;
@@ -138,15 +136,15 @@
     margin-bottom:14px;
     box-sizing:border-box;
   }
-  .config-input:focus{ border-color:rgba(26,18,8,0.9); }
+  .config-input:focus{ border-color:rgba(26,163,255,0.9); }
   .config-status{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:12px;
     color:var(--muted);
     margin:8px 0 14px;
     min-height:18px;
   }
-  .config-status.ok{ color:#1A1208; }
+  .config-status.ok{ color:#1AA3FF; }
   .config-status.err{ color:#FF4444; }
   .config-btns{
     display:flex; gap:10px; margin-top:4px;
@@ -158,10 +156,10 @@
   }
   .search-row input[type="text"]{
     flex:1;
-    background:#FAF5E6;
-    border:1px solid rgba(26,18,8,0.4);
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:15px;
     padding:11px 12px;
     border-radius:4px;
@@ -172,7 +170,7 @@
     width:38px; height:38px;
     border-radius:50%;
     background:transparent;
-    border:1px solid rgba(26,18,8,0.4);
+    border:1px solid rgba(26,163,255,0.4);
     color:var(--accent);
     font-size:18px;
     line-height:1;
@@ -186,10 +184,10 @@
   }
   .date-row-search input[type="date"]{
     flex:1;
-    background:#FAF5E6;
-    border:1px solid rgba(26,18,8,0.4);
+    background:#0B0B0B;
+    border:1px solid rgba(26,163,255,0.4);
     color:var(--ink);
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:14px;
     padding:9px 10px;
     border-radius:4px;
@@ -199,9 +197,9 @@
   .cal-btn{
     flex-shrink:0;
     background:var(--accent);
-    color:#F2ECD8;
+    color:#000;
     border:none;
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:12px;
     text-transform:uppercase;
     letter-spacing:0.05em;
@@ -221,15 +219,15 @@
   .result-item{
     display:flex; align-items:center; justify-content:space-between;
     gap:10px;
-    border:1px solid rgba(26,18,8,0.22);
+    border:1px solid rgba(26,163,255,0.22);
     border-radius:4px;
     padding:10px 12px;
     cursor:pointer;
   }
-  .result-item:active{ background:rgba(26,18,8,0.08); }
+  .result-item:active{ background:rgba(26,163,255,0.08); }
   .result-main{ flex:1; min-width:0; }
   .result-title{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:14px;
     font-weight:700;
     color:var(--ink);
@@ -237,7 +235,7 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .result-meta{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     color:var(--muted);
     margin-top:2px;
@@ -246,12 +244,12 @@
     flex-shrink:0;
     width:30px; height:30px;
     border-radius:50%;
-    border:1px solid rgba(26,18,8,0.4);
+    border:1px solid rgba(26,163,255,0.4);
     display:flex; align-items:center; justify-content:center;
   }
   .map-pin svg{ width:14px; height:14px; stroke:var(--accent); fill:none; stroke-width:2; }
   .no-results{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:13px;
     color:var(--muted);
     text-align:center;
@@ -269,7 +267,7 @@
     pointer-events:none;
   }
   .topbar .label{
-    font-family:'Playfair Display', serif;
+    font-family:'Rajdhani', sans-serif;
     font-weight:700;
     font-size:clamp(18px, 6.5vw, 36px);
     letter-spacing:0.04em;
@@ -281,14 +279,14 @@
     white-space:nowrap;
   }
   .topbar .today{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     letter-spacing:0.06em;
     color:var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .topbar .nameday{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     letter-spacing:0.04em;
     color:var(--muted);
@@ -326,7 +324,7 @@
   }
 
   .eyebrow{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:10.5px;
     letter-spacing:0.18em;
     text-transform:uppercase;
@@ -343,21 +341,21 @@
   }
 
   .date-row{
-    font-family:'Playfair Display', serif;
+    font-family:'Rajdhani', sans-serif;
     font-weight:700;
     color:var(--ink);
     line-height:1.05;
     margin:0 0 1px;
   }
   .time-row{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     color:var(--muted);
     margin-bottom:4px;
     letter-spacing:0.04em;
   }
   .title-row{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:30px;
     font-weight:700;
     text-transform:uppercase;
@@ -366,7 +364,7 @@
     line-height:1.15;
   }
   .place-row{
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11.5px;
     color:var(--muted);
     margin-bottom:2px;
@@ -376,54 +374,44 @@
 
   /* --- NOW (center, dominant) --- */
   .slot.now .card{
-    background:var(--card);
-    border-top:4px solid var(--ink);
-    border-bottom:1px solid var(--ink);
-    border-left:none; border-right:none;
-    border-radius:0;
+    background:linear-gradient(180deg, rgba(26,163,255,0.05), rgba(0,0,0,0));
+    border:1px solid rgba(26,163,255,0.45);
+    border-radius:2px;
     padding:16px 20px 14px;
     position:relative;
     text-align:center;
   }
-  .slot.now .card::before{
-    content:"— PRÁVĚ NYNÍ —";
+  .slot.now .card::before,
+  .slot.now .card::after{
+    content:"";
     position:absolute;
-    top:-13px; left:50%;
-    transform:translateX(-50%);
-    background:var(--bg);
-    padding:0 8px;
-    font-family:'IM Fell English', serif;
-    font-size:9px;
-    letter-spacing:0.15em;
-    color:var(--ink);
-    white-space:nowrap;
+    width:10px; height:10px;
+    border:1.5px solid var(--accent);
   }
-  .slot.now .card::after{ display:none; }
-  .slot.now .eyebrow{ color:var(--muted); justify-content:center; }
-  .slot.now .eyebrow .pip{ background:var(--ink); }
-  .slot.now .date-row{ font-size:16px; font-style:italic; }
+  .slot.now .card::before{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+  .slot.now .card::after{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
+  .slot.now .eyebrow{ color:var(--accent); justify-content:center; }
+  .slot.now .eyebrow .pip{ background:var(--accent); box-shadow:0 0 6px var(--accent); }
+  .slot.now .date-row{ font-size:22px; }
   .slot.now .title-row{
-    font-size:28px;
-    font-weight:900;
+    font-size:32px;
+    font-weight:700;
     color:var(--ink);
-    font-family:'Playfair Display', serif;
-    letter-spacing:-0.01em;
-    line-height:1.1;
-    text-transform:uppercase;
-    display:block;
-    border-bottom:none;
+    border-bottom:2px solid var(--accent);
+    display:inline-block;
+    padding-bottom:2px;
   }
   .slot.now .badge{
     display:inline-block;
     margin-top:8px;
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:10px;
-    letter-spacing:0.15em;
+    letter-spacing:0.12em;
     text-transform:uppercase;
-    color:var(--card);
-    background:var(--ink);
-    padding:3px 10px;
-    border-radius:0;
+    color:#000;
+    background:var(--accent);
+    padding:3px 9px;
+    box-shadow:0 0 10px rgba(26,163,255,0.6);
   }
 
   /* --- FUTURE (above now) --- */
@@ -449,18 +437,18 @@
     display:inline-flex;
     align-items:center;
     gap:6px;
-    font-family:'IM Fell English', serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     letter-spacing:0.04em;
     text-transform:uppercase;
     color:var(--link);
     background:var(--past-soft);
-    border:1px solid rgba(26,18,8,0.3);
+    border:1px solid rgba(26,163,255,0.3);
     padding:6px 12px;
     text-decoration:none;
     transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .photo-link:active{ transform:scale(0.97); background:#EDE5D0; box-shadow:0 0 10px rgba(26,18,8,0.4); }
+  .photo-link:active{ transform:scale(0.97); background:#071A26; box-shadow:0 0 10px rgba(26,163,255,0.4); }
   .photo-link svg{ width:13px; height:13px; flex-shrink:0; }
 
   .ev-modal-backdrop{
@@ -474,7 +462,7 @@
   @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
   .ev-modal{
     background:#0F1117;
-    border:1px solid rgba(26,18,8,0.4);
+    border:1px solid rgba(26,163,255,0.4);
     border-radius:12px;
     width:100%; max-width:400px;
     max-height:80vh;
@@ -511,11 +499,11 @@
     color:var(--link); font-size:13px;
     font-family:'JetBrains Mono',monospace;
     text-decoration:none;
-    border:1px solid rgba(26,18,8,0.3);
+    border:1px solid rgba(26,163,255,0.3);
     padding:5px 12px; border-radius:100px; margin-top:4px;
   }
   .title-clickable{
-    cursor:pointer; border-bottom:1px dashed rgba(26,18,8,0.4);
+    cursor:pointer; border-bottom:1px dashed rgba(26,163,255,0.4);
     transition:border-color .15s;
   }
   .title-clickable:hover{ border-color:var(--accent); }
@@ -540,12 +528,12 @@
   .albums-topbar{
     padding:56px 20px 14px;
     background:var(--bg);
-    border-bottom:1px solid rgba(26,18,8,0.15);
+    border-bottom:1px solid rgba(26,163,255,0.15);
     text-align:center;
     flex-shrink:0;
   }
   .albums-topbar .label{
-    font-family:'Playfair Display', serif;
+    font-family:'Rajdhani', sans-serif;
     font-weight:700;
     font-size:14px;
     letter-spacing:0.06em;
@@ -572,7 +560,7 @@
     text-align:center;
   }
   .albums-header .label{
-    font-family:'Playfair Display', serif;
+    font-family:'Rajdhani', sans-serif;
     font-weight:700;
     font-size:14px;
     letter-spacing:0.06em;
@@ -586,11 +574,11 @@
     align-items:center;
     gap:14px;
     padding:14px 20px;
-    border-bottom:1px solid rgba(26,18,8,0.1);
+    border-bottom:1px solid rgba(26,163,255,0.1);
     cursor:pointer;
     transition:background .15s;
   }
-  .album-item:active{ background:rgba(26,18,8,0.06); }
+  .album-item:active{ background:rgba(26,163,255,0.06); }
   .album-dot{
     width:10px; height:10px; border-radius:50%;
     flex-shrink:0;
@@ -624,8 +612,8 @@
     z-index:20;
     width:38px; height:38px;
     border-radius:50%;
-    background:rgba(242,236,216,0.85);
-    border:1px solid rgba(26,18,8,0.45);
+    background:rgba(11,11,11,0.7);
+    border:1px solid rgba(26,163,255,0.45);
     display:none;
     align-items:center; justify-content:center;
     cursor:pointer;
@@ -763,12 +751,12 @@ function checkAlbumAccess(url){
       <div class="ev-modal-label" style="margin-bottom:12px;font-size:14px;">${ALBUM_QUESTION}</div>
       <input id="albumPwdInput" type="text" placeholder="Tvoje odpověď…" style="
         width:100%; box-sizing:border-box;
-        background:#FAF5E6; border:1px solid rgba(26,18,8,0.4);
+        background:#0B0B0B; border:1px solid rgba(26,163,255,0.4);
         color:var(--ink); font-family:'JetBrains Mono',monospace;
         font-size:16px; padding:10px 12px; border-radius:4px; outline:none;
         margin-bottom:8px;
       ">
-      <div id="albumPwdErr" style="color:#8B5A2B;font-size:12px;font-family:'JetBrains Mono',monospace;min-height:18px;margin-bottom:8px;"></div>
+      <div id="albumPwdErr" style="color:#FF6060;font-size:12px;font-family:'JetBrains Mono',monospace;min-height:18px;margin-bottom:8px;"></div>
       <button onclick="
         var ans=document.getElementById('albumPwdInput').value.trim().toLowerCase();
         var err=document.getElementById('albumPwdErr');
@@ -782,7 +770,7 @@ function checkAlbumAccess(url){
           document.getElementById('albumPwdInput').focus();
         }
       " style="
-        background:var(--accent); border:none; color:#F2ECD8;
+        background:var(--accent); border:none; color:#000;
         font-family:'JetBrains Mono',monospace; font-size:13px;
         padding:10px 28px; border-radius:6px; cursor:pointer; font-weight:700; width:100%;
       ">Otevřít album</button>
@@ -890,7 +878,7 @@ function checkAnniversaries(){
         <div class="ev-modal-value" style="color:var(--muted);">${fmtDate(ev.start)}</div>
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block;width:100%;margin-top:16px;
-          background:var(--accent);border:none;color:#F2ECD8;
+          background:var(--accent);border:none;color:#000;
           font-family:'JetBrains Mono',monospace;font-size:13px;
           padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">OK</button>
       </div>`;
@@ -1117,11 +1105,11 @@ function showEventDetail(idx){
       ` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
-          flex:1;background:var(--accent-soft);border:1px solid rgba(26,18,8,0.3);
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">Sdílet</button>
         <button onclick="exportICS(rawEvents[${idx}])" style="
-          flex:1;background:var(--accent-soft);border:1px solid rgba(26,18,8,0.3);
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">Do kalendáře</button>
       </div>
@@ -1398,7 +1386,7 @@ function checkUpcomingNotifications(){
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block; width:100%; margin-top:16px;
           background:var(--accent); border:none;
-          color:#F2ECD8; font-family:'JetBrains Mono',monospace; font-size:13px;
+          color:#000; font-family:'JetBrains Mono',monospace; font-size:13px;
           padding:10px; border-radius:6px; cursor:pointer; letter-spacing:0.05em; font-weight:700;
         ">OK</button>
       </div>
