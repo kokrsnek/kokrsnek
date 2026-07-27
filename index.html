@@ -644,9 +644,21 @@
 <!-- Albums overlay -->
 <div class="albums-overlay" id="albumsOverlay">
   <div class="albums-topbar">
-    <span class="label">📷 Alba fotek</span>
+    <span class="label">Fotoalba</span>
   </div>
   <div class="albums-list" id="albumsContent"></div>
+  <div style="position:sticky;bottom:0;padding:16px;text-align:center;background:linear-gradient(transparent,var(--bg) 40%);pointer-events:none;">
+    <button onclick="showTimeline()" style="
+      pointer-events:auto;
+      width:48px;height:48px;border-radius:50%;
+      background:rgba(11,11,11,0.85);
+      border:1px solid rgba(26,163,255,0.45);
+      display:inline-flex;align-items:center;justify-content:center;
+      cursor:pointer;
+    ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="color:var(--accent);"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+    </button>
+  </div>
 </div>
 
 <!-- Fixed UI outside h-wrap so transform doesn't affect them -->
