@@ -641,29 +641,9 @@
 <div class="app" id="app">
 </div>
 
-<!-- Albums overlay -->
-<div class="albums-overlay" id="albumsOverlay">
-  <div class="albums-topbar">
-    <span class="label">Fotoalba</span>
-  </div>
-  <div class="albums-list" id="albumsContent"></div>
-  <div style="position:sticky;bottom:0;padding:16px;text-align:center;background:linear-gradient(transparent,var(--bg) 40%);pointer-events:none;">
-    <button onclick="showTimeline()" style="
-      pointer-events:auto;
-      width:48px;height:48px;border-radius:50%;
-      background:rgba(11,11,11,0.85);
-      border:1px solid rgba(26,163,255,0.45);
-      display:inline-flex;align-items:center;justify-content:center;
-      cursor:pointer;
-    ">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="color:var(--accent);"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
-    </button>
-  </div>
-</div>
+
 
 <!-- Fixed UI outside h-wrap so transform doesn't affect them -->
-<button class="back-btn" id="backBtn" onclick="showTimeline()" title="Zpět na timeline">‹</button>
-
 <button class="search-btn" id="albumsBtn" aria-label="Alba fotek" style="right:auto;left:64px;z-index:25;" onclick="showAlbums()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>
 </button>
@@ -1441,58 +1421,40 @@ window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
-// --- SWIPE & ALBUMS OVERLAY ---
-const albumsOverlay = document.getElementById('albumsOverlay');
-const backBtn = document.getElementById('backBtn');
-document.getElementById('albumsBtn').addEventListener('click', showAlbums);
-document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
-let txStart = 0, tyStart = 0, swiping = false;
 
 function showAlbums(){
-  const overlay = document.getElementById('albumsOverlay');
-  if(!overlay){ alert('overlay nenalezen!'); return; }
-  renderAlbums();
-  overlay.classList.add('open');
-  const bb = document.getElementById('backBtn');
-  if(bb) bb.style.display = 'flex';
-}
-function showTimeline(){
-  albumsOverlay.classList.remove('open');
-  backBtn.style.display = 'none';
-}
-
-function renderAlbums(){
-  const list = document.getElementById('albumsContent');
-  if(!list){ console.error('albumsContent not found'); return; }
   const curNow = new Date();
-  const allPast = rawEvents.filter(ev => ev.end < curNow);
-  const withAlbums = allPast.filter(ev => ev.photoAlbum);
-  if(!withAlbums.length){
-    list.innerHTML = `<div class="albums-empty">Zatím žádná fotoalba<br><small style="opacity:0.5">(${allPast.length} min. událostí, ${rawEvents.length} celkem)</small></div>`;
-    return;
-  }
-  withAlbums.sort((a,b) => b.start - a.start);
-  list.innerHTML = withAlbums.map(ev => `
-    <div class="album-item" onclick="checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
-      <div class="album-dot" style="background:${getEventColor(ev)};"></div>
-      <div class="album-info">
-        <div class="album-date">${fmtDate(ev.start)}</div>
-        <div class="album-title">${ev.title}</div>
-      </div>
-      <div class="album-arrow">›</div>
-    </div>
-  `).join('');
+  const withAlbums = rawEvents
+    .filter(ev => ev.photoAlbum && ev.end < curNow)
+    .sort((a,b) => b.start - a.start);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+
+  const rows = withAlbums.length
+    ? withAlbums.map(ev => `
+        <div class="album-item" onclick="this.closest('.ev-modal-backdrop').remove();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
+          <div class="album-dot" style="background:${getEventColor(ev)};"></div>
+          <div class="album-info">
+            <div class="album-date">${fmtDate(ev.start)}</div>
+            <div class="album-title">${ev.title}</div>
+          </div>
+          <div class="album-arrow">›</div>
+        </div>`).join('')
+    : `<div class="albums-empty">Zatím žádná fotoalba<br><small style="color:var(--muted);font-size:11px;">(${rawEvents.filter(e=>e.end<curNow).length} minulých událostí)</small></div>`;
+
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title">Fotoalba</div>
+      ${rows}
+    </div>`;
+  document.body.appendChild(backdrop);
 }
 
-// Swipe doprava = otevři alba, doleva = zavři
-const appEl = document.getElementById('app');
-appEl.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
-appEl.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>20&&dy<50)swiping=true; },{passive:true});
-appEl.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart>70)showAlbums(); swiping=false; });
-
-albumsOverlay.addEventListener('touchstart', e => { txStart=e.touches[0].clientX; tyStart=e.touches[0].clientY; swiping=false; },{passive:true});
-albumsOverlay.addEventListener('touchmove', e => { const dx=e.touches[0].clientX-txStart,dy=Math.abs(e.touches[0].clientY-tyStart); if(!swiping&&Math.abs(dx)>20&&dy<50)swiping=true; },{passive:true});
-albumsOverlay.addEventListener('touchend', e => { if(!swiping)return; if(e.changedTouches[0].clientX-txStart<-70)showTimeline(); swiping=false; });
+document.getElementById('albumsBtn').addEventListener('click', showAlbums);
+document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
 
 renderTimeline();
 </script>
