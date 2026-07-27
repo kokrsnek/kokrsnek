@@ -18,14 +18,14 @@
     color-scheme: dark;
     --bg:#050505;
     --card:#0B0B0B;
-    --line:#1A3A5C;
-    --ink:#E8F4FF;
-    --muted:#7AAFD4;
-    --accent:#4DB8FF;
-    --accent-soft:rgba(77,184,255,0.12);
-    --past:#5A8FAD;
-    --past-soft:#050D12;
-    --link:#7ECDFF;
+    --line:#1A3A1A;
+    --ink:#E8F8E8;
+    --muted:#6AAF7A;
+    --accent:#4DBF6A;
+    --accent-soft:rgba(77,191,106,0.12);
+    --past:#5A8F6A;
+    --past-soft:#050D07;
+    --link:#7EDD8A;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{
@@ -54,7 +54,7 @@
     width:38px; height:38px;
     border-radius:50%;
     background:rgba(11,11,11,0.7);
-    border:1px solid rgba(26,163,255,0.45);
+    border:1px solid rgba(60,180,80,0.45);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     pointer-events:auto;
@@ -63,7 +63,7 @@
     right:64px;
   }
   #gearBtn.connected{
-    border-color:rgba(26,163,255,0.9);
+    border-color:rgba(60,180,80,0.9);
     background:rgba(14,95,168,0.25);
   }
   .search-btn svg{
@@ -83,7 +83,7 @@
     z-index:40;
     background:rgba(5,5,5,0.97);
     backdrop-filter:blur(4px);
-    border-top:1px solid rgba(26,163,255,0.3);
+    border-top:1px solid rgba(60,180,80,0.3);
     display:flex;
     flex-direction:column;
     padding:18px 18px 32px;
@@ -126,7 +126,7 @@
   .config-input{
     width:100%;
     background:#0B0B0B;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
     font-size:13px;
@@ -136,7 +136,7 @@
     margin-bottom:14px;
     box-sizing:border-box;
   }
-  .config-input:focus{ border-color:rgba(26,163,255,0.9); }
+  .config-input:focus{ border-color:rgba(60,180,80,0.9); }
   .config-status{
     font-family:'JetBrains Mono', monospace;
     font-size:12px;
@@ -144,7 +144,7 @@
     margin:8px 0 14px;
     min-height:18px;
   }
-  .config-status.ok{ color:#1AA3FF; }
+  .config-status.ok{ color:#3DB460; }
   .config-status.err{ color:#FF4444; }
   .config-btns{
     display:flex; gap:10px; margin-top:4px;
@@ -157,7 +157,7 @@
   .search-row input[type="text"]{
     flex:1;
     background:#0B0B0B;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
     font-size:15px;
@@ -170,7 +170,7 @@
     width:38px; height:38px;
     border-radius:50%;
     background:transparent;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     color:var(--accent);
     font-size:18px;
     line-height:1;
@@ -185,7 +185,7 @@
   .date-row-search input[type="date"]{
     flex:1;
     background:#0B0B0B;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     color:var(--ink);
     font-family:'JetBrains Mono', monospace;
     font-size:14px;
@@ -219,12 +219,12 @@
   .result-item{
     display:flex; align-items:center; justify-content:space-between;
     gap:10px;
-    border:1px solid rgba(26,163,255,0.22);
+    border:1px solid rgba(60,180,80,0.22);
     border-radius:4px;
     padding:10px 12px;
     cursor:pointer;
   }
-  .result-item:active{ background:rgba(26,163,255,0.08); }
+  .result-item:active{ background:rgba(60,180,80,0.08); }
   .result-main{ flex:1; min-width:0; }
   .result-title{
     font-family:'JetBrains Mono', monospace;
@@ -244,7 +244,7 @@
     flex-shrink:0;
     width:30px; height:30px;
     border-radius:50%;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     display:flex; align-items:center; justify-content:center;
   }
   .map-pin svg{ width:14px; height:14px; stroke:var(--accent); fill:none; stroke-width:2; }
@@ -374,8 +374,8 @@
 
   /* --- NOW (center, dominant) --- */
   .slot.now .card{
-    background:linear-gradient(180deg, rgba(26,163,255,0.05), rgba(0,0,0,0));
-    border:1px solid rgba(26,163,255,0.45);
+    background:linear-gradient(180deg, rgba(60,180,80,0.05), rgba(0,0,0,0));
+    border:1px solid rgba(60,180,80,0.45);
     border-radius:2px;
     padding:16px 20px 14px;
     position:relative;
@@ -411,7 +411,7 @@
     color:#000;
     background:var(--accent);
     padding:3px 9px;
-    box-shadow:0 0 10px rgba(26,163,255,0.6);
+    box-shadow:0 0 10px rgba(60,180,80,0.6);
   }
 
   /* --- FUTURE (above now) --- */
@@ -443,12 +443,12 @@
     text-transform:uppercase;
     color:var(--link);
     background:var(--past-soft);
-    border:1px solid rgba(26,163,255,0.3);
+    border:1px solid rgba(60,180,80,0.3);
     padding:6px 12px;
     text-decoration:none;
     transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .photo-link:active{ transform:scale(0.97); background:#071A26; box-shadow:0 0 10px rgba(26,163,255,0.4); }
+  .photo-link:active{ transform:scale(0.97); background:#071A0A; box-shadow:0 0 10px rgba(60,180,80,0.4); }
   .photo-link svg{ width:13px; height:13px; flex-shrink:0; }
 
   .ev-modal-backdrop{
@@ -462,7 +462,7 @@
   @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
   .ev-modal{
     background:#0F1117;
-    border:1px solid rgba(26,163,255,0.4);
+    border:1px solid rgba(60,180,80,0.4);
     border-radius:12px;
     width:100%; max-width:400px;
     max-height:80vh;
@@ -499,11 +499,11 @@
     color:var(--link); font-size:13px;
     font-family:'JetBrains Mono',monospace;
     text-decoration:none;
-    border:1px solid rgba(26,163,255,0.3);
+    border:1px solid rgba(60,180,80,0.3);
     padding:5px 12px; border-radius:100px; margin-top:4px;
   }
   .title-clickable{
-    cursor:pointer; border-bottom:1px dashed rgba(26,163,255,0.4);
+    cursor:pointer; border-bottom:1px dashed rgba(60,180,80,0.4);
     transition:border-color .15s;
   }
   .title-clickable:hover{ border-color:var(--accent); }
@@ -528,7 +528,7 @@
   .albums-topbar{
     padding:56px 20px 14px;
     background:var(--bg);
-    border-bottom:1px solid rgba(26,163,255,0.15);
+    border-bottom:1px solid rgba(60,180,80,0.15);
     text-align:center;
     flex-shrink:0;
   }
@@ -574,11 +574,11 @@
     align-items:center;
     gap:14px;
     padding:14px 20px;
-    border-bottom:1px solid rgba(26,163,255,0.1);
+    border-bottom:1px solid rgba(60,180,80,0.1);
     cursor:pointer;
     transition:background .15s;
   }
-  .album-item:active{ background:rgba(26,163,255,0.06); }
+  .album-item:active{ background:rgba(60,180,80,0.06); }
   .album-dot{
     width:10px; height:10px; border-radius:50%;
     flex-shrink:0;
@@ -613,7 +613,7 @@
     width:38px; height:38px;
     border-radius:50%;
     background:rgba(11,11,11,0.7);
-    border:1px solid rgba(26,163,255,0.45);
+    border:1px solid rgba(60,180,80,0.45);
     display:none;
     align-items:center; justify-content:center;
     cursor:pointer;
@@ -751,7 +751,7 @@ function checkAlbumAccess(url){
       <div class="ev-modal-label" style="margin-bottom:12px;font-size:14px;">${ALBUM_QUESTION}</div>
       <input id="albumPwdInput" type="text" placeholder="Tvoje odpověď…" style="
         width:100%; box-sizing:border-box;
-        background:#0B0B0B; border:1px solid rgba(26,163,255,0.4);
+        background:#0B0B0B; border:1px solid rgba(60,180,80,0.4);
         color:var(--ink); font-family:'JetBrains Mono',monospace;
         font-size:16px; padding:10px 12px; border-radius:4px; outline:none;
         margin-bottom:8px;
@@ -788,24 +788,9 @@ const GCAL_COLORS = {
   '5':'#F6BF26','6':'#F4511E','7':'#039BE5','8':'#3F51B5',
   '9':'#0B8043','10':'#D50000','11':'#616161'
 };
-
-const AUTO_COLORS = [
-  '#4DB8FF','#33B679','#F6BF26','#E67C73','#8E24AA',
-  '#F4511E','#039BE5','#0B8043','#7986CB','#FF7043',
-  '#26C6DA','#AB47BC','#66BB6A','#FFA726','#EC407A'
-];
-
-function hashColor(str){
-  let h = 0;
-  for(let i=0;i<str.length;i++) h = (Math.imul(31,h)+str.charCodeAt(i))|0;
-  return AUTO_COLORS[Math.abs(h) % AUTO_COLORS.length];
-}
-
-async function fetchCalendarColor(){ /* Google API key neposkytuje barvy pro veřejné kalendáře */ }
-
 function getEventColor(ev){
-  if(ev.raw?.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
-  return hashColor(ev.title || '');
+  if(ev.raw && ev.raw.colorId && GCAL_COLORS[ev.raw.colorId]) return GCAL_COLORS[ev.raw.colorId];
+  return 'var(--accent)';
 }
 
 // =====================================================
@@ -1120,11 +1105,11 @@ function showEventDetail(idx){
       ` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
-          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">Sdílet</button>
         <button onclick="exportICS(rawEvents[${idx}])" style="
-          flex:1;background:var(--accent-soft);border:1px solid rgba(77,184,255,0.3);
+          flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">Do kalendáře</button>
       </div>
@@ -1264,7 +1249,7 @@ async function fetchGoogleCalendarEvents(){
   }
 }
 
-fetchCalendarColor().then(() => fetchGoogleCalendarEvents());
+fetchGoogleCalendarEvents();
 
 
 const searchBtn = document.getElementById('searchBtn');
