@@ -1284,7 +1284,8 @@ function renderTimeline(){
     const countdownStyle = isNow
       ? `font-size:15.75px;color:#E53935;margin-left:6px;letter-spacing:0.04em;`
       : `font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;`;
-    const countdown = (!isPast) ? `<span style="${countdownStyle}">${getDaysText(ev)}</span>` : '';
+    // Pokud je Žhavíme (dnes), nezobrazujeme countdown
+    const countdown = (!isPast && !(isNow && isToday)) ? `<span style="${countdownStyle}">${getDaysText(ev)}</span>` : '';
 
     slot.innerHTML = `
       <div class="card">
