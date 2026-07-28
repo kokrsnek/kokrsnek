@@ -644,10 +644,6 @@
 
 
 <!-- Fixed UI outside h-wrap so transform doesn't affect them -->
-<button class="search-btn" id="yearBtn" aria-label="Vybrat rok" style="right:auto;left:110px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--accent);width:auto;padding:0 10px;border-radius:100px;" onclick="showTimelineYearPicker(allTimelineYears, new Date().getFullYear())">
-  rok
-</button>
-
 <button class="search-btn" id="albumsBtn" aria-label="Alba fotek" style="right:auto;left:64px;z-index:25;" onclick="showAlbums()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>
 </button>
@@ -678,6 +674,7 @@
     <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off">
     <button class="search-close" id="searchClose" aria-label="Zavřít">×</button>
   </div>
+  <div id="yearNav" style="display:flex;flex-wrap:wrap;gap:6px;padding:0 0 14px;"></div>
   <div class="search-results" id="searchResults"></div>
 </div>
 
@@ -1160,8 +1157,6 @@ function renderTimeline(){
   orderedIndices.push(centerIndex); // now (center)
   for (let i = centerIndex - 1; i >= 0; i--) orderedIndices.push(i); // past, nearest-past first (just below now)
 
-  let lastRenderedYear = null;
-
   orderedIndices.forEach((i) => {
     const ev = rawEvents[i];
     const isNow = i === centerIndex;
@@ -1196,11 +1191,6 @@ function renderTimeline(){
       </div>
     `;
     slot.dataset.idx = i;
-    const evYear = ev.start.getFullYear();
-    if(evYear !== lastRenderedYear){
-      slot.id = `timelineYear_${evYear}`;
-      lastRenderedYear = evYear;
-    }
     app.appendChild(slot);
   });
 
@@ -1331,7 +1321,48 @@ function renderResults(query){
 }
 
 let _scrollY = 0;
+function renderYearNav(){
+  const nav = document.getElementById('yearNav');
+  if(!nav) return;
+  const yearsWithEvents = new Set(rawEvents.map(e => e.start.getFullYear()));
+  nav.innerHTML = '';
+
+  for(let y = 2036; y >= 2010; y--){
+    const has = yearsWithEvents.has(y);
+    if(!has) continue; // zobraz jen roky s událostmi
+    const btn = document.createElement('button');
+    btn.textContent = y;
+    btn.style.cssText = `
+      background:var(--accent-soft);
+      border:1px solid rgba(60,180,80,0.35);
+      color:var(--accent);
+      font-family:'JetBrains Mono',monospace;
+      font-size:13px; font-weight:700;
+      padding:5px 12px; border-radius:100px;
+      cursor:pointer; letter-spacing:0.04em;
+    `;
+    btn.onclick = () => {
+      closeSearch();
+      // Najdi první událost daného roku
+      const app = document.getElementById('app');
+      const slots = Array.from(app.querySelectorAll('.slot'));
+      for(const slot of slots){
+        const idx = parseInt(slot.dataset.idx);
+        if(!isNaN(idx) && rawEvents[idx]?.start.getFullYear() === y){
+          app.style.scrollSnapType = 'none';
+          const offset = slot.offsetTop - (app.clientHeight/2) + (slot.offsetHeight/2);
+          app.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+          setTimeout(()=>{ app.style.scrollSnapType=''; }, 800);
+          break;
+        }
+      }
+    };
+    nav.appendChild(btn);
+  }
+}
+
 function openSearch(){
+  renderYearNav();
   _scrollY = window.scrollY || document.documentElement.scrollTop;
   document.body.style.position = 'fixed';
   document.body.style.top = `-${_scrollY}px`;
@@ -1440,78 +1471,7 @@ window.addEventListener('load', () => {
 });
 
 
-let allTimelineYears = [];
-for(let y=2036; y>=2010; y--) allTimelineYears.push(y);
 
-function showTimelineYearPicker(years, currentYear){
-  const existing = document.getElementById('yearPickerPopup');
-  if(existing) existing.remove();
-
-  // Roky kde jsou skutečné události
-  const yearsWithEvents = new Set(rawEvents.map(e => e.start.getFullYear()));
-
-  const popup = document.createElement('div');
-  popup.id = 'yearPickerPopup';
-  popup.style.cssText = `
-    position:fixed; z-index:200;
-    left:50%; top:50%;
-    transform:translate(-50%,-50%);
-    background:var(--card);
-    border:1px solid rgba(60,180,80,0.4);
-    border-radius:10px;
-    padding:16px 20px;
-    min-width:160px;
-    max-height:70vh;
-    overflow-y:auto;
-    box-shadow:0 8px 32px rgba(0,0,0,0.6);
-  `;
-
-  const title = document.createElement('div');
-  title.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;letter-spacing:0.1em;color:var(--muted);text-align:center;margin-bottom:12px;text-transform:uppercase;';
-  title.textContent = 'Přejít na rok';
-  popup.appendChild(title);
-
-  years.forEach(year => {
-    const hasEvents = yearsWithEvents.has(year);
-    const btn = document.createElement('button');
-    btn.textContent = year;
-    btn.style.cssText = `
-      display:block; width:100%; text-align:center;
-      background:${year==currentYear?'rgba(60,180,80,0.15)':'transparent'};
-      border:none; border-radius:6px;
-      color:${year==currentYear?'var(--accent)':hasEvents?'var(--ink)':'var(--muted)'};
-      font-family:'JetBrains Mono',monospace;
-      font-size:${hasEvents?'18px':'14px'}; font-weight:${hasEvents?'700':'400'};
-      padding:${hasEvents?'8px':'4px'}; cursor:${hasEvents?'pointer':'default'}; margin-bottom:2px;
-      letter-spacing:0.05em;
-      opacity:${hasEvents?'1':'0.35'};
-    `;
-    if(hasEvents) btn.onclick = () => {
-      popup.remove();
-      const target = document.getElementById('timelineYear_'+year);
-      if(target){
-        const appEl = document.getElementById('app');
-        appEl.style.scrollSnapType = 'none';
-        appEl.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
-        setTimeout(() => { appEl.style.scrollSnapType = ''; }, 800);
-      }
-    };
-    popup.appendChild(btn);
-  });
-
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '×';
-  closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;';
-  closeBtn.onclick = () => popup.remove();
-  popup.appendChild(closeBtn);
-
-  document.body.appendChild(popup);
-  setTimeout(() => {
-    document.addEventListener('click', function close(e){
-      if(!popup.contains(e.target)){ popup.remove(); document.removeEventListener('click',close); }
-    });
-  }, 100);
-}
 
 function showYearPicker(allYears, currentYear){
   const years = allYears.split(',');
