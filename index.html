@@ -1120,10 +1120,10 @@ function showEventDetail(idx){
           flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">Sdílet</button>
-        <button onclick="exportICS(rawEvents[${idx}])" style="
+        ${isFuture ? `<button onclick="exportICS(rawEvents[${idx}])" style="
           flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
-          padding:8px;border-radius:6px;cursor:pointer;">Do kalendáře</button>
+          padding:8px;border-radius:6px;cursor:pointer;">Do kalendáře</button>` : ''}
       </div>
     </div>
   `;
