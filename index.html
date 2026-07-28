@@ -1249,7 +1249,8 @@ async function fetchGoogleCalendarEvents(){
   }
 }
 
-fetchGoogleCalendarEvents();
+let calendarLoaded = false;
+fetchGoogleCalendarEvents().then(() => { calendarLoaded = true; });
 
 
 const searchBtn = document.getElementById('searchBtn');
@@ -1481,6 +1482,22 @@ function showYearPicker(allYears, currentYear){
 }
 
 function showAlbums(){
+  if(!calendarLoaded){
+    // Kalendář ještě načítá — počkej a zkus znovu
+    const loading = document.createElement('div');
+    loading.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+    loading.innerHTML = '<div style="font-family:JetBrains Mono,monospace;color:var(--accent);font-size:13px;">Načítám data…</div>';
+    document.body.appendChild(loading);
+    const wait = setInterval(() => {
+      if(calendarLoaded){ clearInterval(wait); loading.remove(); _showAlbumsModal(); }
+    }, 200);
+    setTimeout(() => { clearInterval(wait); loading.remove(); _showAlbumsModal(); }, 8000);
+    return;
+  }
+  _showAlbumsModal();
+}
+
+function _showAlbumsModal(){
   const curNow = new Date();
   const withAlbums = rawEvents
     .filter(ev => ev.photoAlbum && ev.end < curNow)
