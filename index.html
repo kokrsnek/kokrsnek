@@ -1276,12 +1276,15 @@ function renderTimeline(){
     const isHappeningNow = ev.start <= now && ev.end >= now;
 
     let eyebrowText;
-    if(isNow && isToday) eyebrowText = "Teď";
+    if(isNow && isToday) eyebrowText = "Žhavíme";
     else if(isNow && !isToday) eyebrowText = "Nadcházející";
     else if(isPast) eyebrowText = "Skončilo";
     else eyebrowText = fmtRelativeFuture(ev.start);
 
-    const countdown = (!isPast) ? `<span style="font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;">${getDaysText(ev)}</span>` : '';
+    const countdownStyle = isNow
+      ? `font-size:15.75px;color:#E53935;margin-left:6px;letter-spacing:0.04em;`
+      : `font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;`;
+    const countdown = (!isPast) ? `<span style="${countdownStyle}">${getDaysText(ev)}</span>` : '';
 
     slot.innerHTML = `
       <div class="card">
