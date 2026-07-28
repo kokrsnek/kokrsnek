@@ -1169,8 +1169,10 @@ function openYearPicker(years, currentYear){
       if(target){
         const appEl = document.getElementById('app');
         appEl.style.scrollSnapType = 'none';
-        // Oddělovač roku viditelný nahoře (offset 8px od vrchu)
-        appEl.scrollTo({top: target.offsetTop - 8, behavior:'smooth'});
+        // Oddělovač roku viditelný pod Dynamic Island
+        const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
+        const offset = Math.max(safeTop, 60);
+        appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
         setTimeout(() => appEl.style.scrollSnapType = '', 800);
       }
     };
