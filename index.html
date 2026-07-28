@@ -1151,6 +1151,7 @@ function openYearPicker(years, currentYear){
     const hasEvents = yearsSet.has(y);
     const btn = document.createElement('button');
     btn.textContent = y;
+    btn.id = `ypBtn_${y}`;
     btn.style.cssText = `display:block;width:100%;text-align:center;
       background:${y===currentYear?'rgba(77,191,106,0.15)':'transparent'};
       border:none;border-radius:6px;
@@ -1168,12 +1169,19 @@ function openYearPicker(years, currentYear){
       if(target){
         const appEl = document.getElementById('app');
         appEl.style.scrollSnapType = 'none';
+        // Oddělovač roku viditelný nahoře (offset 8px od vrchu)
         appEl.scrollTo({top: target.offsetTop - 8, behavior:'smooth'});
         setTimeout(() => appEl.style.scrollSnapType = '', 800);
       }
     };
     popup.appendChild(btn);
   });
+
+  // Vycentruj aktuální rok v pickeru
+  setTimeout(() => {
+    const activeBtn = document.getElementById(`ypBtn_${currentYear}`);
+    if(activeBtn) activeBtn.scrollIntoView({block:'center', behavior:'instant'});
+  }, 0);
 
   const x = document.createElement('button');
   x.textContent='×';
