@@ -1425,8 +1425,16 @@ function showAlbums(){
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
 
-  const rows = withAlbums.length
-    ? withAlbums.map(ev => `
+  let rows = '';
+  if(withAlbums.length){
+    let lastYear = null;
+    withAlbums.forEach(ev => {
+      const year = ev.start.getFullYear();
+      if(year !== lastYear){
+        rows += `<div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.15em;color:var(--muted);padding:14px 0 6px;border-top:${lastYear ? '1px solid rgba(60,180,80,0.15)' : 'none'};">${year}</div>`;
+        lastYear = year;
+      }
+      rows += `
         <div class="album-item" onclick="this.closest('.ev-modal-backdrop').remove();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
           <div class="album-dot" style="background:${getEventColor(ev)};"></div>
           <div class="album-info">
@@ -1434,13 +1442,16 @@ function showAlbums(){
             <div class="album-title">${ev.title}</div>
           </div>
           <div class="album-arrow">›</div>
-        </div>`).join('')
-    : `<div class="albums-empty">Zatím žádná fotoalba<br><small style="color:var(--muted);font-size:11px;">(${rawEvents.filter(e=>e.end<curNow).length} minulých událostí)</small></div>`;
+        </div>`;
+    });
+  } else {
+    rows = `<div class="albums-empty">Zatím žádná fotoalba<br><small style="color:var(--muted);font-size:11px;">(${rawEvents.filter(e=>e.end<curNow).length} minulých událostí)</small></div>`;
+  }
 
   backdrop.innerHTML = `
     <div class="ev-modal">
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title">Fotoalba</div>
+      <div class="ev-modal-title" style="text-align:center;">Fotoalba z akcí</div>
       ${rows}
     </div>`;
   document.body.appendChild(backdrop);
