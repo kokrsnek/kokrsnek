@@ -644,6 +644,10 @@
 
 
 <!-- Fixed UI outside h-wrap so transform doesn't affect them -->
+<button class="search-btn" id="yearBtn" aria-label="Vybrat rok" style="right:auto;left:110px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--accent);width:auto;padding:0 10px;border-radius:100px;" onclick="showTimelineYearPicker(allTimelineYears, new Date().getFullYear())">
+  rok
+</button>
+
 <button class="search-btn" id="albumsBtn" aria-label="Alba fotek" style="right:auto;left:64px;z-index:25;" onclick="showAlbums()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>
 </button>
@@ -1156,8 +1160,6 @@ function renderTimeline(){
   orderedIndices.push(centerIndex); // now (center)
   for (let i = centerIndex - 1; i >= 0; i--) orderedIndices.push(i); // past, nearest-past first (just below now)
 
-  // Sbírej všechny roky pro picker
-  const allTimelineYears = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
   let lastRenderedYear = null;
 
   orderedIndices.forEach((i) => {
@@ -1165,28 +1167,6 @@ function renderTimeline(){
     const isNow = i === centerIndex;
     const isPast = i < centerIndex;
     const kind = isNow ? "now" : (isPast ? "past" : "future");
-    const evYear = ev.start.getFullYear();
-
-    // Vložit oddělovač roku při změně
-    if(evYear !== lastRenderedYear){
-      const yearDiv = document.createElement('div');
-      yearDiv.id = `timelineYear_${evYear}`;
-      yearDiv.style.cssText = `
-        text-align:center;
-        font-family:'JetBrains Mono',monospace;
-        font-size:13px;letter-spacing:0.15em;
-        color:var(--muted);
-        padding:8px 0 4px;
-        cursor:pointer;user-select:none;
-      `;
-      yearDiv.textContent = `— ${evYear} —`;
-      yearDiv.onclick = () => showTimelineYearPicker(allTimelineYears, evYear);
-      app.appendChild(yearDiv);
-      lastRenderedYear = evYear;
-    }
-
-    const slot = document.createElement('div');
-    slot.className = `slot ${kind}`;
 
     const color = getEventColor(ev);
 
@@ -1216,6 +1196,11 @@ function renderTimeline(){
       </div>
     `;
     slot.dataset.idx = i;
+    const evYear = ev.start.getFullYear();
+    if(evYear !== lastRenderedYear){
+      slot.id = `timelineYear_${evYear}`;
+      lastRenderedYear = evYear;
+    }
     app.appendChild(slot);
   });
 
@@ -1455,9 +1440,15 @@ window.addEventListener('load', () => {
 });
 
 
+let allTimelineYears = [];
+for(let y=2036; y>=2010; y--) allTimelineYears.push(y);
+
 function showTimelineYearPicker(years, currentYear){
   const existing = document.getElementById('yearPickerPopup');
   if(existing) existing.remove();
+
+  // Roky kde jsou skutečné události
+  const yearsWithEvents = new Set(rawEvents.map(e => e.start.getFullYear()));
 
   const popup = document.createElement('div');
   popup.id = 'yearPickerPopup';
@@ -1470,6 +1461,8 @@ function showTimelineYearPicker(years, currentYear){
     border-radius:10px;
     padding:16px 20px;
     min-width:160px;
+    max-height:70vh;
+    overflow-y:auto;
     box-shadow:0 8px 32px rgba(0,0,0,0.6);
   `;
 
@@ -1478,21 +1471,22 @@ function showTimelineYearPicker(years, currentYear){
   title.textContent = 'Přejít na rok';
   popup.appendChild(title);
 
-  // Seřadit roky od nejnovějšího
-  [...years].sort((a,b)=>b-a).forEach(year => {
+  years.forEach(year => {
+    const hasEvents = yearsWithEvents.has(year);
     const btn = document.createElement('button');
     btn.textContent = year;
     btn.style.cssText = `
       display:block; width:100%; text-align:center;
       background:${year==currentYear?'rgba(60,180,80,0.15)':'transparent'};
       border:none; border-radius:6px;
-      color:${year==currentYear?'var(--accent)':'var(--ink)'};
+      color:${year==currentYear?'var(--accent)':hasEvents?'var(--ink)':'var(--muted)'};
       font-family:'JetBrains Mono',monospace;
-      font-size:18px; font-weight:700;
-      padding:8px; cursor:pointer; margin-bottom:4px;
+      font-size:${hasEvents?'18px':'14px'}; font-weight:${hasEvents?'700':'400'};
+      padding:${hasEvents?'8px':'4px'}; cursor:${hasEvents?'pointer':'default'}; margin-bottom:2px;
       letter-spacing:0.05em;
+      opacity:${hasEvents?'1':'0.35'};
     `;
-    btn.onclick = () => {
+    if(hasEvents) btn.onclick = () => {
       popup.remove();
       const target = document.getElementById('timelineYear_'+year);
       if(target){
