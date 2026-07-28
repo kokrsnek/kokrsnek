@@ -1156,11 +1156,34 @@ function renderTimeline(){
   orderedIndices.push(centerIndex); // now (center)
   for (let i = centerIndex - 1; i >= 0; i--) orderedIndices.push(i); // past, nearest-past first (just below now)
 
+  // Sbírej všechny roky pro picker
+  const allTimelineYears = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
+  let lastRenderedYear = null;
+
   orderedIndices.forEach((i) => {
     const ev = rawEvents[i];
     const isNow = i === centerIndex;
     const isPast = i < centerIndex;
     const kind = isNow ? "now" : (isPast ? "past" : "future");
+    const evYear = ev.start.getFullYear();
+
+    // Vložit oddělovač roku při změně
+    if(evYear !== lastRenderedYear){
+      const yearDiv = document.createElement('div');
+      yearDiv.id = `timelineYear_${evYear}`;
+      yearDiv.style.cssText = `
+        text-align:center;
+        font-family:'JetBrains Mono',monospace;
+        font-size:13px;letter-spacing:0.15em;
+        color:var(--muted);
+        padding:8px 0 4px;
+        cursor:pointer;user-select:none;
+      `;
+      yearDiv.textContent = `— ${evYear} —`;
+      yearDiv.onclick = () => showTimelineYearPicker(allTimelineYears, evYear);
+      app.appendChild(yearDiv);
+      lastRenderedYear = evYear;
+    }
 
     const slot = document.createElement('div');
     slot.className = `slot ${kind}`;
@@ -1431,6 +1454,70 @@ window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
 
+
+function showTimelineYearPicker(years, currentYear){
+  const existing = document.getElementById('yearPickerPopup');
+  if(existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'yearPickerPopup';
+  popup.style.cssText = `
+    position:fixed; z-index:200;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    background:var(--card);
+    border:1px solid rgba(60,180,80,0.4);
+    border-radius:10px;
+    padding:16px 20px;
+    min-width:160px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  `;
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;letter-spacing:0.1em;color:var(--muted);text-align:center;margin-bottom:12px;text-transform:uppercase;';
+  title.textContent = 'Přejít na rok';
+  popup.appendChild(title);
+
+  // Seřadit roky od nejnovějšího
+  [...years].sort((a,b)=>b-a).forEach(year => {
+    const btn = document.createElement('button');
+    btn.textContent = year;
+    btn.style.cssText = `
+      display:block; width:100%; text-align:center;
+      background:${year==currentYear?'rgba(60,180,80,0.15)':'transparent'};
+      border:none; border-radius:6px;
+      color:${year==currentYear?'var(--accent)':'var(--ink)'};
+      font-family:'JetBrains Mono',monospace;
+      font-size:18px; font-weight:700;
+      padding:8px; cursor:pointer; margin-bottom:4px;
+      letter-spacing:0.05em;
+    `;
+    btn.onclick = () => {
+      popup.remove();
+      const target = document.getElementById('timelineYear_'+year);
+      if(target){
+        const appEl = document.getElementById('app');
+        appEl.style.scrollSnapType = 'none';
+        appEl.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+        setTimeout(() => { appEl.style.scrollSnapType = ''; }, 800);
+      }
+    };
+    popup.appendChild(btn);
+  });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;';
+  closeBtn.onclick = () => popup.remove();
+  popup.appendChild(closeBtn);
+
+  document.body.appendChild(popup);
+  setTimeout(() => {
+    document.addEventListener('click', function close(e){
+      if(!popup.contains(e.target)){ popup.remove(); document.removeEventListener('click',close); }
+    });
+  }, 100);
+}
 
 function showYearPicker(allYears, currentYear){
   const years = allYears.split(',');
