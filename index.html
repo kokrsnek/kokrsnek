@@ -1206,8 +1206,8 @@ function renderTimeline(){
   orderedIndices.push(centerIndex); // now (center)
   for (let i = centerIndex - 1; i >= 0; i--) orderedIndices.push(i); // past, nearest-past first (just below now)
 
-  // Roky zastoupené v událostech
-  const yearsInTimeline = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
+  // Roky zastoupené v událostech — globálně pro onclick
+  window._yearsInTimeline = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
   let lastYear = null;
 
   orderedIndices.forEach((i) => {
@@ -1223,7 +1223,7 @@ function renderTimeline(){
       yd.id = `yr_${evYear}`;
       yd.style.cssText = 'text-align:center;font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:0.15em;color:var(--muted);padding:10px 0 4px;cursor:pointer;user-select:none;';
       yd.textContent = `— ${evYear} —`;
-      yd.onclick = () => openYearPicker(yearsInTimeline, evYear);
+      yd.onclick = () => openYearPicker(window._yearsInTimeline, evYear);
       app.appendChild(yd);
       lastYear = evYear;
     }
@@ -1249,7 +1249,7 @@ function renderTimeline(){
 
     slot.innerHTML = `
       <div class="card">
-        ${isNow ? `<div onclick="openYearPicker(yearsInTimeline,${evYear})" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.15em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
+        ${isNow ? `<div onclick="openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.15em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
         <div class="eyebrow"><span class="pip" style="background:${color};"></span>${eyebrowText}${countdown}</div>
         <div class="date-row">${fmtDateRange(ev)}</div>
         <div class="time-row">${fmtTimeRow(ev)}</div>
