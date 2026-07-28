@@ -814,15 +814,31 @@ function getDaysText(ev){
 // =====================================================
 async function shareEvent(ev){
   const r = ev.raw || {};
-  const link = r.htmlLink || '';
-  const textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}`;
+  const isPast = ev.end < now;
+
+  let textBase, shareUrl;
+
+  if(isPast){
+    // Minulé události — jen popis + případné fotky/soubory
+    const extras = [];
+    if(ev.photoAlbum) extras.push(ev.photoAlbum);
+    if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`${f.title}: ${f.url}`));
+    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n') : ''}`;
+    shareUrl = ev.photoAlbum || (ev.driveFiles?.[0]?.url) || undefined;
+  } else {
+    // Budoucí události — přidej odkaz na Google Calendar
+    const link = r.htmlLink || '';
+    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}`;
+    shareUrl = link || undefined;
+  }
+
   if(navigator.share){
     try{
-      await navigator.share({ title: ev.title, text: textBase, url: link || undefined });
+      await navigator.share({ title: ev.title, text: textBase, url: shareUrl });
       return;
     }catch(e){}
   }
-  await navigator.clipboard.writeText(textBase + (link ? '\n\n'+link : ''));
+  await navigator.clipboard.writeText(textBase + (shareUrl && !textBase.includes(shareUrl) ? '\n\n'+shareUrl : ''));
   const btn = document.getElementById('shareEvBtn');
   if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = 'Sdílet'; },2000); }
 }
