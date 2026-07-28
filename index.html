@@ -657,7 +657,9 @@
     var el=now;
     while(el && el!==app){top+=el.offsetTop;el=el.offsetParent;}
     var offset=top-(app.clientHeight/2)+(now.offsetHeight/2);
+    app.style.scrollSnapType='none';
     app.scrollTo({top:Math.max(0,offset),behavior:'smooth'});
+    setTimeout(()=>{ app.style.scrollSnapType=''; }, 800);
   });
 ">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
