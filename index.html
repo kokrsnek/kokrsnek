@@ -674,7 +674,6 @@
     <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off">
     <button class="search-close" id="searchClose" aria-label="Zavřít">×</button>
   </div>
-  <div id="yearNav" style="display:flex;flex-wrap:wrap;gap:6px;padding:0 0 14px;"></div>
   <div class="search-results" id="searchResults"></div>
 </div>
 
@@ -1102,14 +1101,6 @@ function showEventDetail(idx){
           Otevřít album
         </a>
       ` : ''}
-      ${ev.pdfAttachments && ev.pdfAttachments.length ? `
-        <div class="ev-modal-label">Dokumenty</div>
-        ${ev.pdfAttachments.map(pdf => `
-          <a class="ev-modal-link" href="${pdf.url}" target="_blank" rel="noopener" style="margin-bottom:6px;display:flex;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            ${pdf.title}
-          </a>`).join('')}
-      ` : ''}
       ${confLink ? `
         <div class="ev-modal-label">Online meeting</div>
         <a class="ev-modal-link" href="${confLink}" target="_blank" rel="noopener">Připojit se</a>
@@ -1162,6 +1153,9 @@ function renderTimeline(){
     const isNow = i === centerIndex;
     const isPast = i < centerIndex;
     const kind = isNow ? "now" : (isPast ? "past" : "future");
+
+    const slot = document.createElement('div');
+    slot.className = `slot ${kind}`;
 
     const color = getEventColor(ev);
 
@@ -1233,15 +1227,9 @@ async function fetchGoogleCalendarEvents(){
       const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
       const end   = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
       let photoAlbum = null;
-      let pdfAttachments = [];
       if(it.attachments){
         const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
         if(p) photoAlbum = p.fileUrl;
-        // PDF přílohy
-        pdfAttachments = it.attachments.filter(a =>
-          a.mimeType === 'application/pdf' ||
-          (a.fileUrl && a.fileUrl.includes('drive.google.com') && a.title && a.title.toLowerCase().endsWith('.pdf'))
-        ).map(a => ({ url: a.fileUrl, title: a.title || 'Dokument' }));
       }
       if(!photoAlbum && it.description){
         const clean = it.description.replace(/<[^>]+>/g, ' '); // strip HTML tags from description
@@ -1254,7 +1242,7 @@ async function fetchGoogleCalendarEvents(){
         const key = Object.keys(PHOTO_ALBUMS).find(k => k.trim().toLowerCase() === title.toLowerCase());
         if(key) photoAlbum = PHOTO_ALBUMS[key];
       }
-      return { start, end, title, place: it.location||'', photoAlbum, pdfAttachments, raw: it };
+      return { start, end, title, place: it.location||'', photoAlbum, raw: it };
     }).sort((a,b)=>a.start-b.start);
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
@@ -1321,48 +1309,7 @@ function renderResults(query){
 }
 
 let _scrollY = 0;
-function renderYearNav(){
-  const nav = document.getElementById('yearNav');
-  if(!nav) return;
-  const yearsWithEvents = new Set(rawEvents.map(e => e.start.getFullYear()));
-  nav.innerHTML = '';
-
-  for(let y = 2036; y >= 2010; y--){
-    const has = yearsWithEvents.has(y);
-    if(!has) continue; // zobraz jen roky s událostmi
-    const btn = document.createElement('button');
-    btn.textContent = y;
-    btn.style.cssText = `
-      background:var(--accent-soft);
-      border:1px solid rgba(60,180,80,0.35);
-      color:var(--accent);
-      font-family:'JetBrains Mono',monospace;
-      font-size:13px; font-weight:700;
-      padding:5px 12px; border-radius:100px;
-      cursor:pointer; letter-spacing:0.04em;
-    `;
-    btn.onclick = () => {
-      closeSearch();
-      // Najdi první událost daného roku
-      const app = document.getElementById('app');
-      const slots = Array.from(app.querySelectorAll('.slot'));
-      for(const slot of slots){
-        const idx = parseInt(slot.dataset.idx);
-        if(!isNaN(idx) && rawEvents[idx]?.start.getFullYear() === y){
-          app.style.scrollSnapType = 'none';
-          const offset = slot.offsetTop - (app.clientHeight/2) + (slot.offsetHeight/2);
-          app.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
-          setTimeout(()=>{ app.style.scrollSnapType=''; }, 800);
-          break;
-        }
-      }
-    };
-    nav.appendChild(btn);
-  }
-}
-
 function openSearch(){
-  renderYearNav();
   _scrollY = window.scrollY || document.documentElement.scrollTop;
   document.body.style.position = 'fixed';
   document.body.style.top = `-${_scrollY}px`;
@@ -1469,8 +1416,6 @@ function checkUpcomingNotifications(){
 window.addEventListener('load', () => {
   setTimeout(checkUpcomingNotifications, 2000);
 });
-
-
 
 
 function showYearPicker(allYears, currentYear){
