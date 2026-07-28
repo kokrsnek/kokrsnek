@@ -1105,6 +1105,16 @@ function showEventDetail(idx){
         <div class="ev-modal-label">Online meeting</div>
         <a class="ev-modal-link" href="${confLink}" target="_blank" rel="noopener">Připojit se</a>
       ` : ''}
+      ${ev.driveFiles && ev.driveFiles.length ? `
+        <div class="ev-modal-label">Soubory</div>
+        ${ev.driveFiles.map(f => {
+          const isPdf = f.mime === 'application/pdf' || f.title.toLowerCase().endsWith('.pdf');
+          const icon = isPdf
+            ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`
+            : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+          return `<a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${f.url.replace(/'/g,"\\'")}');" style="margin-bottom:6px;">${icon} ${f.title}</a>`;
+        }).join('')}
+      ` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
           flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
@@ -1171,7 +1181,7 @@ function openYearPicker(years, currentYear){
         appEl.style.scrollSnapType = 'none';
         // Oddělovač roku viditelný pod Dynamic Island
         const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
-        const offset = Math.max(safeTop, 60);
+        const offset = Math.max(safeTop, 30);
         appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
         setTimeout(() => appEl.style.scrollSnapType = '', 800);
       }
@@ -1312,22 +1322,31 @@ async function fetchGoogleCalendarEvents(){
       const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
       const end   = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
       let photoAlbum = null;
+      let driveFiles = [];
       if(it.attachments){
         const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
         if(p) photoAlbum = p.fileUrl;
+        // Všechny přílohy z Google Drive
+        driveFiles = it.attachments
+          .filter(a => a.fileUrl && !(/photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl)))
+          .map(a => ({
+            url: a.fileUrl,
+            title: a.title || 'Soubor',
+            mime: a.mimeType || '',
+            icon: a.iconLink || ''
+          }));
       }
       if(!photoAlbum && it.description){
-        const clean = it.description.replace(/<[^>]+>/g, ' '); // strip HTML tags from description
+        const clean = it.description.replace(/<[^>]+>/g, ' ');
         const m = clean.match(/https?:\/\/photos(?:\.app)?\.goo\.gl\/[^\s"'<>]+|https?:\/\/photos\.google\.com\/[^\s"'<>]+/);
         if(m) photoAlbum = m[0].replace(/&amp;/g,'&');
       }
       const title = (it.summary||'(bez názvu)').trim();
-      // Matching alba — case-insensitive, bez přebytečných mezer
       if(!photoAlbum){
         const key = Object.keys(PHOTO_ALBUMS).find(k => k.trim().toLowerCase() === title.toLowerCase());
         if(key) photoAlbum = PHOTO_ALBUMS[key];
       }
-      return { start, end, title, place: it.location||'', photoAlbum, raw: it };
+      return { start, end, title, place: it.location||'', photoAlbum, driveFiles, raw: it };
     }).sort((a,b)=>a.start-b.start);
     renderTimeline();
     setTimeout(checkUpcomingNotifications, 1000);
