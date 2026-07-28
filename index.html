@@ -1197,7 +1197,7 @@ function openYearPicker(years, currentYear){
         appEl.style.scrollSnapType = 'none';
         // Oddělovač roku viditelný pod Dynamic Island
         const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
-        const offset = Math.max(safeTop, 30) - target.offsetHeight;
+        const offset = Math.max(safeTop, 30) + target.offsetHeight;
         appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
         setTimeout(() => appEl.style.scrollSnapType = '', 800);
       }
