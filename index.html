@@ -1290,7 +1290,7 @@ function renderTimeline(){
     slot.innerHTML = `
       <div class="card">
         ${isNow ? `<div onclick="openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'JetBrains Mono',monospace;font-size:18px;letter-spacing:0.15em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
-        <div class="eyebrow"><span class="pip" style="background:${color};"></span>${eyebrowText}${countdown}</div>
+        <div class="eyebrow">${isNow ? '' : `<span class="pip" style="background:${color};"></span>`}${eyebrowText}${countdown}</div>
         <div class="date-row">${fmtDateRange(ev)}</div>
         <div class="time-row">${fmtTimeRow(ev)}</div>
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
