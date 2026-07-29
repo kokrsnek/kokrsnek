@@ -1081,7 +1081,13 @@ function showEventDetail(idx){
   rows.push({label:'Datum', value: fmtDateRange(ev)});
   if(!isMultiDay(ev)) rows.push({label:'Čas', value: fmtTime(ev.start, ev.end)});
 
-  if(ev.place) rows.push({label:'Místo', value: ev.place, isPlace: true});
+  if(ev.place){
+    // Zjisti jestli místo obsahuje URL na mapy
+    const urlMatch = ev.place.match(/https?:\/\/(?:maps\.app\.goo\.gl|maps\.google\.com|goo\.gl|www\.google\.com\/maps)[^\s]*/);
+    const mapUrl = urlMatch ? urlMatch[0] : null;
+    const placeLabel = ev.place.replace(urlMatch ? urlMatch[0] : '', '').trim() || 'Zobrazit místo';
+    rows.push({label:'Místo', value: placeLabel, mapUrl: mapUrl, isPlace: true});
+  }
 
   // Popis
   const desc = stripHtml(r.description);
@@ -1119,9 +1125,9 @@ function showEventDetail(idx){
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value" style="margin-bottom:8px;">${r.value}</div>
-        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
+        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
           <iframe
-            src="https://maps.google.com/maps?q=${encodeURIComponent(r.value)}&output=embed&hl=cs&zoom=14"
+            src="${r.mapUrl ? r.mapUrl.replace(/\?.*/, '')+'?output=embed&hl=cs' : `https://maps.google.com/maps?q=${encodeURIComponent(r.value)}&output=embed&hl=cs&zoom=14`}"
             width="100%" height="160" style="border:0;display:block;pointer-events:none;"
             loading="lazy">
           </iframe>
@@ -1349,7 +1355,7 @@ function renderTimeline(){
         <div class="date-row">${fmtDateRange(ev)}</div>
         <div class="time-row">${fmtTimeRow(ev)}</div>
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
-        ${ev.place ? `<div class="place-row">${ev.place}</div>` : ``}
+        ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
         ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
         ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       </div>
