@@ -1094,8 +1094,10 @@ function showEventDetail(idx){
   if(desc) rows.push({label:'Popis', value: desc});
 
   // Organizátor
-  if(r.organizer && r.organizer.displayName) rows.push({label:'Organizátor', value: r.organizer.displayName});
-  else if(r.organizer && r.organizer.email) rows.push({label:'Organizátor', value: r.organizer.email});
+  if(r.organizer && r.organizer.displayName && r.organizer.displayName !== r.organizer.email)
+    rows.push({label:'Organizátor', value: r.organizer.displayName});
+  else if(r.organizer)
+    rows.push({label:'Organizátor', value: 'KoKrŠNeK v.t.s.'});
 
   // Účastníci
   if(r.attendees && r.attendees.length){
