@@ -1604,8 +1604,69 @@ function checkUpcomingNotifications(){
 }
 
 window.addEventListener('load', () => {
-  setTimeout(checkUpcomingNotifications, 2000);
+  // Welcome screen pro betatest — zobrazí se jednou za sezení
+  if(!sessionStorage.getItem('welcomeShown')){
+    sessionStorage.setItem('welcomeShown','1');
+    showWelcome();
+  } else {
+    setTimeout(checkUpcomingNotifications, 2000);
+  }
 });
+
+function showWelcome(){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.style.zIndex = '300';
+
+  let countdown = 10;
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="max-height:85vh;text-align:left;">
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:4px;">Vítej v KoKrŠNeK!</div>
+      <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;">Přehled funkcí aplikace</div>
+
+      ${[
+        ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
+        ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
+        ['🔍','Vyhledávání','Tlačítko lupy — hledej podle názvu nebo místa.'],
+        ['🏠','Domečkové tlačítko','Vrátí na aktuální událost a znovu načte kalendář.'],
+        ['📷','Fotoalba','Tlačítko fotek — všechna alba seřazená podle roku.'],
+        ['🔒','Ochrana alb a souborů','Přístup chráněn tajnou otázkou o šerifovi.'],
+        ['!','Report chyb','Červené tlačítko — pošli nám zprávu pokud něco nefunguje.'],
+        ['🔔','Notifikace','Při otevření appky dostaneš upozornění 5 dní před událostí.'],
+        ['🎂','Výročí','Při výročí minulé události se zobrazí připomínka.'],
+      ].map(([icon,title,desc])=>`
+        <div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;">
+          <div style="font-size:16px;min-width:28px;text-align:center;padding-top:1px;">${icon}</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;">${title}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5;">${desc}</div>
+          </div>
+        </div>
+      `).join('')}
+
+      <button id="welcomeCloseBtn" onclick="document.getElementById('welcomeOverlay').remove();checkUpcomingNotifications();" style="
+        display:block;width:100%;margin-top:8px;
+        background:var(--accent);border:none;color:#000;
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;font-weight:700;
+      ">Rozumím · zavřít (<span id="welcomeCount">10</span>s)</button>
+    </div>`;
+  backdrop.id = 'welcomeOverlay';
+  document.body.appendChild(backdrop);
+
+  // Odpočet a auto-zavření po 10 sekundách
+  const timer = setInterval(() => {
+    countdown--;
+    const el = document.getElementById('welcomeCount');
+    if(el) el.textContent = countdown;
+    if(countdown <= 0){
+      clearInterval(timer);
+      const overlay = document.getElementById('welcomeOverlay');
+      if(overlay) overlay.remove();
+      setTimeout(checkUpcomingNotifications, 500);
+    }
+  }, 1000);
+}
 
 
 function showYearPicker(allYears, currentYear){
