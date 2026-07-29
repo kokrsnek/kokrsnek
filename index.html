@@ -1090,7 +1090,7 @@ function showEventDetail(idx){
   }
 
   // Popis
-  const desc = stripHtml(r.description);
+  const desc = stripHtml(r.description).replace(/https?:\/\/photos(?:\.app)?\.goo\.gl\/\S+/g,'').replace(/https?:\/\/photos\.google\.com\/\S+/g,'').trim();
   if(desc) rows.push({label:'Popis', value: desc});
 
   // Organizátor
@@ -1126,11 +1126,13 @@ function showEventDetail(idx){
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value" style="margin-bottom:8px;">${r.value}</div>
         <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
-          <iframe
-            src="${r.mapUrl ? r.mapUrl.replace(/\?.*/, '')+'?output=embed&hl=cs' : `https://maps.google.com/maps?q=${encodeURIComponent(r.value)}&output=embed&hl=cs&zoom=14`}"
-            width="100%" height="160" style="border:0;display:block;pointer-events:none;"
-            loading="lazy">
-          </iframe>
+          <img
+            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_API_KEY}"
+            style="width:100%;display:block;border-radius:8px;"
+            loading="lazy"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          >
+          <div style="display:none;align-items:center;justify-content:center;height:80px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;">Otevřít v Mapách →</div>
         </a>
       ` : `
         <div class="ev-modal-label">${r.label}</div>
