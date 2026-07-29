@@ -1081,7 +1081,7 @@ function showEventDetail(idx){
   rows.push({label:'Datum', value: fmtDateRange(ev)});
   if(!isMultiDay(ev)) rows.push({label:'Čas', value: fmtTime(ev.start, ev.end)});
 
-  if(ev.place) rows.push({label:'Místo', value: ev.place});
+  if(ev.place) rows.push({label:'Místo', value: ev.place, isPlace: true});
 
   // Popis
   const desc = stripHtml(r.description);
@@ -1116,7 +1116,17 @@ function showEventDetail(idx){
         <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
         <div class="ev-modal-title" style="margin-bottom:0;">${ev.title}</div>
       </div>
-      ${rows.map(r=>`
+      ${rows.map(r=> r.isPlace ? `
+        <div class="ev-modal-label">${r.label}</div>
+        <div class="ev-modal-value" style="margin-bottom:8px;">${r.value}</div>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
+          <iframe
+            src="https://maps.google.com/maps?q=${encodeURIComponent(r.value)}&output=embed&hl=cs&zoom=14"
+            width="100%" height="160" style="border:0;display:block;pointer-events:none;"
+            loading="lazy">
+          </iframe>
+        </a>
+      ` : `
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
