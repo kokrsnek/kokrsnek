@@ -1130,7 +1130,7 @@ function showEventDetail(idx){
         <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
         <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(77,191,106,0.3);">
           <img
-            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_API_KEY}"
+            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_MAPS_KEY}"
             style="width:100%;display:block;"
             loading="lazy"
             onerror="this.parentElement.style.display='none';"
@@ -1388,6 +1388,7 @@ const PHOTO_ALBUMS = {
 };
 // =====================================================
 const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
+const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(){
