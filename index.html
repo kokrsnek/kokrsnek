@@ -1128,6 +1128,14 @@ function showEventDetail(idx){
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
+        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(77,191,106,0.3);">
+          <img
+            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_API_KEY}"
+            style="width:100%;display:block;"
+            loading="lazy"
+            onerror="this.parentElement.style.display='none';"
+          >
+        </a>
         <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="
           display:flex;align-items:center;justify-content:center;gap:8px;
           background:var(--accent-soft);border:1px solid rgba(77,191,106,0.35);
