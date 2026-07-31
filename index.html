@@ -1127,15 +1127,16 @@ function showEventDetail(idx){
       </div>
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
-        <div class="ev-modal-value" style="margin-bottom:8px;">${r.value}</div>
-        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
-          <img
-            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_API_KEY}"
-            style="width:100%;display:block;border-radius:8px;"
-            loading="lazy"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-          >
-          <div style="display:none;align-items:center;justify-content:center;height:80px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;">Otevřít v Mapách →</div>
+        <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
+        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="
+          display:flex;align-items:center;justify-content:center;gap:8px;
+          background:var(--accent-soft);border:1px solid rgba(77,191,106,0.35);
+          border-radius:8px;padding:12px;margin-bottom:6px;
+          color:var(--accent);font-family:'JetBrains Mono',monospace;
+          font-size:13px;text-decoration:none;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Otevřít v Mapách
         </a>
       ` : `
         <div class="ev-modal-label">${r.label}</div>
