@@ -1606,29 +1606,7 @@ function checkUpcomingNotifications(){
 
 
 
-      <button id="welcomeCloseBtn" onclick="document.getElementById('welcomeOverlay').remove();checkUpcomingNotifications();" style="
-        display:block;width:100%;margin-top:8px;
-        background:var(--accent);border:none;color:#000;
-        font-family:'JetBrains Mono',monospace;font-size:13px;
-        padding:10px;border-radius:6px;cursor:pointer;font-weight:700;
-      ">Rozumím · zavřít (<span id="welcomeCount">10</span>s)</button>
-    </div>`;
-  backdrop.id = 'welcomeOverlay';
-  document.body.appendChild(backdrop);
 
-  // Odpočet a auto-zavření po 10 sekundách
-  const timer = setInterval(() => {
-    countdown--;
-    const el = document.getElementById('welcomeCount');
-    if(el) el.textContent = countdown;
-    if(countdown <= 0){
-      clearInterval(timer);
-      const overlay = document.getElementById('welcomeOverlay');
-      if(overlay) overlay.remove();
-      setTimeout(checkUpcomingNotifications, 500);
-    }
-  }, 1000);
-}
 
 
 function showYearPicker(allYears, currentYear){
