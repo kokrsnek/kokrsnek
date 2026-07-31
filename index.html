@@ -1744,7 +1744,6 @@ document.getElementById('albumsBtn').addEventListener('click', showAlbums);
 document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
 
 function showWelcome(){
-  alert('showWelcome zavolana');
   var features = [
     ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
     ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
@@ -1794,11 +1793,15 @@ function showWelcome(){
   }, 1000);
 }
 
-window.addEventListener('load', function(){ showWelcome(); });
-
+// iOS PWA - window.load může být blokován, použij DOMContentLoaded i přímé volání
+if(document.readyState === 'complete' || document.readyState === 'interactive'){
+  setTimeout(showWelcome, 400);
+} else {
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(showWelcome, 400); });
+  window.addEventListener('load', function(){ showWelcome(); });
+}
 
 renderTimeline();
-setTimeout(showWelcome, 300);
 </script>
 </body>
 </html>
