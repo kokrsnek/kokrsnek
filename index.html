@@ -672,7 +672,7 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
 </button>
 
-<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="showFeedback()">
+<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="localStorage.getItem('welcomeSeen') ? showFeedback() : (localStorage.setItem('welcomeSeen','1'), showWelcome())">
   <svg viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 </button>
 
@@ -1744,6 +1744,7 @@ document.getElementById('albumsBtn').addEventListener('click', showAlbums);
 document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
 
 function showWelcome(){
+  if(document.getElementById('welcomeOverlay')) return;
   var features = [
     ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
     ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
@@ -1765,43 +1766,23 @@ function showWelcome(){
       + '</div></div>';
   }
   var backdrop = document.createElement('div');
-  backdrop.className = 'ev-modal-backdrop';
-  backdrop.style.zIndex = '300';
   backdrop.id = 'welcomeOverlay';
-  backdrop.innerHTML = '<div class="ev-modal" style="max-height:85vh;">'
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  backdrop.innerHTML = '<div style="background:#0F1117;border:1px solid rgba(60,180,80,0.4);border-radius:12px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;padding:24px 22px 20px;position:relative;">'
+    + '<button id="welcomeCloseBtn" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px;">×</button>'
     + '<div class="ev-modal-title" style="text-align:center;margin-bottom:4px;">Vítej v KoKrŠNeK!</div>'
     + '<div style="text-align:center;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">Přehled funkcí aplikace</div>'
     + rows
-    + '<button id="welcomeCloseBtn" style="display:block;width:100%;margin-top:8px;background:var(--accent);border:none;color:#000;font-family:JetBrains Mono,monospace;font-size:13px;padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">Rozumím &middot; zavřít (<span id="welcomeCount">10</span>s)</button>'
+    + '<button id="welcomeCloseBtn2" style="display:block;width:100%;margin-top:8px;background:var(--accent);border:none;color:#000;font-family:JetBrains Mono,monospace;font-size:13px;padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">Rozumím</button>'
     + '</div>';
   document.body.appendChild(backdrop);
-  document.getElementById('welcomeCloseBtn').addEventListener('click', function(){
-    document.getElementById('welcomeOverlay').remove();
-    checkUpcomingNotifications();
-  });
-  var countdown = 10;
-  var timer = setInterval(function(){
-    countdown--;
-    var el = document.getElementById('welcomeCount');
-    if(el) el.textContent = countdown;
-    if(countdown <= 0){
-      clearInterval(timer);
-      var ov = document.getElementById('welcomeOverlay');
-      if(ov) ov.remove();
-      setTimeout(checkUpcomingNotifications, 500);
-    }
-  }, 1000);
+  function closeWelcome(){ var ov = document.getElementById('welcomeOverlay'); if(ov) ov.remove(); }
+  backdrop.addEventListener('click', function(e){ if(e.target === backdrop) closeWelcome(); });
+  document.getElementById('welcomeCloseBtn').addEventListener('click', closeWelcome);
+  document.getElementById('welcomeCloseBtn2').addEventListener('click', closeWelcome);
 }
 
-// iOS PWA - window.load může být blokován, použij DOMContentLoaded i přímé volání
-if(document.readyState === 'complete' || document.readyState === 'interactive'){
-  setTimeout(showWelcome, 400);
-} else {
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(showWelcome, 400); });
-  window.addEventListener('load', function(){ showWelcome(); });
-}
 
-renderTimeline();
 </script>
 </body>
 </html>
