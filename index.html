@@ -672,7 +672,7 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
 </button>
 
-<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="localStorage.getItem('welcomeSeen') ? showFeedback() : (localStorage.setItem('welcomeSeen','1'), showWelcome())">
+<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="showFeedback()">
   <svg viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 </button>
 
@@ -1083,33 +1083,11 @@ function showEventDetail(idx){
   if(!isMultiDay(ev)) rows.push({label:'Čas', value: fmtTime(ev.start, ev.end)});
 
   if(ev.place){
+    // Zjisti jestli místo obsahuje URL na mapy
     const urlMatch = ev.place.match(/https?:\/\/(?:maps\.app\.goo\.gl|maps\.google\.com|goo\.gl|www\.google\.com\/maps)[^\s]*/);
     const mapUrl = urlMatch ? urlMatch[0] : null;
-
-    // Detekce desetinných GPS (49.2345, 16.6789)
-    let gpsCoords = null;
-    const decMatch = ev.place.match(/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/);
-    if(decMatch) gpsCoords = `${decMatch[1]},${decMatch[2]}`;
-
-    // Detekce DMS formátu (49°25'57.7"N 16°37'21.3"E)
-    if(!gpsCoords){
-      const dmsMatch = ev.place.match(/(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([NS])[,\s]+(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([EW])/i);
-      if(dmsMatch){
-        let lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600;
-        let lng = parseInt(dmsMatch[5]) + parseInt(dmsMatch[6])/60 + parseFloat(dmsMatch[7])/3600;
-        if(dmsMatch[4].toUpperCase()==='S') lat = -lat;
-        if(dmsMatch[8].toUpperCase()==='W') lng = -lng;
-        gpsCoords = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-      }
-    }
-
-    const placeLabel = ev.place
-      .replace(urlMatch ? urlMatch[0] : '', '')
-      .replace(/\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[NSns][,\s]+\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[EWew]/, '')
-      .replace(decMatch ? decMatch[0] : '', '')
-      .trim() || 'Zobrazit místo';
-
-    rows.push({label:'Místo', value: placeLabel, mapUrl, gpsCoords, isPlace: true});
+    const placeLabel = ev.place.replace(urlMatch ? urlMatch[0] : '', '').trim() || 'Zobrazit místo';
+    rows.push({label:'Místo', value: placeLabel, mapUrl: mapUrl, isPlace: true});
   }
 
   // Popis
@@ -1149,25 +1127,15 @@ function showEventDetail(idx){
       </div>
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
-        <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
-        ${!r.mapUrl ? `
-        <a href="${r.gpsCoords ? `https://www.google.com/maps/search/?api=1&query=${r.gpsCoords}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(77,191,106,0.3);">
+        <div class="ev-modal-value" style="margin-bottom:8px;">${r.value}</div>
+        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
           <img
-            src="https://maps.googleapis.com/maps/api/staticmap?center=${r.gpsCoords || encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${r.gpsCoords || encodeURIComponent(r.value)}&key=${GOOGLE_MAPS_KEY}"
-            style="width:100%;display:block;"
+            src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${encodeURIComponent(r.value)}&key=${GOOGLE_API_KEY}"
+            style="width:100%;display:block;border-radius:8px;"
             loading="lazy"
-            onerror="this.parentElement.style.display='none';"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
           >
-        </a>` : ''}
-        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="
-          display:flex;align-items:center;justify-content:center;gap:8px;
-          background:var(--accent-soft);border:1px solid rgba(77,191,106,0.35);
-          border-radius:8px;padding:12px;margin-bottom:6px;
-          color:var(--accent);font-family:'JetBrains Mono',monospace;
-          font-size:13px;text-decoration:none;
-        ">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Otevřít v Mapách
+          <div style="display:none;align-items:center;justify-content:center;height:80px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;">Otevřít v Mapách →</div>
         </a>
       ` : `
         <div class="ev-modal-label">${r.label}</div>
@@ -1411,7 +1379,6 @@ const PHOTO_ALBUMS = {
 };
 // =====================================================
 const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
-const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(){
@@ -1636,10 +1603,65 @@ function checkUpcomingNotifications(){
   }
 }
 
+function showWelcome(){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.style.zIndex = '300';
+
+  let countdown = 10;
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="max-height:85vh;text-align:left;">
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:4px;">Vítej v KoKrŠNeK!</div>
+      <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;">Přehled funkcí aplikace</div>
+
+      ${[
+        ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
+        ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
+        ['🔍','Vyhledávání','Tlačítko lupy — hledej podle názvu nebo místa.'],
+        ['🏠','Domečkové tlačítko','Vrátí na aktuální událost a znovu načte kalendář.'],
+        ['📷','Fotoalba','Tlačítko fotek — všechna alba seřazená podle roku.'],
+        ['🔒','Ochrana alb a souborů','Přístup chráněn tajnou otázkou o šerifovi.'],
+        ['!','Report chyb','Červené tlačítko — pošli nám zprávu pokud něco nefunguje.'],
+        ['🔔','Notifikace','Při otevření appky dostaneš upozornění 5 dní před událostí.'],
+        ['🎂','Výročí','Při výročí minulé události se zobrazí připomínka.'],
+      ].map(([icon,title,desc])=>`
+        <div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;">
+          <div style="font-size:16px;min-width:28px;text-align:center;padding-top:1px;">${icon}</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;">${title}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5;">${desc}</div>
+          </div>
+        </div>
+      `).join('')}
+
+window.addEventListener('load', () => {
+  showWelcome();
+});
 
 
+      <button id="welcomeCloseBtn" onclick="document.getElementById('welcomeOverlay').remove();checkUpcomingNotifications();" style="
+        display:block;width:100%;margin-top:8px;
+        background:var(--accent);border:none;color:#000;
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;font-weight:700;
+      ">Rozumím · zavřít (<span id="welcomeCount">10</span>s)</button>
+    </div>`;
+  backdrop.id = 'welcomeOverlay';
+  document.body.appendChild(backdrop);
 
-
+  // Odpočet a auto-zavření po 10 sekundách
+  const timer = setInterval(() => {
+    countdown--;
+    const el = document.getElementById('welcomeCount');
+    if(el) el.textContent = countdown;
+    if(countdown <= 0){
+      clearInterval(timer);
+      const overlay = document.getElementById('welcomeOverlay');
+      if(overlay) overlay.remove();
+      setTimeout(checkUpcomingNotifications, 500);
+    }
+  }, 1000);
+}
 
 
 function showYearPicker(allYears, currentYear){
@@ -1776,45 +1798,7 @@ function _showAlbumsModal(){
 document.getElementById('albumsBtn').addEventListener('click', showAlbums);
 document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e.preventDefault(); showAlbums(); });
 
-function showWelcome(){
-  if(document.getElementById('welcomeOverlay')) return;
-  var features = [
-    ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
-    ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
-    ['🔍','Vyhledávání','Tlačítko lupy — hledej podle názvu nebo místa.'],
-    ['🏠','Domeček','Vrátí na aktuální událost a znovu načte kalendář.'],
-    ['📷','Fotoalba','Tlačítko fotek — všechna alba seřazená podle roku.'],
-    ['🔒','Ochrana','Přístup chráněn tajnou otázkou o šerifovi.'],
-    ['!','Report chyb','Červené tlačítko — pošli zprávu pokud něco nefunguje.'],
-    ['🔔','Notifikace','Upozornění 5 dní před událostí při otevření appky.'],
-    ['🎂','Výročí','Připomínka výročí minulých událostí.']
-  ];
-  var rows = '';
-  for(var i=0;i<features.length;i++){
-    rows += '<div style="margin-bottom:14px;">'
-      + '<div style="text-align:left;">'
-      + '<div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;">' + features[i][1] + '</div>'
-      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);line-height:1.5;">' + features[i][2] + '</div>'
-      + '</div>';
-  }
-  var backdrop = document.createElement('div');
-  backdrop.id = 'welcomeOverlay';
-  backdrop.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
-  backdrop.innerHTML = '<div style="background:#0F1117;border:1px solid rgba(60,180,80,0.4);border-radius:12px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;padding:24px 22px 20px;position:relative;">'
-    + '<button id="welcomeCloseBtn" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px;">×</button>'
-    + '<div class="ev-modal-title" style="text-align:center;margin-bottom:4px;">Vítej u KoKrŠNeKů!</div>'
-    + '<div style="text-align:center;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">Přehled funkcí aplikace</div>'
-    + rows
-    + '<button id="welcomeCloseBtn2" style="display:block;width:100%;margin-top:8px;background:var(--accent);border:none;color:#000;font-family:JetBrains Mono,monospace;font-size:13px;padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">Rozumím</button>'
-    + '</div>';
-  document.body.appendChild(backdrop);
-  function closeWelcome(){ var ov = document.getElementById('welcomeOverlay'); if(ov) ov.remove(); }
-  backdrop.addEventListener('click', function(e){ if(e.target === backdrop) closeWelcome(); });
-  document.getElementById('welcomeCloseBtn').addEventListener('click', closeWelcome);
-  document.getElementById('welcomeCloseBtn2').addEventListener('click', closeWelcome);
-}
-
-
+renderTimeline();
 </script>
 </body>
 </html>
