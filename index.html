@@ -1112,10 +1112,13 @@ function showEventDetail(idx){
       }
     }
 
-    // Lookup pro známá místa
+    // Lookup pro známá místa — projdi každé slovo
     if(!gpsCoords && !mapUrl){
-      const key = ev.place.trim().toLowerCase().replace(/[^a-záčďéěíňóřšťůúýžа-я]/gi,'').split(' ')[0];
-      if(KNOWN_PLACES[key]) gpsCoords = KNOWN_PLACES[key];
+      const words = ev.place.trim().toLowerCase().split(/\s+/);
+      for(const word of words){
+        const clean = word.replace(/[^a-záčďéěíňóřšťůúýž]/g, '');
+        if(KNOWN_PLACES[clean]){ gpsCoords = KNOWN_PLACES[clean]; break; }
+      }
     }
 
     const placeLabel = ev.place
