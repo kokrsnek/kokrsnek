@@ -1085,7 +1085,8 @@ function showEventDetail(idx){
   if(ev.place){
     // Lookup tabulka pro známá místa
     const KNOWN_PLACES = {
-      'bouda': '49.432694,16.622583',
+      'bouda':    '49.432694,16.622583',
+      'hastrman': '49.463861,16.496667',
     };
 
     const urlMatch = ev.place.match(/https?:\/\/(?:maps\.app\.goo\.gl|maps\.google\.com|goo\.gl|www\.google\.com\/maps)[^\s]*/);
@@ -1161,24 +1162,13 @@ function showEventDetail(idx){
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
-        ${!r.mapUrl ? `
-        <a href="${r.gpsCoords ? `https://www.google.com/maps/search/?api=1&query=${r.gpsCoords}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(77,191,106,0.3);">
-          <img
-            src="https://maps.googleapis.com/maps/api/staticmap?center=${r.gpsCoords || encodeURIComponent(r.value)}&zoom=14&size=600x240&scale=2&markers=color:red%7C${r.gpsCoords || encodeURIComponent(r.value)}&key=${GOOGLE_MAPS_KEY}"
+        <a href="${r.mapUrl || (r.gpsCoords ? `https://www.google.com/maps/search/?api=1&query=${r.gpsCoords}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`)}" target="_blank" rel="noopener" style="display:block;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(77,191,106,0.3);">
+          ${(!r.mapUrl && (r.gpsCoords || r.value)) ? `<img
+            src="https://maps.googleapis.com/maps/api/staticmap?center=${r.gpsCoords || encodeURIComponent(r.value)}&zoom=15&size=600x240&scale=2&markers=color:red%7C${r.gpsCoords || encodeURIComponent(r.value)}&key=${GOOGLE_MAPS_KEY}"
             style="width:100%;display:block;"
             loading="lazy"
             onerror="this.parentElement.style.display='none';"
-          >
-        </a>` : ''}
-        <a href="${r.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.value)}`}" target="_blank" rel="noopener" style="
-          display:flex;align-items:center;justify-content:center;gap:8px;
-          background:var(--accent-soft);border:1px solid rgba(77,191,106,0.35);
-          border-radius:8px;padding:12px;margin-bottom:6px;
-          color:var(--accent);font-family:'JetBrains Mono',monospace;
-          font-size:13px;text-decoration:none;
-        ">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Otevřít v Mapách
+          >` : `<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Otevřít v Mapách</div>`}
         </a>
       ` : `
         <div class="ev-modal-label">${r.label}</div>
