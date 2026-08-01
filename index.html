@@ -1401,7 +1401,7 @@ function renderTimeline(){
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
         ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
-        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
+        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Fotoalbum</a>` : ``}
       </div>
     `;
     slot.dataset.idx = i;
