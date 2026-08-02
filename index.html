@@ -1917,7 +1917,9 @@ async function showLikers(evIdx, key){
     ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo nelajkoval</div>'
     : snap.docs.map(d => {
         const data = d.data();
-        const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        const time = data.at
+          ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+          : '';
         return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.1);font-family:'JetBrains Mono',monospace;">
           <span style="font-size:13px;color:var(--accent);font-weight:700;">❤️ ${d.id}</span>
           <span style="font-size:11px;color:var(--muted);">${time}</span>
