@@ -700,6 +700,17 @@
 
 
 <script>
+// Firebase inicializace — musí být první
+const firebaseConfig = {
+  apiKey: "AIzaSyDnWBkXpnGCSPMKPrbroJtP2QVt48YtURw",
+  authDomain: "kokrsnek-4bdc7.firebaseapp.com",
+  projectId: "kokrsnek-4bdc7",
+  storageBucket: "kokrsnek-4bdc7.firebasestorage.app",
+  messagingSenderId: "1079843186893",
+  appId: "1:1079843186893:web:b826958d3884ea34412184"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
 const DAYS = ["ne","po","út","st","čt","pá","so"];
 
@@ -1827,16 +1838,6 @@ window.addEventListener('load', function(){ showWelcome(); });
 // =====================================================
 // FIREBASE — lajky a komentáře
 // =====================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDnWBkXpnGCSPMKPrbroJtP2QVt48YtURw",
-  authDomain: "kokrsnek-4bdc7.firebaseapp.com",
-  projectId: "kokrsnek-4bdc7",
-  storageBucket: "kokrsnek-4bdc7.firebasestorage.app",
-  messagingSenderId: "1079843186893",
-  appId: "1:1079843186893:web:b826958d3884ea34412184"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
 function getUserName(){
   let name = localStorage.getItem('kokrsnekUser');
