@@ -455,10 +455,8 @@
     position:fixed; inset:0; z-index:60;
     background:rgba(0,0,0,0.75);
     backdrop-filter:blur(3px);
-    display:flex; align-items:flex-start; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     padding:20px;
-    padding-top:max(20px, env(safe-area-inset-top));
-    overflow-y:auto;
     animation: fadeIn .2s ease;
   }
   @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
@@ -1230,16 +1228,13 @@ function showEventDetail(idx){
         <div id="commentList_${idx}" style="max-height:180px;overflow-y:auto;margin:8px 0;font-family:'JetBrains Mono',monospace;">
           <div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Načítám…</div>
         </div>
-        <div style="display:flex;gap:6px;">
-          <input id="commentInput_${idx}" type="text" placeholder="Napiš komentář…" style="
-            flex:1;background:var(--card);border:1px solid rgba(77,191,106,0.3);
-            color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:13px;
-            padding:8px 10px;border-radius:6px;outline:none;">
-          <button onclick="postComment(${idx})" style="
-            background:var(--accent);border:none;color:#000;
-            font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
-            padding:8px 14px;border-radius:6px;cursor:pointer;">↑</button>
-        </div>
+        <button onclick="openCommentEditor(${idx},'${getEventKey(rawEvents[${idx}])}')" style="
+          display:block;width:100%;
+          background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
+          color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;
+          padding:10px;border-radius:6px;cursor:pointer;text-align:left;">
+          ✏️ Napiš komentář…
+        </button>
       </div>
     </div>
   `;
@@ -1258,32 +1253,6 @@ function showEventDetail(idx){
   const fbKey = getEventKey(ev);
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
-
-  // iOS: přizpůsob modal výšce viewportu při otevření klávesnice
-  setTimeout(() => {
-    const modal = backdrop.querySelector('.ev-modal');
-    const inputs = backdrop.querySelectorAll('input[type="text"], textarea');
-    inputs.forEach(inp => {
-      inp.addEventListener('focus', () => {
-        if(window.visualViewport){
-          const availH = window.visualViewport.height - 20;
-          if(modal) modal.style.maxHeight = availH + 'px';
-          setTimeout(() => inp.scrollIntoView({behavior:'smooth', block:'end'}), 300);
-        }
-      });
-      inp.addEventListener('blur', () => {
-        if(modal) modal.style.maxHeight = '';
-      });
-    });
-    if(window.visualViewport){
-      window.visualViewport.addEventListener('resize', () => {
-        const availH = window.visualViewport.height - 20;
-        if(document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA')){
-          if(modal) modal.style.maxHeight = availH + 'px';
-        }
-      });
-    }
-  }, 100);
   refreshComments(idx, fbKey);
 
   // Long press na like button = zobraz kdo lajkoval
@@ -1993,6 +1962,64 @@ async function refreshLikes(evIdx, key){
   }catch(e){ console.error('likes error',e); }
 }
 
+function openCommentEditor(evIdx, key, parentId){
+  const editor = document.createElement('div');
+  editor.style.cssText = `
+    position:fixed;inset:0;z-index:200;
+    background:var(--bg);
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top,20px) 16px 16px;
+    box-sizing:border-box;
+  `;
+  editor.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-top:8px;">
+      <button onclick="this.closest('[style]').remove()" style="
+        background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0;line-height:1;">✕</button>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">
+        ${parentId ? 'Odpověď' : 'Nový komentář'}
+      </span>
+      <button id="sendCommentBtn" onclick="sendFromEditor(${evIdx},'${key}',${parentId?`'${parentId}'`:'null'},this)" style="
+        margin-left:auto;background:var(--accent);border:none;color:#000;
+        font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+        padding:8px 20px;border-radius:6px;cursor:pointer;">Odeslat</button>
+    </div>
+    <textarea id="fullCommentInput" placeholder="Napiš komentář…" style="
+      flex:1;background:var(--card);
+      border:1px solid rgba(77,191,106,0.3);
+      color:var(--ink);font-family:'JetBrains Mono',monospace;
+      font-size:16px;padding:12px;border-radius:8px;
+      outline:none;resize:none;line-height:1.5;
+    "></textarea>
+  `;
+  document.body.appendChild(editor);
+  setTimeout(() => document.getElementById('fullCommentInput')?.focus(), 100);
+}
+
+async function sendFromEditor(evIdx, key, parentId, btn){
+  const input = document.getElementById('fullCommentInput');
+  const text = (input&&input.value||'').trim();
+  if(!text) return;
+  const user = getUserName();
+  if(!user) return;
+  btn.textContent = '…';
+  btn.disabled = true;
+  try{
+    await db.collection('events').doc(key).collection('comments').add({
+      user, text, at: new Date().toISOString(), parentId: parentId||null
+    });
+    input.closest('[style]').remove();
+    refreshComments(evIdx, key);
+  }catch(e){
+    btn.textContent = 'Odeslat';
+    btn.disabled = false;
+    alert('Chyba: '+e.message);
+  }
+}
+
+function openCommentEditorReply(evIdx, key, parentId){
+  openCommentEditor(evIdx, key, parentId);
+}
+
 async function postComment(evIdx, parentId){
   try{
     const ev = rawEvents[evIdx];
@@ -2044,7 +2071,7 @@ async function refreshComments(evIdx, key){
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
           <span style="font-size:11px;color:var(--muted);">${time}</span>
-          ${!isReply ? `<button onclick="toggleReply('${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;font-family:'JetBrains Mono',monospace;">↩ odpovědět</button>` : ''}
+          ${!isReply ? `<button onclick="openCommentEditor(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;font-family:'JetBrains Mono',monospace;">↩ odpovědět</button>` : ''}
           <button onclick="deleteComment(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;margin-left:auto;">🗑</button>
         </div>
         <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
