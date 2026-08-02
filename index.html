@@ -939,13 +939,18 @@ function checkAnniversaries(){
 // =====================================================
 // POČASÍ (Open-Meteo, bez API klíče)
 // =====================================================
-async function fetchWeather(place, dateStr){
+async function fetchWeather(place, dateStr, coords){
   try{
-    const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
-      {headers:{'User-Agent':'KoKrSNeK-PWA'}});
-    const geoData = await geo.json();
-    if(!geoData.length) return null;
-    const {lat, lon} = geoData[0];
+    let lat, lon;
+    if(coords){
+      [lat, lon] = coords.split(',');
+    } else {
+      const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
+        {headers:{'User-Agent':'KoKrSNeK-PWA'}});
+      const geoData = await geo.json();
+      if(!geoData.length) return null;
+      lat = geoData[0].lat; lon = geoData[0].lon;
+    }
     const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
     const wxData = await wx.json();
     if(!wxData.daily) return null;
@@ -1246,7 +1251,10 @@ function showEventDetail(idx){
   // Načti počasí pokud je to budoucí událost s místem
   if(isFuture && ev.place){
     const dateStr = ev.start.toISOString().split('T')[0];
-    fetchWeather(ev.place, dateStr).then(wx => {
+    // Použij GPS souřadnice z KNOWN_PLACES nebo geocoding
+    const placeRow = rows.find(r => r.isPlace);
+    const coords = placeRow?.gpsCoords || null;
+    fetchWeather(ev.place, dateStr, coords).then(wx => {
       const container = document.getElementById(`wx_${idx}`);
       const el = document.getElementById(`wxVal_${idx}`);
       if(wx && container && el){
