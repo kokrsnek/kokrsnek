@@ -1113,8 +1113,10 @@ function showEventDetail(idx){
   const rows = [];
 
   // Datum a čas
-  rows.push({label:'Datum', value: fmtDateRange(ev)});
-  if(!isMultiDay(ev)) rows.push({label:'Čas', value: fmtTime(ev.start, ev.end)});
+  const dateVal = isMultiDay(ev)
+    ? fmtDateRange(ev)
+    : `${fmtDateRange(ev)}  ·  ${fmtTime(ev.start, ev.end)}`;
+  rows.push({label:'Datum a čas', value: dateVal});
 
   if(ev.place){
     // Zjisti jestli místo obsahuje URL na mapy
