@@ -2079,32 +2079,29 @@ async function refreshComments(evIdx, key){
   try{
     const snap = await db.collection('events').doc(key).collection('comments').get();
     const docs = snap.docs.sort((a,b) => (a.data().at||'') < (b.data().at||'') ? -1 : 1);
-    const roots = docs.filter(d => !d.data().parentId);
-    const replies = docs.filter(d => d.data().parentId);
-
-    const renderComment = (d, isReply) => {
+    const renderComment = (d, depth) => {
       const data = d.data();
       const time = data.at ? new Date(data.at).toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : '';
-      const childReplies = replies.filter(r => r.data().parentId === d.id);
-      return `<div style="padding:6px 0 2px;${isReply ? 'margin-left:16px;border-left:2px solid rgba(60,180,80,0.3);padding-left:8px;' : 'border-bottom:1px solid rgba(60,180,80,0.1);'}">
+      const indent = Math.min(depth, 4) * 12;
+      const childReplies = docs.filter(r => r.data().parentId === d.id)
+        .sort((a,b) => (a.data().at||'') < (b.data().at||'') ? -1 : 1);
+      return `<div style="padding:6px 0 2px;${depth > 0 ? `margin-left:${indent}px;border-left:2px solid rgba(60,180,80,0.3);padding-left:8px;` : 'border-bottom:1px solid rgba(60,180,80,0.1);'}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
           <span style="font-size:11px;color:var(--muted);">${time}</span>
-          ${!isReply ? `<button onclick="openCommentEditor(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;font-family:'JetBrains Mono',monospace;">↩ odpovědět</button>` : ''}
+          <button onclick="openCommentEditor(${evIdx},window['evKey_'+${evIdx}],'${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;font-family:'JetBrains Mono',monospace;">↩ odpovědět</button>
           <button onclick="deleteComment(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;margin-left:auto;">🗑</button>
         </div>
         <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
-        ${!isReply ? `<div id="replyBox_${d.id}" style="display:none;gap:6px;margin-top:6px;">
-          <input id="replyInput_${d.id}" type="text" placeholder="Odpověď…" style="flex:1;background:var(--card);border:1px solid rgba(60,180,80,0.3);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;border-radius:6px;outline:none;">
-          <button onclick="postComment(${evIdx},'${d.id}')" style="background:var(--accent);border:none;color:#000;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;">↑</button>
-        </div>` : ''}
-        ${childReplies.map(r => renderComment(r, true)).join('')}
+        ${childReplies.map(r => renderComment(r, depth + 1)).join('')}
       </div>`;
     };
 
+    const roots = docs.filter(d => !d.data().parentId);
+
     list.innerHTML = roots.length === 0
       ? '<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Zatím žádné komentáře</div>'
-      : roots.map(d => renderComment(d, false)).join('');
+      : roots.map(d => renderComment(d, 0)).join('');
   }catch(e){
     const list2 = document.getElementById('commentList_'+evIdx);
     if(list2) list2.innerHTML = '<div style="color:#E53935;font-size:11px;text-align:center;padding:8px;">'+e.message+'</div>';
