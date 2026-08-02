@@ -1926,24 +1926,28 @@ document.getElementById('albumsBtn').addEventListener('touchend', function(e){ e
 function showWelcome(){
 
   var features = [
-    ['📅','Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
-    ['— rok —','Navigace po rocích','Klikni na oddělovač roku pro rychlý skok na jiný rok.'],
-    ['🔍','Vyhledávání','Tlačítko lupy — hledej podle názvu nebo místa.'],
-    ['🏠','Domeček','Vrátí na aktuální událost a znovu načte kalendář.'],
-    ['📷','Fotoalba','Tlačítko fotek — všechna alba seřazená podle roku.'],
-    ['🔒','Ochrana','Přístup chráněn tajnou otázkou o šerifovi.'],
-    ['!','Report chyb','Červené tlačítko — pošli zprávu pokud něco nefunguje.'],
-    ['🔔','Notifikace','Upozornění 5 dní před událostí při otevření appky.'],
-    ['🎂','Výročí','Připomínka výročí minulých událostí.']
+    ['Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni na název události pro detail.'],
+    ['Navigace po rocích','Klikni na oddělovač roku v timeline pro rychlý skok na jiný rok.'],
+    ['Vyhledávání','Tlačítko lupy — hledej podle názvu nebo místa.'],
+    ['Domeček','Vrátí na aktuální událost a znovu načte kalendář.'],
+    ['Fotoalba','Tlačítko fotek — všechna alba seřazená podle roku.'],
+    ['Ochrana alb a souborů','Přístup chráněn tajnou otázkou o šerifovi.'],
+    ['Sdílení','V detailu události tlačítko Sdílet — název, datum, místo a odkaz.'],
+    ['Do kalendáře','U budoucích událostí lze přidat do vlastního kalendáře.'],
+    ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval.'],
+    ['💬 Komentáře','V detailu události lze psát komentáře a odpovídat na ně.'],
+    ['💸 Příspěvek na akci','U minulých událostí — QR kód pro platbu příspěvku.'],
+    ['Počasí','V detailu události se zobrazí předpověď nebo historické počasí.'],
+    ['Notifikace','Upozornění 5 dní před událostí při otevření appky.'],
+    ['Výročí','Připomínka výročí minulých událostí.'],
+    ['! Report chyb','Červené tlačítko — pošli zprávu pokud něco nefunguje. Druhý stisk otevře tuto nápovědu.']
   ];
   var rows = '';
   for(var i=0;i<features.length;i++){
-    rows += '<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;">'
-      + '<div style="font-size:15px;min-width:26px;text-align:center;">' + features[i][0] + '</div>'
-      + '<div style="text-align:left;">'
-      + '<div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;">' + features[i][1] + '</div>'
-      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);line-height:1.5;">' + features[i][2] + '</div>'
-      + '</div></div>';
+    rows += '<div style="margin-bottom:12px;">'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;">' + features[i][0] + '</div>'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);line-height:1.5;">' + features[i][1] + '</div>'
+      + '</div>';
   }
   var backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
