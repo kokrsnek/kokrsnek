@@ -1228,7 +1228,7 @@ function showEventDetail(idx){
         <div id="commentList_${idx}" style="max-height:180px;overflow-y:auto;margin:8px 0;font-family:'JetBrains Mono',monospace;">
           <div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Načítám…</div>
         </div>
-        <button onclick="openCommentEditor(${idx},'${getEventKey(rawEvents[${idx}])}')" style="
+        <button onclick="openCommentEditor(${idx}, window['evKey_'+${idx}])" style="
           display:block;width:100%;
           background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;
@@ -1239,6 +1239,7 @@ function showEventDetail(idx){
     </div>
   `;
   document.body.appendChild(backdrop);
+  window['evKey_'+idx] = getEventKey(ev);
 
   // Načti počasí pokud je to budoucí událost s místem
   if(isFuture && ev.place){
