@@ -1233,7 +1233,7 @@ function showEventDetail(idx){
           background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;
           padding:10px;border-radius:6px;cursor:pointer;text-align:left;">
-          ✏️ Napiš komentář…
+          Napiš komentář…
         </button>
       </div>
     </div>
@@ -1964,61 +1964,79 @@ async function refreshLikes(evIdx, key){
 }
 
 function openCommentEditor(evIdx, key, parentId){
+  document.getElementById('commentEditor')?.remove();
+
   const editor = document.createElement('div');
+  editor.id = 'commentEditor';
   editor.style.cssText = `
-    position:fixed;inset:0;z-index:200;
-    background:var(--bg);
+    position:fixed;top:0;left:0;right:0;
+    height:33dvh;min-height:160px;
+    z-index:300;
+    background:var(--card);
+    border-bottom:2px solid rgba(60,180,80,0.4);
     display:flex;flex-direction:column;
-    padding:env(safe-area-inset-top,20px) 16px 16px;
+    padding:env(safe-area-inset-top,12px) 16px 12px;
     box-sizing:border-box;
+    box-shadow:0 4px 24px rgba(0,0,0,0.5);
   `;
+
   editor.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-top:8px;">
-      <button onclick="this.closest('[style]').remove()" style="
-        background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0;line-height:1;">✕</button>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">
-        ${parentId ? 'Odpověď' : 'Nový komentář'}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-top:4px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);flex:1;">
+        ${parentId ? '↩ Odpověď' : '💬 Nový komentář'}
       </span>
-      <button id="sendCommentBtn" onclick="sendFromEditor(${evIdx},'${key}',${parentId?`'${parentId}'`:'null'},this)" style="
-        margin-left:auto;background:var(--accent);border:none;color:#000;
-        font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
-        padding:8px 20px;border-radius:6px;cursor:pointer;">Odeslat</button>
+      <button onclick="document.getElementById('commentEditor').remove()" style="
+        background:none;border:none;color:var(--muted);font-size:22px;
+        cursor:pointer;padding:0;line-height:1;">×</button>
     </div>
-    <textarea id="fullCommentInput" placeholder="Napiš komentář…" style="
-      flex:1;background:var(--card);
-      border:1px solid rgba(77,191,106,0.3);
+    <textarea id="editorTextarea" placeholder="Napiš komentář…" style="
+      flex:1;background:var(--bg);
+      border:1px solid rgba(60,180,80,0.3);
       color:var(--ink);font-family:'JetBrains Mono',monospace;
-      font-size:16px;padding:12px;border-radius:8px;
+      font-size:16px;padding:10px 12px;border-radius:6px;
       outline:none;resize:none;line-height:1.5;
+      margin-bottom:10px;
     "></textarea>
+    <button id="editorSendBtn" style="
+      background:var(--accent);border:none;color:#000;
+      font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+      padding:10px;border-radius:6px;cursor:pointer;
+      flex-shrink:0;
+    ">Odeslat</button>
   `;
+
   document.body.appendChild(editor);
-  setTimeout(() => document.getElementById('fullCommentInput')?.focus(), 100);
-}
 
-async function sendFromEditor(evIdx, key, parentId, btn){
-  const input = document.getElementById('fullCommentInput');
-  const text = (input&&input.value||'').trim();
-  if(!text) return;
-  const user = getUserName();
-  if(!user) return;
-  btn.textContent = '…';
-  btn.disabled = true;
-  try{
-    await db.collection('events').doc(key).collection('comments').add({
-      user, text, at: new Date().toISOString(), parentId: parentId||null
-    });
-    input.closest('[style]').remove();
-    refreshComments(evIdx, key);
-  }catch(e){
-    btn.textContent = 'Odeslat';
-    btn.disabled = false;
-    alert('Chyba: '+e.message);
-  }
-}
+  const ta = document.getElementById('editorTextarea');
+  const sendBtn = document.getElementById('editorSendBtn');
 
-function openCommentEditorReply(evIdx, key, parentId){
-  openCommentEditor(evIdx, key, parentId);
+  // Automaticky otevři klávesnici
+  ta.focus();
+
+  sendBtn.addEventListener('click', async () => {
+    const text = ta.value.trim();
+    if(!text) return;
+    const user = getUserName();
+    if(!user) return;
+    sendBtn.textContent = '…';
+    sendBtn.disabled = true;
+    try{
+      await db.collection('events').doc(key).collection('comments').add({
+        user, text, at: new Date().toISOString(), parentId: parentId||null
+      });
+      editor.remove();
+      await refreshComments(evIdx, key);
+      // Scroll na nový komentář
+      setTimeout(() => {
+        const list = document.getElementById('commentList_'+evIdx);
+        if(list) list.scrollTop = list.scrollHeight;
+      }, 200);
+    }catch(e){
+      sendBtn.textContent = 'Odeslat';
+      sendBtn.disabled = false;
+      alert('Chyba: '+e.message);
+    }
+  });
 }
 
 async function postComment(evIdx, parentId){
