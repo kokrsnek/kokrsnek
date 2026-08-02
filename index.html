@@ -1191,7 +1191,7 @@ function showEventDetail(idx){
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
-      ${isFuture && ev.place ? `<div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wx_${idx}"><span style="color:var(--muted);">Načítám…</span></div>` : ''}
+      ${isFuture && ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"><span style="color:var(--muted);">Načítám…</span></div></div>` : ''}
       ${ev.photoAlbum ? `
         <div class="ev-modal-label">Fotoalbum</div>
         <a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
@@ -1249,8 +1249,12 @@ function showEventDetail(idx){
   if(isFuture && ev.place){
     const dateStr = ev.start.toISOString().split('T')[0];
     fetchWeather(ev.place, dateStr).then(wx => {
-      const el = document.getElementById(`wx_${idx}`);
-      if(el) el.textContent = wx || 'Počasí není dostupné';
+      const container = document.getElementById(`wx_${idx}`);
+      const el = document.getElementById(`wxVal_${idx}`);
+      if(wx && container && el){
+        el.textContent = wx;
+        container.style.display = 'block';
+      }
     });
   }
 
