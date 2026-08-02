@@ -506,6 +506,8 @@
   .title-clickable{
     cursor:pointer; border-bottom:1px dashed rgba(60,180,80,0.4);
     transition:border-color .15s;
+    -webkit-tap-highlight-color: rgba(60,180,80,0.2);
+    touch-action: manipulation;
   }
   .title-clickable:hover{ border-color:var(--accent); }
 
@@ -1417,6 +1419,7 @@ const PHOTO_ALBUMS = {
 };
 // =====================================================
 const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
+const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(){
