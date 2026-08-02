@@ -502,7 +502,7 @@
     padding:5px 12px; border-radius:100px; margin-top:4px;
   }
   .album-tile{
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; justify-content:center; gap:12px;
     width:100%; box-sizing:border-box;
     background:linear-gradient(135deg, rgba(60,180,80,0.14), rgba(60,180,80,0.05));
     border:1px solid rgba(60,180,80,0.35);
@@ -515,7 +515,7 @@
     display:flex; align-items:center; justify-content:center;
   }
   .album-tile-icon svg{ width:20px; height:20px; stroke:var(--accent); fill:none; stroke-width:2; }
-  .album-tile-text{ flex:1; text-align:left; }
+  .album-tile-text{ text-align:center; }
   .album-tile-title{
     font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:var(--ink);
   }
@@ -883,16 +883,20 @@ async function shareEvent(ev){
   let textBase, shareUrl;
 
   if(isPast){
-    // Minulé události — jen popis + případné fotky/soubory
+    // Minulé události — popis + mapa místa + případné fotky/soubory
     const extras = [];
-    if(ev.photoAlbum) extras.push(ev.photoAlbum);
-    if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`${f.title}: ${f.url}`));
+    if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
+    if(ev.photoAlbum) extras.push(`📸 Album fotek: ${ev.photoAlbum}`);
+    if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`📄 ${f.title}: ${f.url}`));
     textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n') : ''}`;
-    shareUrl = ev.photoAlbum || (ev.driveFiles?.[0]?.url) || undefined;
+    // Odkazy jsou už součástí textu výše — url se dál neposílá zvlášť, ať se nezdvojí
+    shareUrl = undefined;
   } else {
-    // Budoucí události — přidej odkaz na Google Calendar
+    // Budoucí události — přidej odkaz na Google Calendar a mapu místa
     const link = r.htmlLink || '';
-    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}`;
+    const extras = [];
+    if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
+    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n') : ''}`;
     shareUrl = link || undefined;
   }
 
