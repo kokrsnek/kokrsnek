@@ -903,7 +903,7 @@ async function shareEvent(ev){
 
   if(navigator.share){
     try{
-      await navigator.share({ title: ev.title, text: textBase, url: shareUrl });
+      await navigator.share({ title: `KoKrŠNeci tě zvou na ${ev.title}`, text: textBase, url: shareUrl });
       return;
     }catch(e){}
   }
