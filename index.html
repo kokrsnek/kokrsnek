@@ -1645,6 +1645,7 @@ function renderResults(query){
   const past = matches.filter(({ev}) => ev.start < curNow).sort((a,b) => b.ev.start - a.ev.start);
   const sorted = [...future, ...past];
   sorted.forEach(({ev, i}) => {
+    const row = document.createElement('div');
     row.className = 'result-item';
     row.innerHTML = `
       <div class="result-main">
