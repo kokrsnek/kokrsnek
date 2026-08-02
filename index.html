@@ -888,7 +888,7 @@ async function shareEvent(ev){
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
     if(ev.photoAlbum) extras.push(`📸 Album fotek: ${ev.photoAlbum}`);
     if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`📄 ${f.title}: ${f.url}`));
-    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n') : ''}`;
+    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n\n') : ''}`;
     // Odkazy jsou už součástí textu výše — url se dál neposílá zvlášť, ať se nezdvojí
     shareUrl = undefined;
   } else {
@@ -896,7 +896,7 @@ async function shareEvent(ev){
     const link = r.htmlLink || '';
     const extras = [];
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
-    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n') : ''}`;
+    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n\n') : ''}`;
     shareUrl = link || undefined;
   }
 
