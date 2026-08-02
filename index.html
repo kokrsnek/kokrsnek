@@ -1689,8 +1689,7 @@ function renderResults(query){
   if (currentRow){
     requestAnimationFrame(() => {
       if (myToken !== _searchRenderToken) return; // mezitím proběhlo novější hledání, tohle je zastaralé
-      const offset = currentRow.offsetTop - (searchResults.clientHeight/2) + (currentRow.offsetHeight/2);
-      searchResults.scrollTop = Math.max(0, offset);
+      currentRow.scrollIntoView({block: 'start', behavior: 'auto'});
     });
   }
 }
