@@ -1998,6 +1998,7 @@ function showPayment(eventTitle){
     const iban = czechIBAN('1518140045', '3030');
     const spd = 'SPD*1.0*ACC:' + iban + '*MSG:prispevek Kokrsnekum za ' + (eventTitle||'akci') + '*';
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(spd) + '&format=png&margin=10';
+    const copyText = 'Účet: 1518140045/3030\nZpráva: příspěvek Kokršnekům za ' + (eventTitle||'akci');
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
     backdrop.onclick = function(e){ if(e.target===backdrop) backdrop.remove(); };
@@ -2006,9 +2007,18 @@ function showPayment(eventTitle){
       + '<div class="ev-modal-title" style="margin-bottom:4px;">💸 Příspěvek na akci</div>'
       + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
       + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:4px;">'
-      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">Účet: 1518140045/3030<br>Zpráva: příspěvek Kokršnekům za ' + (eventTitle||'akci') + '</div>'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.8;">'
+      + '1518140045/3030<br>příspěvek Kokršnekům za ' + (eventTitle||'akci')
+      + '</div>'
+      + '<button id="copyPayBtn" style="display:block;width:100%;margin-top:12px;padding:10px;border-radius:6px;background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--accent);font-family:JetBrains Mono,monospace;font-size:13px;cursor:pointer;">Zkopírovat platební údaje</button>'
       + '</div>';
     document.body.appendChild(backdrop);
+    document.getElementById('copyPayBtn').addEventListener('click', function(){
+      navigator.clipboard.writeText(copyText).then(() => {
+        this.textContent = '✓ Zkopírováno';
+        setTimeout(() => { this.textContent = 'Zkopírovat platební údaje'; }, 2000);
+      });
+    });
   }catch(err){
     alert('Chyba: ' + err.message);
   }
