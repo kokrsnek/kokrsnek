@@ -1874,20 +1874,37 @@ async function refreshLikes(evIdx, key){
   }catch(e){ console.error('likes error',e); }
 }
 
-async function postComment(evIdx){
+async function postComment(evIdx, parentId){
   try{
     const ev = rawEvents[evIdx];
     const key = getEventKey(ev);
-    const input = document.getElementById('commentInput_'+evIdx);
+    const inputId = parentId ? 'replyInput_'+parentId : 'commentInput_'+evIdx;
+    const input = document.getElementById(inputId);
     const text = (input&&input.value||'').trim();
     if(!text) return;
     const user = getUserName();
     await db.collection('events').doc(key).collection('comments').add({
-      user, text, at: new Date().toISOString()
+      user, text, at: new Date().toISOString(), parentId: parentId||null
     });
     input.value = '';
+    const replyBox = document.getElementById('replyBox_'+parentId);
+    if(replyBox) replyBox.style.display = 'none';
     refreshComments(evIdx, key);
   }catch(e){ console.error('comment error',e); alert('Chyba: '+e.message); }
+}
+
+async function deleteComment(evIdx, key, docId){
+  const pwd = prompt('Zadej heslo pro smazání:');
+  if(pwd !== '8006293768'){ alert('Špatné heslo'); return; }
+  await db.collection('events').doc(key).collection('comments').doc(docId).delete();
+  refreshComments(evIdx, key);
+}
+
+function toggleReply(parentId){
+  const box = document.getElementById('replyBox_'+parentId);
+  if(!box) return;
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+  if(box.style.display === 'flex') document.getElementById('replyInput_'+parentId)?.focus();
 }
 
 async function refreshComments(evIdx, key){
@@ -1896,17 +1913,32 @@ async function refreshComments(evIdx, key){
   try{
     const snap = await db.collection('events').doc(key).collection('comments').get();
     const docs = snap.docs.sort((a,b) => (a.data().at||'') < (b.data().at||'') ? -1 : 1);
-    list.innerHTML = docs.length === 0
+    const roots = docs.filter(d => !d.data().parentId);
+    const replies = docs.filter(d => d.data().parentId);
+
+    const renderComment = (d, isReply) => {
+      const data = d.data();
+      const time = data.at ? new Date(data.at).toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : '';
+      const childReplies = replies.filter(r => r.data().parentId === d.id);
+      return `<div style="padding:6px 0 2px;${isReply ? 'margin-left:16px;border-left:2px solid rgba(60,180,80,0.3);padding-left:8px;' : 'border-bottom:1px solid rgba(60,180,80,0.1);'}">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
+          <span style="font-size:11px;color:var(--muted);">${time}</span>
+          ${!isReply ? `<button onclick="toggleReply('${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;font-family:'JetBrains Mono',monospace;">↩ odpovědět</button>` : ''}
+          <button onclick="deleteComment(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;margin-left:auto;">🗑</button>
+        </div>
+        <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
+        ${!isReply ? `<div id="replyBox_${d.id}" style="display:none;gap:6px;margin-top:6px;">
+          <input id="replyInput_${d.id}" type="text" placeholder="Odpověď…" style="flex:1;background:var(--card);border:1px solid rgba(60,180,80,0.3);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;border-radius:6px;outline:none;">
+          <button onclick="postComment(${evIdx},'${d.id}')" style="background:var(--accent);border:none;color:#000;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;">↑</button>
+        </div>` : ''}
+        ${childReplies.map(r => renderComment(r, true)).join('')}
+      </div>`;
+    };
+
+    list.innerHTML = roots.length === 0
       ? '<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Zatím žádné komentáře</div>'
-      : docs.map(d=>{
-          const data = d.data();
-          const time = data.at ? new Date(data.at).toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : '';
-          return `<div style="padding:6px 0;border-bottom:1px solid rgba(60,180,80,0.1);">
-            <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:6px;">${time}</span>
-            <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
-          </div>`;
-        }).join('');
+      : roots.map(d => renderComment(d, false)).join('');
   }catch(e){
     const list2 = document.getElementById('commentList_'+evIdx);
     if(list2) list2.innerHTML = '<div style="color:#E53935;font-size:11px;text-align:center;padding:8px;">'+e.message+'</div>';
