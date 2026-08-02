@@ -1286,9 +1286,13 @@ function showEventDetail(idx){
   refreshComments(idx, fbKey);
 
   // Platební tlačítko
-  const payBtn = backdrop.querySelector('.payment-btn');
-  if(payBtn) payBtn.addEventListener('click', () => showPayment(payBtn.dataset.title));
-  refreshComments(idx, fbKey);
+  setTimeout(() => {
+    const payBtn = backdrop.querySelector('.payment-btn');
+    if(payBtn){
+      payBtn.addEventListener('click', () => showPayment(payBtn.dataset.title));
+      payBtn.addEventListener('touchend', (e) => { e.preventDefault(); showPayment(payBtn.dataset.title); });
+    }
+  }, 100);
 
   // Long press na like button = zobraz kdo lajkoval
   const likeBtn = document.getElementById('likeBtn_'+idx);
