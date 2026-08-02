@@ -501,6 +501,28 @@
     border:1px solid rgba(60,180,80,0.3);
     padding:5px 12px; border-radius:100px; margin-top:4px;
   }
+  .album-tile{
+    display:flex; align-items:center; gap:12px;
+    width:100%; box-sizing:border-box;
+    background:linear-gradient(135deg, rgba(60,180,80,0.14), rgba(60,180,80,0.05));
+    border:1px solid rgba(60,180,80,0.35);
+    border-radius:12px; padding:14px 16px; margin-top:4px;
+    color:var(--ink); text-decoration:none; cursor:pointer;
+  }
+  .album-tile-icon{
+    flex-shrink:0; width:38px; height:38px; border-radius:10px;
+    background:rgba(60,180,80,0.18);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .album-tile-icon svg{ width:20px; height:20px; stroke:var(--accent); fill:none; stroke-width:2; }
+  .album-tile-text{ flex:1; text-align:left; }
+  .album-tile-title{
+    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:var(--ink);
+  }
+  .album-tile-sub{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:2px;
+  }
+  .album-tile-arrow{ flex-shrink:0; color:var(--accent); font-size:18px; }
   .title-clickable{
     cursor:pointer; border-bottom:1px dashed rgba(60,180,80,0.4);
     transition:border-color .15s;
@@ -1220,9 +1242,15 @@ function showEventDetail(idx){
       ${ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"></div></div>` : ''}
       ${ev.photoAlbum ? `
         <div class="ev-modal-label">Fotoalbum</div>
-        <a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
-          
-          Otevřít album
+        <a class="album-tile" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
+          <div class="album-tile-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>
+          </div>
+          <div class="album-tile-text">
+            <div class="album-tile-title">Otevřít album</div>
+            <div class="album-tile-sub">Fotky z této akce</div>
+          </div>
+          <div class="album-tile-arrow">→</div>
         </a>
       ` : ''}
       ${confLink ? `
