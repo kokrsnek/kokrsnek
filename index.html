@@ -1318,10 +1318,13 @@ function showEventDetail(idx){
 
   // Organizátor (zobrazí se na konci, pod komentáři)
   let organizerValue = null;
-  if(r.organizer && r.organizer.displayName && r.organizer.displayName !== r.organizer.email)
+  let isDefaultOrganizer = false;
+  if(r.organizer && r.organizer.displayName && r.organizer.displayName !== r.organizer.email){
     organizerValue = r.organizer.displayName;
-  else if(r.organizer)
+  } else if(r.organizer){
     organizerValue = 'KoKrŠNeK v.t.s.';
+    isDefaultOrganizer = true;
+  }
 
   // Účastníci
   if(r.attendees && r.attendees.length){
@@ -1424,7 +1427,7 @@ function showEventDetail(idx){
       ` : ''}
       ${organizerValue ? `
         <div style="margin-top:14px;">
-          <div class="ev-modal-value" ${organizerValue === 'KoKrŠNeK v.t.s.' ? `style="cursor:pointer;" onclick="startQuiz()"` : ''}>${organizerValue}</div>
+          <div class="ev-modal-value" ${isDefaultOrganizer ? `style="cursor:pointer;" onclick="startQuiz()"` : ''}>${organizerValue}</div>
         </div>
       ` : ''}
     </div>
