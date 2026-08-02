@@ -1391,16 +1391,25 @@ function openYearPicker(years, currentYear){
       margin-bottom:2px;`;
     if(hasEvents) btn.onclick = () => {
       popup.remove();
-      const target = document.getElementById('yr_'+y);
-      if(target){
-        const appEl = document.getElementById('app');
-        appEl.style.scrollSnapType = 'none';
-        // Oddělovač roku viditelný pod Dynamic Island
-        const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
-        const offset = Math.max(safeTop, 30) + target.offsetHeight;
-        appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
-        setTimeout(() => appEl.style.scrollSnapType = '', 800);
-      }
+      const appEl = document.getElementById('app');
+      // Najdi všechny sloty daného roku a vyber chronologicky nejstarší (January)
+      const allSlots = Array.from(appEl.querySelectorAll('.slot[data-idx]'));
+      const yearSlots = allSlots.filter(s => {
+        const idx = parseInt(s.dataset.idx);
+        return !isNaN(idx) && rawEvents[idx]?.start.getFullYear() === y;
+      });
+      if(!yearSlots.length) return;
+      // Seřaď chronologicky a vyber první (nejstarší v roce)
+      yearSlots.sort((a,b) => {
+        const ia = parseInt(a.dataset.idx), ib = parseInt(b.dataset.idx);
+        return rawEvents[ia].start - rawEvents[ib].start;
+      });
+      const target = yearSlots[0];
+      appEl.style.scrollSnapType = 'none';
+      const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
+      const offset = Math.max(safeTop, 30);
+      appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
+      setTimeout(() => appEl.style.scrollSnapType = '', 800);
     };
     popup.appendChild(btn);
   });
