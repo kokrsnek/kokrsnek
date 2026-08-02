@@ -1852,52 +1852,64 @@ function getEventKey(ev){
 }
 
 async function toggleLike(evIdx){
-  const ev = rawEvents[evIdx];
-  const key = getEventKey(ev);
-  const user = getUserName();
-  const ref = db.collection('events').doc(key).collection('likes').doc(user);
-  const snap = await ref.get();
-  if(snap.exists){ await ref.delete(); } else { await ref.set({user, at: new Date()}); }
-  refreshLikes(evIdx, key);
+  try{
+    const ev = rawEvents[evIdx];
+    const key = getEventKey(ev);
+    const user = getUserName();
+    const ref = db.collection('events').doc(key).collection('likes').doc(user);
+    const snap = await ref.get();
+    if(snap.exists){ await ref.delete(); } else { await ref.set({user, at: new Date()}); }
+    refreshLikes(evIdx, key);
+  }catch(e){ console.error('like error',e); }
 }
 
 async function refreshLikes(evIdx, key){
-  const snap = await db.collection('events').doc(key).collection('likes').get();
-  const user = localStorage.getItem('kokrsnekUser');
-  const liked = snap.docs.some(d => d.id === user);
-  const btn = document.getElementById('likeBtn_'+evIdx);
-  if(btn){ btn.textContent = (liked?'❤️':'🤍')+' '+snap.size; btn.style.color = liked?'#E53935':'var(--accent)'; }
+  try{
+    const snap = await db.collection('events').doc(key).collection('likes').get();
+    const user = localStorage.getItem('kokrsnekUser');
+    const liked = snap.docs.some(d => d.id === user);
+    const btn = document.getElementById('likeBtn_'+evIdx);
+    if(btn){ btn.textContent = (liked?'❤️':'🤍')+' '+snap.size; btn.style.color = liked?'#E53935':'var(--accent)'; }
+  }catch(e){ console.error('likes error',e); }
 }
 
 async function postComment(evIdx){
-  const ev = rawEvents[evIdx];
-  const key = getEventKey(ev);
-  const input = document.getElementById('commentInput_'+evIdx);
-  const text = (input&&input.value||'').trim();
-  if(!text) return;
-  const user = getUserName();
-  await db.collection('events').doc(key).collection('comments').add({
-    user, text, at: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  input.value = '';
-  refreshComments(evIdx, key);
+  try{
+    const ev = rawEvents[evIdx];
+    const key = getEventKey(ev);
+    const input = document.getElementById('commentInput_'+evIdx);
+    const text = (input&&input.value||'').trim();
+    if(!text) return;
+    const user = getUserName();
+    await db.collection('events').doc(key).collection('comments').add({
+      user, text, at: new Date().toISOString()
+    });
+    input.value = '';
+    refreshComments(evIdx, key);
+  }catch(e){ console.error('comment error',e); alert('Chyba: '+e.message); }
 }
 
 async function refreshComments(evIdx, key){
   const list = document.getElementById('commentList_'+evIdx);
   if(!list) return;
-  const snap = await db.collection('events').doc(key).collection('comments').orderBy('at','asc').get();
-  list.innerHTML = snap.empty
-    ? '<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Zatím žádné komentáře</div>'
-    : snap.docs.map(d=>{
-        const data = d.data();
-        const time = data.at&&data.at.toDate ? data.at.toDate().toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : '';
-        return `<div style="padding:6px 0;border-bottom:1px solid rgba(60,180,80,0.1);">
-          <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:6px;">${time}</span>
-          <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
-        </div>`;
-      }).join('');
+  try{
+    const snap = await db.collection('events').doc(key).collection('comments').get();
+    const docs = snap.docs.sort((a,b) => (a.data().at||'') < (b.data().at||'') ? -1 : 1);
+    list.innerHTML = docs.length === 0
+      ? '<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px;">Zatím žádné komentáře</div>'
+      : docs.map(d=>{
+          const data = d.data();
+          const time = data.at ? new Date(data.at).toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : '';
+          return `<div style="padding:6px 0;border-bottom:1px solid rgba(60,180,80,0.1);">
+            <span style="font-size:11px;font-weight:700;color:var(--accent);">${data.user}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:6px;">${time}</span>
+            <div style="font-size:13px;color:var(--ink);margin-top:2px;">${data.text}</div>
+          </div>`;
+        }).join('');
+  }catch(e){
+    const list2 = document.getElementById('commentList_'+evIdx);
+    if(list2) list2.innerHTML = '<div style="color:#E53935;font-size:11px;text-align:center;padding:8px;">'+e.message+'</div>';
+  }
 }
 
 renderTimeline();
