@@ -880,7 +880,8 @@ async function shareEvent(ev){
   const r = ev.raw || {};
   const isPast = ev.end < now;
   const NL = '\r\n'; // CRLF — Gmail appka na iOS občas slučuje samotné \n, s \r\n je zalomení spolehlivější
-  const intro = `KoKrŠNeci tě zvou na ${ev.title}`;
+  const intro = `KoKrŠNeci tě zvou na…`;
+  const introFull = `KoKrŠNeci tě zvou na ${ev.title}`;
   const dateWithDay = isMultiDay(ev) ? fmtDateRange(ev) : `${fmtFull(ev.start)} od ${fmtTime(ev.start)}`;
 
   let textBase, shareUrl;
@@ -905,7 +906,7 @@ async function shareEvent(ev){
 
   if(navigator.share){
     try{
-      await navigator.share({ title: intro, text: textBase, url: shareUrl });
+      await navigator.share({ title: introFull, text: textBase, url: shareUrl });
       return;
     }catch(e){}
   }
