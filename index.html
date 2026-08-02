@@ -1917,7 +1917,12 @@ async function showLikers(evIdx, key){
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
   const rows = snap.empty
     ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo nelajkoval</div>'
-    : snap.docs.map(d => {
+    : [...snap.docs].sort((a,b) => {
+        const ta = a.data().at; const tb = b.data().at;
+        const da = ta ? (ta.toDate ? ta.toDate() : new Date(ta)) : new Date(0);
+        const db2 = tb ? (tb.toDate ? tb.toDate() : new Date(tb)) : new Date(0);
+        return db2 - da;
+      }).map(d => {
         const data = d.data();
         const time = data.at
           ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
