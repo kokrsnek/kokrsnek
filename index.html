@@ -644,6 +644,14 @@
 </style>
   <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    window.addEventListener('load', function(){
+      if(typeof emailjs !== 'undefined'){
+        emailjs.init({publicKey: 'eHE-eJaOEEtMKimis'});
+        window._ejReady = true;
+      }
+    });
+  </script>
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1959,23 +1967,13 @@ const EMAILJS_SERVICE_ID   = 'service_sp8lnel';
 const EMAILJS_TEMPLATE_ID  = 'template_pso6ebr';
 let _emailjsReady = false;
 
-function initEmailJS(){
-  try{
-    if(typeof emailjs !== 'undefined'){
-      emailjs.init({publicKey: EMAILJS_PUBLIC_KEY});
-      _emailjsReady = true;
-    }
-  }catch(e){}
-}
-
 function sendNotification(type, user, eventTitle, extra){
   try{
-    if(!_emailjsReady) initEmailJS();
-    if(!_emailjsReady) return;
+    if(!window._ejReady || typeof emailjs === 'undefined') return;
     const now = new Date().toLocaleString('cs',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      type: type === 'like' ? 'Nový lajk' : 'Nový komentář',
-      user: user || 'neznámý',
+    emailjs.send('service_sp8lnel', 'template_pso6ebr', {
+      type: type === 'like' ? 'Novy lajk' : 'Novy komentar',
+      user: user || 'neznamy',
       event_title: eventTitle || '',
       extra: extra || '',
       date_time: now
