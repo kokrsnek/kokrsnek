@@ -879,6 +879,7 @@ function getDaysText(ev){
 async function shareEvent(ev){
   const r = ev.raw || {};
   const isPast = ev.end < now;
+  const NL = '\r\n'; // CRLF — Gmail appka na iOS občas slučuje samotné \n, s \r\n je zalomení spolehlivější
 
   let textBase, shareUrl;
 
@@ -888,7 +889,7 @@ async function shareEvent(ev){
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
     if(ev.photoAlbum) extras.push(`📸 Album fotek: ${ev.photoAlbum}`);
     if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`📄 ${f.title}: ${f.url}`));
-    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n\n') : ''}`;
+    textBase = `${ev.title}${NL}${fmtDateRange(ev)}${ev.place ? NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
     // Odkazy jsou už součástí textu výše — url se dál neposílá zvlášť, ať se nezdvojí
     shareUrl = undefined;
   } else {
@@ -896,7 +897,7 @@ async function shareEvent(ev){
     const link = r.htmlLink || '';
     const extras = [];
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
-    textBase = `${ev.title}\n${fmtDateRange(ev)}${ev.place ? '\n'+ev.place : ''}${extras.length ? '\n\n'+extras.join('\n\n') : ''}`;
+    textBase = `${ev.title}${NL}${fmtDateRange(ev)}${ev.place ? NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
     shareUrl = link || undefined;
   }
 
@@ -906,7 +907,7 @@ async function shareEvent(ev){
       return;
     }catch(e){}
   }
-  await navigator.clipboard.writeText(textBase + (shareUrl && !textBase.includes(shareUrl) ? '\n\n'+shareUrl : ''));
+  await navigator.clipboard.writeText(textBase + (shareUrl && !textBase.includes(shareUrl) ? NL+NL+shareUrl : ''));
   const btn = document.getElementById('shareEvBtn');
   if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = 'Sdílet'; },2000); }
 }
