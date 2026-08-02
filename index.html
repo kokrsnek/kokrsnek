@@ -1427,7 +1427,7 @@ function showEventDetail(idx){
       ` : ''}
       ${organizerValue ? `
         <div style="margin-top:14px;">
-          <div class="ev-modal-value" ${isDefaultOrganizer ? `style="cursor:pointer;" onclick="startQuiz()"` : ''}>${organizerValue}</div>
+          <div class="ev-modal-value" ${organizerValue ? `style="cursor:pointer;" onclick="startQuiz()"` : ''}>${organizerValue}</div>
         </div>
       ` : ''}
     </div>
