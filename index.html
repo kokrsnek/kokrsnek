@@ -1261,26 +1261,26 @@ function showEventDetail(idx){
 
   // iOS: přizpůsob modal výšce viewportu při otevření klávesnice
   setTimeout(() => {
+    const modal = backdrop.querySelector('.ev-modal');
     const inputs = backdrop.querySelectorAll('input[type="text"], textarea');
     inputs.forEach(inp => {
       inp.addEventListener('focus', () => {
-        setTimeout(() => inp.scrollIntoView({behavior:'smooth', block:'nearest'}), 300);
+        if(window.visualViewport){
+          const availH = window.visualViewport.height - 20;
+          if(modal) modal.style.maxHeight = availH + 'px';
+          setTimeout(() => inp.scrollIntoView({behavior:'smooth', block:'end'}), 300);
+        }
+      });
+      inp.addEventListener('blur', () => {
+        if(modal) modal.style.maxHeight = '';
       });
     });
     if(window.visualViewport){
-      const onResize = () => {
-        const modal = backdrop.querySelector('.ev-modal');
-        if(modal){
-          const vh = window.visualViewport.height;
-          backdrop.style.height = vh + 'px';
-          backdrop.style.top = window.visualViewport.offsetTop + 'px';
+      window.visualViewport.addEventListener('resize', () => {
+        const availH = window.visualViewport.height - 20;
+        if(document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA')){
+          if(modal) modal.style.maxHeight = availH + 'px';
         }
-      };
-      window.visualViewport.addEventListener('resize', onResize);
-      window.visualViewport.addEventListener('scroll', onResize);
-      backdrop.addEventListener('remove', () => {
-        window.visualViewport.removeEventListener('resize', onResize);
-        window.visualViewport.removeEventListener('scroll', onResize);
       });
     }
   }, 100);
