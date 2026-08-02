@@ -1613,7 +1613,37 @@ const searchDate = document.getElementById('searchDate');
 const calBtn = document.getElementById('calBtn');
 const searchResults = document.getElementById('searchResults');
 
+const SEARCH_KNOWN_PLACES = {
+  'bouda':     '49.432694,16.622583',
+  'hastrman':  '49.463861,16.496667',
+  'funibrouk': '49.446694,16.665611',
+  'sjíždění':  '49.482333,16.608556',
+  'sjizdeni':  '49.482333,16.608556',
+};
 function mapUrl(place){
+  if(!place) return `https://www.google.com/maps/search/?api=1&query=`;
+  // 1) přímý odkaz na Google Maps v textu místa
+  const urlMatch = place.match(/https?:\/\/(?:maps\.app\.goo\.gl|maps\.google\.com|goo\.gl|www\.google\.com\/maps)[^\s]*/);
+  if(urlMatch) return urlMatch[0];
+  // 2) desetinné GPS souřadnice v textu (např. "49.432694,16.622583")
+  const decMatch = place.match(/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/);
+  if(decMatch) return `https://www.google.com/maps/search/?api=1&query=${decMatch[1]},${decMatch[2]}`;
+  // 3) souřadnice ve formátu stupně/minuty/vteřiny
+  const dmsMatch = place.match(/(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([NS])[,\s]+(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([EW])/i);
+  if(dmsMatch){
+    let lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600;
+    let lng = parseInt(dmsMatch[5]) + parseInt(dmsMatch[6])/60 + parseFloat(dmsMatch[7])/3600;
+    if(dmsMatch[4].toUpperCase()==='S') lat = -lat;
+    if(dmsMatch[8].toUpperCase()==='W') lng = -lng;
+    return `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lng.toFixed(6)}`;
+  }
+  // 4) známá pojmenovaná místa (bouda, hastrman, ...)
+  const words = place.trim().toLowerCase().split(/\s+/);
+  for(const word of words){
+    const clean = word.replace(/[^a-záčďéěíňóřšťůúýž]/g, '');
+    if(SEARCH_KNOWN_PLACES[clean]) return `https://www.google.com/maps/search/?api=1&query=${SEARCH_KNOWN_PLACES[clean]}`;
+  }
+  // 5) fallback — hledat podle textu místa
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 }
 function calDayUrl(d){
@@ -1623,7 +1653,7 @@ function calDayUrl(d){
   return `https://calendar.google.com/calendar/u/0/r/day/${y}/${m}/${day}`;
 }
 function pinSVG(){
-  return ``;
+  return `<svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12.2A7 7 0 0 1 19 8.8C19 13.8 12 21 12 21z"/><circle cx="12" cy="8.8" r="2.4"/></svg>`;
 }
 
 let _searchRenderToken = 0;
