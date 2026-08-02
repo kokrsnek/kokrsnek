@@ -1994,34 +1994,24 @@ async function czechIBAN(account, bank){
 }
 
 function showPayment(eventTitle){
-  const iban = czechIBAN('1518140045', '3030');
-  const msg = encodeURIComponent('příspěvek Kokršnekům za ' + eventTitle);
-  const spd = `SPD*1.0*ACC:${iban}*MSG:příspěvek Kokršnekům za ${eventTitle}*`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(spd)}&format=png&margin=10`;
-  // Deep link pro bankovní aplikaci (formát csp/banking)
-  const bankLink = `https://platba.eu/?iban=${iban}&message=${msg}`;
-
-  const backdrop = document.createElement('div');
-  backdrop.className = 'ev-modal-backdrop';
-  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
-  backdrop.innerHTML = `
-    <div class="ev-modal" style="text-align:center;">
-      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="margin-bottom:4px;">💸 Příspěvek na akci</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">${eventTitle}</div>
-      <img src="${qrUrl}" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:4px;" alt="QR platba">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">
-        Účet: 1518140045/3030<br>
-        IBAN: ${iban.replace(/(.{4})/g,'$1 ').trim()}<br>
-        Zpráva: příspěvek Kokršnekům za ${eventTitle}
-      </div>
-      <a href="${bankLink}" target="_blank" rel="noopener" style="
-        display:block;margin-top:14px;padding:10px;border-radius:6px;
-        background:var(--accent);color:#000;text-decoration:none;
-        font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
-      ">Otevřít v bankovní aplikaci</a>
-    </div>`;
-  document.body.appendChild(backdrop);
+  try{
+    const iban = czechIBAN('1518140045', '3030');
+    const spd = 'SPD*1.0*ACC:' + iban + '*MSG:prispevek Kokrsnekum za ' + (eventTitle||'akci') + '*';
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(spd) + '&format=png&margin=10';
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = function(e){ if(e.target===backdrop) backdrop.remove(); };
+    backdrop.innerHTML = '<div class="ev-modal" style="text-align:center;">'
+      + '<button class="ev-modal-close" onclick="this.closest(\'.ev-modal-backdrop\').remove()">×</button>'
+      + '<div class="ev-modal-title" style="margin-bottom:4px;">💸 Příspěvek na akci</div>'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
+      + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:4px;">'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">Účet: 1518140045/3030<br>Zpráva: příspěvek Kokršnekům za ' + (eventTitle||'akci') + '</div>'
+      + '</div>';
+    document.body.appendChild(backdrop);
+  }catch(err){
+    alert('Chyba: ' + err.message);
+  }
 }
 
 async function showLikers(evIdx, key){
