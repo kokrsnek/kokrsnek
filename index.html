@@ -1438,7 +1438,9 @@ function showEventDetail(idx){
     const dateStr = ev.start.toISOString().split('T')[0];
     const placeRow = rows.find(r => r.isPlace);
     const coords = placeRow?.gpsCoords || null;
-    fetchWeatherRange(ev.place, dateStr, coords, 9, 22).then(wx => {
+    const isAllDay = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
+    const startHour = isAllDay ? 9 : ev.start.getHours();
+    fetchWeatherRange(ev.place, dateStr, coords, startHour, 22).then(wx => {
       const container = document.getElementById(`wx_${idx}`);
       const el = document.getElementById(`wxVal_${idx}`);
       if(wx && container && el){
@@ -1679,7 +1681,9 @@ function renderTimeline(){
         for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
         return null;
       })();
-      fetchWeatherRange(ev.place, wxDateStr, wxCoords, 9, 22).then(wx => {
+      const isAllDayNow = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
+      const startHourNow = isAllDayNow ? 9 : ev.start.getHours();
+      fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNow, 22).then(wx => {
         const el = document.getElementById('slotWx_'+i);
         if(el && wx) el.textContent = wx;
       });
@@ -1990,7 +1994,9 @@ function checkUpcomingNotifications(){
       const words = ev.place.trim().toLowerCase().split(/\s+/);
       let wxCoords = null;
       for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]){ wxCoords=KNOWN_PLACES[c]; break; } }
-      fetchWeatherRange(ev.place, wxDateStr, wxCoords, 9, 22).then(wx => {
+      const isAllDayNotif = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
+      const startHourNotif = isAllDayNotif ? 9 : ev.start.getHours();
+      fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNotif, 22).then(wx => {
         const el = document.getElementById('notifWx_'+evIdx);
         if(el && wx) el.textContent = wx;
       });
