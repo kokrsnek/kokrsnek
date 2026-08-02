@@ -941,56 +941,20 @@ function checkAnniversaries(){
 // =====================================================
 async function fetchWeather(place, dateStr){
   try{
-    // Geocoding přes Nominatim
     const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
       {headers:{'User-Agent':'KoKrSNeK-PWA'}});
     const geoData = await geo.json();
     if(!geoData.length) return null;
     const {lat, lon} = geoData[0];
-
-    // Počasí přes Yr.no (MET Norway)
-    const wx = await fetch(
-      `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${parseFloat(lat).toFixed(4)}&lon=${parseFloat(lon).toFixed(4)}`,
-      {headers:{'User-Agent':'KoKrSNeK-PWA/1.0 github.com/kokrsnek'}}
-    );
-    if(!wx.ok) return null;
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
     const wxData = await wx.json();
-    const timeseries = wxData.properties?.timeseries;
-    if(!timeseries) return null;
-
-    // Najdi data pro požadovaný den (poledne)
-    const target = dateStr + 'T12:00:00Z';
-    const entry = timeseries.find(t => t.time.startsWith(dateStr + 'T12')) ||
-                  timeseries.find(t => t.time.startsWith(dateStr));
-    if(!entry) return null;
-
-    const details = entry.data?.instant?.details;
-    const next12 = entry.data?.next_12_hours?.summary;
-    const next1 = entry.data?.next_1_hours?.summary;
-    const symbol = (next1 || next12)?.symbol_code || '';
-
-    const temp = Math.round(details?.air_temperature ?? 0);
-    const wind = Math.round(details?.wind_speed ?? 0);
-
-    // Ikona podle symbol_code
-    const icon = symbol.includes('clearsky') ? '☀️'
-      : symbol.includes('fair') ? '🌤'
-      : symbol.includes('partlycloudy') ? '⛅'
-      : symbol.includes('cloudy') ? '☁️'
-      : symbol.includes('rain') ? '🌧'
-      : symbol.includes('snow') ? '❄️'
-      : symbol.includes('sleet') ? '🌨'
-      : symbol.includes('thunder') ? '⛈'
-      : symbol.includes('fog') ? '🌫'
-      : '🌡';
-
-    // Min/max z celého dne
-    const dayEntries = timeseries.filter(t => t.time.startsWith(dateStr));
-    const temps = dayEntries.map(t => t.data?.instant?.details?.air_temperature).filter(v => v != null);
-    const tMax = temps.length ? Math.round(Math.max(...temps)) : temp;
-    const tMin = temps.length ? Math.round(Math.min(...temps)) : temp;
-
-    return `${icon} ${tMin}–${tMax}°C · 💨${wind}m/s`;
+    if(!wxData.daily) return null;
+    const code = wxData.daily.weathercode[0];
+    const max = Math.round(wxData.daily.temperature_2m_max[0]);
+    const min = Math.round(wxData.daily.temperature_2m_min[0]);
+    const rain = wxData.daily.precipitation_sum[0];
+    const icon = code<=1?'☀️':code<=3?'⛅':code<=48?'🌫':code<=67?'🌧':code<=77?'❄️':code<=82?'🌦':'⛈';
+    return `${icon} ${min}–${max}°C${rain>0?' · '+rain+'mm':''}`;
   }catch(e){ return null; }
 }
 
