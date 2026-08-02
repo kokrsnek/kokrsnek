@@ -951,7 +951,17 @@ async function fetchWeather(place, dateStr, coords){
       if(!geoData.length) return null;
       lat = geoData[0].lat; lon = geoData[0].lon;
     }
-    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
+
+    // Zjisti jestli jde o minulé nebo budoucí datum
+    const today = new Date(); today.setHours(0,0,0,0);
+    const evDate = new Date(dateStr + 'T00:00:00');
+    const isPastDate = evDate < today;
+
+    const apiBase = isPastDate
+      ? `https://archive-api.open-meteo.com/v1/archive`
+      : `https://api.open-meteo.com/v1/forecast`;
+
+    const wx = await fetch(`${apiBase}?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
     const wxData = await wx.json();
     if(!wxData.daily) return null;
     const code = wxData.daily.weathercode[0];
@@ -959,7 +969,8 @@ async function fetchWeather(place, dateStr, coords){
     const min = Math.round(wxData.daily.temperature_2m_min[0]);
     const rain = wxData.daily.precipitation_sum[0];
     const icon = code<=1?'☀️':code<=3?'⛅':code<=48?'🌫':code<=67?'🌧':code<=77?'❄️':code<=82?'🌦':'⛈';
-    return `${icon} ${min}–${max}°C${rain>0?' · '+rain+'mm':''}`;
+    const suffix = isPastDate ? ' (bylo)' : '';
+    return `${icon} ${min}–${max}°C${rain>0?' · '+rain+'mm':''}${suffix}`;
   }catch(e){ return null; }
 }
 
@@ -1194,7 +1205,7 @@ function showEventDetail(idx){
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
-      ${isFuture && ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"><span style="color:var(--muted);">Načítám…</span></div></div>` : ''}
+      ${ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"></div></div>` : ''}
       ${ev.photoAlbum ? `
         <div class="ev-modal-label">Fotoalbum</div>
         <a class="ev-modal-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
@@ -1248,10 +1259,9 @@ function showEventDetail(idx){
   document.body.appendChild(backdrop);
   window['evKey_'+idx] = getEventKey(ev);
 
-  // Načti počasí pokud je to budoucí událost s místem
-  if(isFuture && ev.place){
+  // Načti počasí pro všechny události s místem
+  if(ev.place){
     const dateStr = ev.start.toISOString().split('T')[0];
-    // Použij GPS souřadnice z KNOWN_PLACES nebo geocoding
     const placeRow = rows.find(r => r.isPlace);
     const coords = placeRow?.gpsCoords || null;
     fetchWeather(ev.place, dateStr, coords).then(wx => {
