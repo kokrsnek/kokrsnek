@@ -2006,7 +2006,10 @@ function showPayment(eventTitle){
       + '<button class="ev-modal-close" onclick="this.closest(\'.ev-modal-backdrop\').remove()">×</button>'
       + '<div class="ev-modal-title" style="margin-bottom:4px;">💸 Příspěvek na akci</div>'
       + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
-      + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:4px;">'
+      + '<a href="' + qrUrl + '" target="_blank" rel="noopener" download="qr-platba.png">'
+      + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:4px;cursor:pointer;">'
+      + '</a>'
+      + '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--muted);margin-top:4px;">Klikni pro uložení QR kódu</div>'
       + '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-top:10px;line-height:1.8;">'
       + '1518140045/3030<br>příspěvek Kokršnekům za ' + (eventTitle||'akci')
       + '</div>'
