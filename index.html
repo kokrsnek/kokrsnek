@@ -1424,7 +1424,7 @@ function showEventDetail(idx){
       ` : ''}
       ${organizerValue ? `
         <div style="margin-top:14px;">
-          <div class="ev-modal-value">${organizerValue}</div>
+          <div class="ev-modal-value" ${organizerValue === 'KoKrŠNeK v.t.s.' ? `style="cursor:pointer;" onclick="startQuiz()"` : ''}>${organizerValue}</div>
         </div>
       ` : ''}
     </div>
@@ -2476,6 +2476,165 @@ async function refreshComments(evIdx, key){
   }catch(e){
     const list2 = document.getElementById('commentList_'+evIdx);
     if(list2) list2.innerHTML = '<div style="color:#E53935;font-size:11px;text-align:center;padding:8px;">'+e.message+'</div>';
+  }
+}
+
+// =====================================================
+// KVÍZ (skryté vajíčko — klik na "KoKrŠNeK v.t.s." v detailu události)
+// =====================================================
+const QUIZ_QUESTIONS = [
+  {q:"Jak se jmenuje nejvyšší hora ČR?", a:["Sněžka","Praděd","Lysá hora"], correct:0},
+  {q:"Kolik nohou má pavouk?", a:["6","8","10"], correct:1},
+  {q:"Který orgán v těle produkuje inzulín?", a:["Slinivka břišní","Játra","Ledviny"], correct:0},
+  {q:"Jak dlouho trvá oběh Země kolem Slunce?", a:["365 dní","30 dní","24 hodin"], correct:0},
+  {q:"Kolik je 7 × 8?", a:["54","56","58"], correct:1},
+  {q:"Kolik strun má klasická kytara?", a:["4","6","8"], correct:1},
+  {q:"Jak se jmenuje hlavní město Rakouska?", a:["Vídeň","Salcburk","Graz"], correct:0},
+  {q:"Kolik planet má sluneční soustava (bez Pluta)?", a:["7","8","9"], correct:1},
+  {q:"Který živočich je největší savec na Zemi?", a:["Slon africký","Plejtvák obrovský","Žirafa"], correct:1},
+  {q:"Kolik barev má duha?", a:["5","7","9"], correct:1},
+  {q:"Jaký je chemický symbol pro zlato?", a:["Au","Ag","Gd"], correct:0},
+  {q:"Kolik hráčů má fotbalový tým na hřišti (bez náhradníků)?", a:["9","11","13"], correct:1},
+  {q:"Který měsíc má nejméně dní (v přestupném roce)?", a:["Únor","Duben","Listopad"], correct:0},
+  {q:"Jak se nazývá nejdelší řeka protékající ČR?", a:["Vltava","Labe","Morava"], correct:1},
+  {q:"Kolik komor má lidské srdce?", a:["2","4","6"], correct:1},
+  {q:"Jak se jmenuje český vynálezce kontaktní čočky?", a:["Otto Wichterle","Emil Škoda","František Křižík"], correct:0},
+  {q:"Kolik kontinentů je na Zemi?", a:["5","6","7"], correct:2},
+  {q:"Který plyn tvoří většinu zemské atmosféry?", a:["Kyslík","Dusík","Oxid uhličitý"], correct:1},
+];
+
+let quizState = null;
+
+function startQuiz(){
+  document.getElementById('quizBackdrop')?.remove();
+  quizState = { streak: 0, usedIndices: [], timerInterval: null, timeLeft: 10 };
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.id = 'quizBackdrop';
+  backdrop.onclick = (e) => { if(e.target===backdrop){ clearInterval(quizState.timerInterval); backdrop.remove(); } };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;position:relative;">
+      <button class="ev-modal-close" onclick="clearInterval(quizState.timerInterval);this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div id="quizModalContent"></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  nextQuizQuestion();
+}
+
+function pickQuizQuestion(){
+  if(quizState.usedIndices.length >= QUIZ_QUESTIONS.length) quizState.usedIndices = [];
+  let idx;
+  do { idx = Math.floor(Math.random()*QUIZ_QUESTIONS.length); } while(quizState.usedIndices.includes(idx));
+  quizState.usedIndices.push(idx);
+  return QUIZ_QUESTIONS[idx];
+}
+
+function nextQuizQuestion(){
+  clearInterval(quizState.timerInterval);
+  const question = pickQuizQuestion();
+  quizState.timeLeft = 10;
+  const content = document.getElementById('quizModalContent');
+  if(!content) return;
+  const order = [0,1,2].sort(() => Math.random()-0.5);
+  content.innerHTML = `
+    <div style="font-size:11px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Série: ${quizState.streak}</div>
+    <div id="quizTimer" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);margin-bottom:10px;">10</div>
+    <div class="ev-modal-title" style="margin-bottom:16px;">${question.q}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${order.map(i => `<button onclick="answerQuiz(${i === question.correct})" style="
+        background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);
+        color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:14px;
+        padding:12px;border-radius:8px;cursor:pointer;">${question.a[i]}</button>`).join('')}
+    </div>
+  `;
+  const timerEl = document.getElementById('quizTimer');
+  quizState.timerInterval = setInterval(() => {
+    quizState.timeLeft--;
+    if(timerEl) timerEl.textContent = quizState.timeLeft;
+    if(quizState.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
+    if(quizState.timeLeft <= 0){
+      clearInterval(quizState.timerInterval);
+      answerQuiz(false);
+    }
+  }, 1000);
+}
+
+function answerQuiz(isCorrect){
+  clearInterval(quizState.timerInterval);
+  if(isCorrect){
+    quizState.streak++;
+    nextQuizQuestion();
+  } else {
+    endQuiz();
+  }
+}
+
+function endQuiz(){
+  const content = document.getElementById('quizModalContent');
+  if(!content) return;
+  const savedName = localStorage.getItem('kokrsnekUser') || '';
+  const streakWord = quizState.streak===1 ? 'otázku' : (quizState.streak>=2 && quizState.streak<=4 ? 'otázky' : 'otázek');
+  content.innerHTML = `
+    <div class="ev-modal-title" style="margin-bottom:6px;">Konec!</div>
+    <div class="ev-modal-label" style="margin-bottom:16px;font-size:14px;text-transform:none;letter-spacing:0;">Uhodl jsi <span style="color:var(--accent);font-weight:700;">${quizState.streak}</span> ${streakWord} v řadě</div>
+    <input id="quizNameInput" type="text" placeholder="Tvoje jméno…" value="${savedName}" style="
+      width:100%; box-sizing:border-box;
+      background:#0B0B0B; border:1px solid rgba(60,180,80,0.4);
+      color:var(--ink); font-family:'JetBrains Mono',monospace;
+      font-size:16px; padding:10px 12px; border-radius:4px; outline:none; margin-bottom:12px;
+    ">
+    <button onclick="submitQuizScore()" style="
+      display:block;width:100%;
+      background:var(--accent);border:none;color:#000;
+      font-family:'JetBrains Mono',monospace;font-size:13px;
+      padding:10px;border-radius:6px;cursor:pointer;font-weight:700;
+    ">Uložit a zobrazit žebříček</button>
+  `;
+  setTimeout(() => document.getElementById('quizNameInput')?.focus(), 100);
+}
+
+async function submitQuizScore(){
+  const input = document.getElementById('quizNameInput');
+  const name = (input?.value || '').trim();
+  if(!name){ input?.focus(); return; }
+  localStorage.setItem('kokrsnekUser', name);
+  try{
+    const ref = db.collection('quizScores').doc(name);
+    const snap = await ref.get();
+    const prevBest = snap.exists ? (snap.data().score || 0) : -1;
+    if(quizState.streak > prevBest){
+      await ref.set({ name, score: quizState.streak, at: new Date().toISOString() });
+    }
+  }catch(e){}
+  showQuizLeaderboard();
+}
+
+async function showQuizLeaderboard(){
+  const content = document.getElementById('quizModalContent');
+  if(!content) return;
+  content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
+  try{
+    const snap = await db.collection('quizScores').get();
+    const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
+    content.innerHTML = `
+      <div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div>
+      <div style="text-align:left;max-height:300px;overflow-y:auto;">
+        ${rows.length === 0 ? `<div style="color:var(--muted);font-size:12px;text-align:center;">Zatím nikdo nehrál</div>` : rows.map((r,i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.15);">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);width:24px;">${i+1}.</span>
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--ink);">${r.name}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);">${r.score}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="document.getElementById('quizBackdrop')?.remove()" style="
+        display:block;width:100%;margin-top:16px;
+        background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;">Zavřít</button>
+    `;
+  }catch(e){
+    content.innerHTML = `<div style="color:#E53935;font-size:12px;text-align:center;">${e.message}</div>`;
   }
 }
 
