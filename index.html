@@ -1639,8 +1639,12 @@ function renderResults(query){
     return;
   }
 
-  matches.forEach(({ev, i}) => {
-    const row = document.createElement('div');
+  // Řazení: budoucí vzestupně (nejbližší nahoře), pak minulé sestupně (nejbližší nahoře, nejstarší dole)
+  const curNow = new Date();
+  const future = matches.filter(({ev}) => ev.start >= curNow).sort((a,b) => a.ev.start - b.ev.start);
+  const past = matches.filter(({ev}) => ev.start < curNow).sort((a,b) => b.ev.start - a.ev.start);
+  const sorted = [...future, ...past];
+  sorted.forEach(({ev, i}) => {
     row.className = 'result-item';
     row.innerHTML = `
       <div class="result-main">
