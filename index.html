@@ -1234,7 +1234,7 @@ function showEventDetail(idx){
           flex:1;background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;
           padding:8px;border-radius:6px;cursor:pointer;">🤍 0</button>
-        ${!isFuture ? `<button onclick="showPayment('${ev.title.replace(/'/g,"\\'")}')" style="
+        ${!isFuture ? `<button class="payment-btn" data-title="${ev.title.replace(/"/g,'&quot;')}" style="
           flex:1;background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;
           padding:8px;border-radius:6px;cursor:pointer;">💸 Příspěvek</button>` : ''}
@@ -1284,6 +1284,10 @@ function showEventDetail(idx){
   const fbKey = getEventKey(ev);
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
+
+  // Platební tlačítko
+  const payBtn = backdrop.querySelector('.payment-btn');
+  if(payBtn) payBtn.addEventListener('click', () => showPayment(payBtn.dataset.title));
   refreshComments(idx, fbKey);
 
   // Long press na like button = zobraz kdo lajkoval
