@@ -919,8 +919,7 @@ async function shareEvent(ev){
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
     if(ev.photoAlbum) extras.push(`📸 Album fotek: ${ev.photoAlbum}`);
     if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`📄 ${f.title}: ${f.url}`));
-    textBase = `${intro}${NL}${NL}${ev.title}${NL}${NL}${dateWithDay}${wxLine ? NL+NL+wxLine : ''}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
-    // Odkazy jsou už součástí textu výše — url se dál neposílá zvlášť, ať se nezdvojí
+    textBase = `${ev.title}${NL}${NL}${dateWithDay}${wxLine ? NL+NL+wxLine : ''}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
     shareUrl = undefined;
   } else {
     // Budoucí události — přidej odkaz na Google Calendar a mapu místa
