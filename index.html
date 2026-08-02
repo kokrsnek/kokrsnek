@@ -1041,6 +1041,53 @@ async function fetchWeather(place, dateStr, coords){
   }catch(e){ return null; }
 }
 
+async function fetchWeatherRange(place, dateStr, coords, hourStart, hourEnd){
+  try{
+    let lat, lon;
+    if(coords){
+      [lat, lon] = coords.split(',');
+    } else {
+      const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
+        {headers:{'User-Agent':'KoKrSNeK-PWA'}});
+      const geoData = await geo.json();
+      if(!geoData.length) return null;
+      lat = geoData[0].lat; lon = geoData[0].lon;
+    }
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const evDate = new Date(dateStr + 'T00:00:00');
+    const isPastDate = evDate < today;
+
+    const apiBase = isPastDate
+      ? `https://archive-api.open-meteo.com/v1/archive`
+      : `https://api.open-meteo.com/v1/forecast`;
+
+    const wx = await fetch(`${apiBase}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
+    const wxData = await wx.json();
+    if(!wxData.hourly || !wxData.hourly.time) return null;
+
+    // Vyber jen hodiny v zadaném rozmezí (výchozí 9:00–22:00)
+    const temps = [], rains = [], codes = [];
+    wxData.hourly.time.forEach((t, i) => {
+      const h = parseInt(t.slice(11,13));
+      if(h >= hourStart && h <= hourEnd){
+        temps.push(wxData.hourly.temperature_2m[i]);
+        rains.push(wxData.hourly.precipitation[i]);
+        codes.push(wxData.hourly.weathercode[i]);
+      }
+    });
+    if(!temps.length) return null;
+
+    const min = Math.round(Math.min(...temps));
+    const max = Math.round(Math.max(...temps));
+    const rain = rains.reduce((a,b) => a+b, 0);
+    const code = Math.max(...codes); // nejhorší kód počasí v rámci okna = nejvýstižnější ikona
+    const icon = code<=1?'☀️':code<=3?'⛅':code<=48?'🌫':code<=67?'🌧':code<=77?'❄️':code<=82?'🌦':'⛈';
+    const suffix = isPastDate ? ' (bylo)' : '';
+    return `${icon} ${min}–${max}°C${rain>0?' · '+rain.toFixed(1)+'mm':''}${suffix}`;
+  }catch(e){ return null; }
+}
+
 async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
   try{
     let lat, lon;
@@ -1391,7 +1438,7 @@ function showEventDetail(idx){
     const dateStr = ev.start.toISOString().split('T')[0];
     const placeRow = rows.find(r => r.isPlace);
     const coords = placeRow?.gpsCoords || null;
-    fetchWeather(ev.place, dateStr, coords).then(wx => {
+    fetchWeatherRange(ev.place, dateStr, coords, 9, 22).then(wx => {
       const container = document.getElementById(`wx_${idx}`);
       const el = document.getElementById(`wxVal_${idx}`);
       if(wx && container && el){
@@ -1632,7 +1679,7 @@ function renderTimeline(){
         for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
         return null;
       })();
-      fetchWeather(ev.place, wxDateStr, wxCoords).then(wx => {
+      fetchWeatherRange(ev.place, wxDateStr, wxCoords, 9, 22).then(wx => {
         const el = document.getElementById('slotWx_'+i);
         if(el && wx) el.textContent = wx;
       });
@@ -1943,7 +1990,7 @@ function checkUpcomingNotifications(){
       const words = ev.place.trim().toLowerCase().split(/\s+/);
       let wxCoords = null;
       for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]){ wxCoords=KNOWN_PLACES[c]; break; } }
-      fetchWeather(ev.place, wxDateStr, wxCoords).then(wx => {
+      fetchWeatherRange(ev.place, wxDateStr, wxCoords, 9, 22).then(wx => {
         const el = document.getElementById('notifWx_'+evIdx);
         if(el && wx) el.textContent = wx;
       });
