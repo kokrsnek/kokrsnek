@@ -1685,7 +1685,8 @@ function renderResults(query){
 
   if (currentRow){
     requestAnimationFrame(() => {
-      searchResults.scrollTop = currentRow.offsetTop - 4;
+      const offset = currentRow.offsetTop - (searchResults.clientHeight/2) + (currentRow.offsetHeight/2);
+      searchResults.scrollTop = Math.max(0, offset);
     });
   }
 }
