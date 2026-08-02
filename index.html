@@ -1468,12 +1468,28 @@ function renderTimeline(){
         <div class="time-row">${fmtTimeRow(ev)}</div>
         <div class="title-row title-clickable" onclick="showEventDetail(${i})">${ev.title}</div>
         ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
+        ${isNow && !isPast && ev.place ? `<div id="slotWx_${i}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
         ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
         ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       </div>
     `;
     slot.dataset.idx = i;
     app.appendChild(slot);
+
+    // Počasí pro now slot
+    if(isNow && !isPast && ev.place){
+      const wxDateStr = ev.start.toISOString().split('T')[0];
+      const wxCoords = (() => {
+        const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
+        const words = ev.place.trim().toLowerCase().split(/\s+/);
+        for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
+        return null;
+      })();
+      fetchWeather(ev.place, wxDateStr, wxCoords).then(wx => {
+        const el = document.getElementById('slotWx_'+i);
+        if(el && wx) el.textContent = wx;
+      });
+    }
   });
 
   const nowSlot = document.querySelector('.slot.now');
@@ -1697,7 +1713,8 @@ function checkUpcomingNotifications(){
         <div class="ev-modal-title">${ev.title}</div>
         <div class="ev-modal-label">Kdy</div>
         <div class="ev-modal-value">${fmtDateRange(ev)} · ${daysText}</div>
-        ${ev.place ? `<div class="ev-modal-label">Místo</div><div class="ev-modal-value">${ev.place}</div>` : ''}
+        ${ev.place ? `<div class="ev-modal-label">Místo</div><div class="ev-modal-value">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ''}
+        ${ev.place ? `<div id="notifWx_${evIdx}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:4px;"></div>` : ''}
         <div class="ev-modal-value" style="margin-top:16px;font-size:clamp(11px,3.5vw,18px);color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kokršneci na tebe ano.</div>
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block; width:100%; margin-top:16px;
@@ -1709,6 +1726,19 @@ function checkUpcomingNotifications(){
     `;
     document.body.appendChild(backdrop);
     setTimeout(() => { if(backdrop.parentElement) backdrop.remove(); }, 15000);
+
+    // Načti počasí pro notifikaci
+    if(ev.place){
+      const wxDateStr = ev.start.toISOString().split('T')[0];
+      const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
+      const words = ev.place.trim().toLowerCase().split(/\s+/);
+      let wxCoords = null;
+      for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]){ wxCoords=KNOWN_PLACES[c]; break; } }
+      fetchWeather(ev.place, wxDateStr, wxCoords).then(wx => {
+        const el = document.getElementById('notifWx_'+evIdx);
+        if(el && wx) el.textContent = wx;
+      });
+    }
   });
 
   // Pokus se také o systémovou notifikaci pokud je povolena
