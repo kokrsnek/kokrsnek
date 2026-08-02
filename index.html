@@ -1270,7 +1270,7 @@ function showEventDetail(idx){
       pressTimer = setTimeout(() => {
         longPressed = true;
         showLikers(idx, fbKey);
-      }, 600);
+      }, 400);
     }, {passive:true});
     likeBtn.addEventListener('touchend', e => {
       clearTimeout(pressTimer);
