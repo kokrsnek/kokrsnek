@@ -1211,7 +1211,7 @@ function showEventDetail(idx){
       ` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button id="likeBtn_${idx}" onclick="toggleLike(${idx})" style="
-          flex:1;background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
+          flex:1;background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);
           color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;
           padding:8px;border-radius:6px;cursor:pointer;">🤍 0</button>
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
@@ -1256,6 +1256,29 @@ function showEventDetail(idx){
   const fbKey = getEventKey(ev);
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
+
+  // Long press na like button = zobraz kdo lajkoval
+  const likeBtn = document.getElementById('likeBtn_'+idx);
+  if(likeBtn){
+    let pressTimer;
+    let longPressed = false;
+    likeBtn.style.userSelect = 'none';
+    likeBtn.style.webkitUserSelect = 'none';
+    likeBtn.style.webkitTouchCallout = 'none';
+    likeBtn.addEventListener('touchstart', e => {
+      longPressed = false;
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        showLikers(idx, fbKey);
+      }, 600);
+    }, {passive:true});
+    likeBtn.addEventListener('touchend', e => {
+      clearTimeout(pressTimer);
+      if(longPressed) e.preventDefault();
+    });
+    likeBtn.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+    likeBtn.addEventListener('contextmenu', e => e.preventDefault());
+  }
 }
 
 function showFeedback(){
@@ -1883,6 +1906,30 @@ function getUserName(){
 
 function getEventKey(ev){
   return (ev.raw && ev.raw.id) ? ev.raw.id : ev.title.replace(/[^a-zA-Z0-9]/g,'_') + '_' + ev.start.toISOString().slice(0,10);
+}
+
+async function showLikers(evIdx, key){
+  const snap = await db.collection('events').doc(key).collection('likes').get();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  const rows = snap.empty
+    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo nelajkoval</div>'
+    : snap.docs.map(d => {
+        const data = d.data();
+        const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.1);font-family:'JetBrains Mono',monospace;">
+          <span style="font-size:13px;color:var(--accent);font-weight:700;">❤️ ${d.id}</span>
+          <span style="font-size:11px;color:var(--muted);">${time}</span>
+        </div>`;
+      }).join('');
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">Kdo lajkoval</div>
+      ${rows}
+    </div>`;
+  document.body.appendChild(backdrop);
 }
 
 async function toggleLike(evIdx){
