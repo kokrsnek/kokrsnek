@@ -1588,9 +1588,17 @@ function renderResults(query){
       ${ev.place ? `<a class="map-pin" href="${mapUrl(ev.place)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${pinSVG()}</a>` : ``}
     `;
     row.addEventListener('click', () => {
-      const target = document.querySelector(`.slot[data-idx="${i}"]`);
-      if (target){ target.scrollIntoView({block:"center"}); }
       closeSearch();
+      setTimeout(() => {
+        const app = document.getElementById('app');
+        const target = document.querySelector(`.slot[data-idx="${i}"]`);
+        if(target && app){
+          app.style.scrollSnapType = 'none';
+          const offset = target.offsetTop - (app.clientHeight/2) + (target.offsetHeight/2);
+          app.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
+          setTimeout(() => app.style.scrollSnapType = '', 800);
+        }
+      }, 50);
     });
     searchResults.appendChild(row);
   });
