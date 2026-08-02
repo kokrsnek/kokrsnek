@@ -2023,7 +2023,7 @@ function showPayment(eventTitle){
   document.body.appendChild(backdrop);
 }
 
-function showLikers(evIdx, key){
+async function showLikers(evIdx, key){
   const snap = await db.collection('events').doc(key).collection('likes').get();
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
