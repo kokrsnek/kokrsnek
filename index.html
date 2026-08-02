@@ -1193,11 +1193,12 @@ function showEventDetail(idx){
   const desc = stripHtml(r.description).replace(/https?:\/\/photos(?:\.app)?\.goo\.gl\/\S+/g,'').replace(/https?:\/\/photos\.google\.com\/\S+/g,'').trim();
   if(desc) rows.push({label:'Popis', value: desc});
 
-  // Organizátor
+  // Organizátor (zobrazí se na konci, pod komentáři)
+  let organizerValue = null;
   if(r.organizer && r.organizer.displayName && r.organizer.displayName !== r.organizer.email)
-    rows.push({label:'Organizátor', value: r.organizer.displayName});
+    organizerValue = r.organizer.displayName;
   else if(r.organizer)
-    rows.push({label:'Organizátor', value: 'KoKrŠNeK v.t.s.'});
+    organizerValue = 'KoKrŠNeK v.t.s.';
 
   // Účastníci
   if(r.attendees && r.attendees.length){
@@ -1298,6 +1299,12 @@ function showEventDetail(idx){
           Napiš komentář…
         </button>
       </div>
+      ${organizerValue ? `
+        <div style="margin-top:14px;">
+          <div class="ev-modal-label">Organizátor</div>
+          <div class="ev-modal-value">${organizerValue}</div>
+        </div>
+      ` : ''}
     </div>
   `;
   document.body.appendChild(backdrop);
