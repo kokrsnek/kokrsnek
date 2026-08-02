@@ -1639,16 +1639,28 @@ function renderResults(query){
     return;
   }
 
-  // Řazení: budoucí vzestupně (nejbližší nahoře), pak minulé sestupně (nejbližší nahoře, nejstarší dole)
+  // Řazení jako hlavní timeline: chronologicky vzestupně, najdi "aktuální" (nejbližší k teď),
+  // pak posklládej DOM tak, aby scrollem nahoru šly budoucí (nejvzdálenější nahoře) a scrollem
+  // dolů minulé (nejstarší dole) — aktuální položka je po vykreslení zarovnaná nahoru výsledků.
   const curNow = new Date();
-  const future = matches.filter(({ev}) => ev.start >= curNow).sort((a,b) => a.ev.start - b.ev.start);
-  const past = matches.filter(({ev}) => ev.start < curNow).sort((a,b) => b.ev.start - a.ev.start);
-  const sorted = [...future, ...past];
-  sorted.forEach(({ev, i}) => {
+  const chrono = [...matches].sort((a,b) => a.ev.start - b.ev.start);
+  let centerIndex = chrono.findIndex(({ev}) => ev.end >= curNow);
+  if (centerIndex === -1) centerIndex = chrono.length - 1; // všechny nalezené jsou minulé → nejnovější z nich bude "aktuální"
+
+  const ordered = [];
+  for (let idx = chrono.length - 1; idx > centerIndex; idx--) ordered.push(chrono[idx]); // budoucí, nejvzdálenější první
+  ordered.push(chrono[centerIndex]); // aktuální / nejbližší
+  for (let idx = centerIndex - 1; idx >= 0; idx--) ordered.push(chrono[idx]); // minulé, nejnovější první
+
+  let currentRow = null;
+  ordered.forEach(({ev, i}, pos) => {
     const row = document.createElement('div');
     row.className = 'result-item';
+    const isCurrent = pos === (chrono.length - 1 - centerIndex);
+    if (isCurrent) row.style.cssText = 'border-color:rgba(77,191,106,0.7);background:rgba(77,191,106,0.08);';
     row.innerHTML = `
       <div class="result-main">
+        ${isCurrent ? `<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px;">aktuální</div>` : ``}
         <div class="result-title">${ev.title}</div>
         <div class="result-meta">${fmtDate(ev.start)} · ${fmtTime(ev.start, ev.end)}${ev.place ? ' · '+ev.place : ''}</div>
       </div>
@@ -1668,7 +1680,14 @@ function renderResults(query){
       }, 50);
     });
     searchResults.appendChild(row);
+    if (isCurrent) currentRow = row;
   });
+
+  if (currentRow){
+    requestAnimationFrame(() => {
+      searchResults.scrollTop = currentRow.offsetTop - 4;
+    });
+  }
 }
 
 let _scrollY = 0;
