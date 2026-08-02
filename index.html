@@ -1259,7 +1259,7 @@ function showEventDetail(idx){
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
 
-  // iOS: při focusu na input scrolluj do view
+  // iOS: přizpůsob modal výšce viewportu při otevření klávesnice
   setTimeout(() => {
     const inputs = backdrop.querySelectorAll('input[type="text"], textarea');
     inputs.forEach(inp => {
@@ -1267,6 +1267,22 @@ function showEventDetail(idx){
         setTimeout(() => inp.scrollIntoView({behavior:'smooth', block:'nearest'}), 300);
       });
     });
+    if(window.visualViewport){
+      const onResize = () => {
+        const modal = backdrop.querySelector('.ev-modal');
+        if(modal){
+          const vh = window.visualViewport.height;
+          backdrop.style.height = vh + 'px';
+          backdrop.style.top = window.visualViewport.offsetTop + 'px';
+        }
+      };
+      window.visualViewport.addEventListener('resize', onResize);
+      window.visualViewport.addEventListener('scroll', onResize);
+      backdrop.addEventListener('remove', () => {
+        window.visualViewport.removeEventListener('resize', onResize);
+        window.visualViewport.removeEventListener('scroll', onResize);
+      });
+    }
   }, 100);
   refreshComments(idx, fbKey);
 
