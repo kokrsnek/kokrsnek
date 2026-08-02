@@ -455,8 +455,10 @@
     position:fixed; inset:0; z-index:60;
     background:rgba(0,0,0,0.75);
     backdrop-filter:blur(3px);
-    display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:flex-start; justify-content:center;
     padding:20px;
+    padding-top:max(20px, env(safe-area-inset-top));
+    overflow-y:auto;
     animation: fadeIn .2s ease;
   }
   @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
@@ -1255,6 +1257,17 @@ function showEventDetail(idx){
   // Načti lajky a komentáře z Firebase
   const fbKey = getEventKey(ev);
   refreshLikes(idx, fbKey);
+  refreshComments(idx, fbKey);
+
+  // iOS: při focusu na input scrolluj do view
+  setTimeout(() => {
+    const inputs = backdrop.querySelectorAll('input[type="text"], textarea');
+    inputs.forEach(inp => {
+      inp.addEventListener('focus', () => {
+        setTimeout(() => inp.scrollIntoView({behavior:'smooth', block:'nearest'}), 300);
+      });
+    });
+  }, 100);
   refreshComments(idx, fbKey);
 
   // Long press na like button = zobraz kdo lajkoval
