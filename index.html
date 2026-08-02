@@ -1622,6 +1622,13 @@ function closeSearch(){
 searchBtn.addEventListener('click', openSearch);
 searchClose.addEventListener('click', closeSearch);
 searchInput.addEventListener('input', () => renderResults(searchInput.value));
+
+// Zavři hledání dotykem mimo dialog
+document.addEventListener('touchstart', (e) => {
+  if(searchOverlay.classList.contains('open') && !searchOverlay.contains(e.target) && e.target !== searchBtn){
+    closeSearch();
+  }
+}, {passive:true});
 calBtn.addEventListener('click', () => {
   const val = searchDate.value;
   const d = val ? new Date(val + 'T00:00:00') : new Date();
