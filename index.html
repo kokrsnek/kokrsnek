@@ -876,6 +876,26 @@ function getDaysText(ev){
 // =====================================================
 // SDÍLENÍ UDÁLOSTI
 // =====================================================
+function getPlaceCoords(place){
+  if(!place) return null;
+  const decMatch = place.match(/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/);
+  if(decMatch) return `${decMatch[1]},${decMatch[2]}`;
+  const dmsMatch = place.match(/(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([NS])[,\s]+(\d+)[°\s]+(\d+)['\s]+(\d+\.?\d*)["″\s]*([EW])/i);
+  if(dmsMatch){
+    let lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600;
+    let lng = parseInt(dmsMatch[5]) + parseInt(dmsMatch[6])/60 + parseFloat(dmsMatch[7])/3600;
+    if(dmsMatch[4].toUpperCase()==='S') lat = -lat;
+    if(dmsMatch[8].toUpperCase()==='W') lng = -lng;
+    return `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  }
+  const words = place.trim().toLowerCase().split(/\s+/);
+  for(const word of words){
+    const clean = word.replace(/[^a-záčďéěíňóřšťůúýž]/g, '');
+    if(SEARCH_KNOWN_PLACES[clean]) return SEARCH_KNOWN_PLACES[clean];
+  }
+  return null;
+}
+
 async function shareEvent(ev){
   const r = ev.raw || {};
   const isPast = ev.end < now;
@@ -883,6 +903,12 @@ async function shareEvent(ev){
   const intro = `KoKrŠNeci tě zvou na…`;
   const introFull = `KoKrŠNeci tě zvou na ${ev.title}`;
   const dateWithDay = isMultiDay(ev) ? fmtDateRange(ev) : `${fmtFull(ev.start)} od ${fmtTime(ev.start)}`;
+
+  let wxLine = '';
+  if(ev.place){
+    const wx = await fetchWeather(ev.place, ev.start.toISOString().split('T')[0], getPlaceCoords(ev.place));
+    if(wx) wxLine = wx;
+  }
 
   let textBase, shareUrl;
 
@@ -892,7 +918,7 @@ async function shareEvent(ev){
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
     if(ev.photoAlbum) extras.push(`📸 Album fotek: ${ev.photoAlbum}`);
     if(ev.driveFiles && ev.driveFiles.length) ev.driveFiles.forEach(f => extras.push(`📄 ${f.title}: ${f.url}`));
-    textBase = `${intro}${NL}${NL}${ev.title}${NL}${NL}${dateWithDay}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
+    textBase = `${intro}${NL}${NL}${ev.title}${NL}${NL}${dateWithDay}${wxLine ? NL+NL+wxLine : ''}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
     // Odkazy jsou už součástí textu výše — url se dál neposílá zvlášť, ať se nezdvojí
     shareUrl = undefined;
   } else {
@@ -900,7 +926,7 @@ async function shareEvent(ev){
     const link = r.htmlLink || '';
     const extras = [];
     if(ev.place) extras.push(`📍 Mapa: ${mapUrl(ev.place)}`);
-    textBase = `${intro}${NL}${NL}${ev.title}${NL}${NL}${dateWithDay}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
+    textBase = `${intro}${NL}${NL}${ev.title}${NL}${NL}${dateWithDay}${wxLine ? NL+NL+wxLine : ''}${ev.place ? NL+NL+ev.place : ''}${extras.length ? NL+NL+extras.join(NL+NL) : ''}`;
     shareUrl = link || undefined;
   }
 
