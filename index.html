@@ -1626,7 +1626,10 @@ function pinSVG(){
   return ``;
 }
 
+let _searchRenderToken = 0;
+
 function renderResults(query){
+  const myToken = ++_searchRenderToken;
   const q = query.trim().toLowerCase();
   searchResults.innerHTML = "";
   if (!q){ return; }
@@ -1685,6 +1688,7 @@ function renderResults(query){
 
   if (currentRow){
     requestAnimationFrame(() => {
+      if (myToken !== _searchRenderToken) return; // mezitím proběhlo novější hledání, tohle je zastaralé
       const offset = currentRow.offsetTop - (searchResults.clientHeight/2) + (currentRow.offsetHeight/2);
       searchResults.scrollTop = Math.max(0, offset);
     });
@@ -1716,7 +1720,11 @@ function closeSearch(){
 
 searchBtn.addEventListener('click', openSearch);
 searchClose.addEventListener('click', closeSearch);
-searchInput.addEventListener('input', () => renderResults(searchInput.value));
+let _searchDebounce = null;
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => renderResults(searchInput.value), 80);
+});
 
 // Zavři hledání dotykem mimo dialog
 document.addEventListener('touchstart', (e) => {
