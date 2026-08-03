@@ -1427,13 +1427,17 @@ function showEventDetail(idx){
       ` : ''}
       ${organizerValue ? `
         <div style="margin-top:14px;">
-          <div ${organizerValue ? `onclick="startQuiz()" style="cursor:pointer;padding:10px 8px;margin:0 -8px;border-radius:8px;-webkit-tap-highlight-color:rgba(60,180,80,0.25);"` : ''} class="ev-modal-value">${organizerValue}</div>
+          <div id="orgQuiz_${idx}" class="ev-modal-value" style="cursor:pointer;padding:10px 8px;margin:0 -8px;border-radius:8px;">${organizerValue}</div>
         </div>
       ` : ''}
     </div>
   `;
   document.body.appendChild(backdrop);
   window['evKey_'+idx] = getEventKey(ev);
+
+  // Kvíz — klik na 'KoKrŠNeK v.t.s.' (addEventListener místo inline onclick, spolehlivější na iOS)
+  const orgEl = document.getElementById('orgQuiz_'+idx);
+  if(orgEl) orgEl.addEventListener('click', startQuiz);
 
   // Načti počasí pro všechny události s místem
   if(ev.place){
