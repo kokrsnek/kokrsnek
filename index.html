@@ -2819,7 +2819,10 @@ async function submitQuizScore(){
   const content = document.getElementById('quizModalContent');
   let saveError = null;
   try{
-    const ref = db.collection('quizScores').doc(name);
+    const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
+    // Ulož tento konkrétní pokus do historie (vždy, i když není nový rekord)
+    await withTimeout(ref.collection('attempts').add({ score: st.streak, at: new Date().toISOString() }), 8000);
+    // Aktualizuj nejlepší skóre pro řazení žebříčku
     const snap = await withTimeout(ref.get(), 8000);
     const prevBest = snap.exists ? (snap.data().score || 0) : -1;
     if(st.streak > prevBest){
@@ -2838,7 +2841,7 @@ async function showQuizLeaderboard(saveError){
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
   const saveErrorHtml = saveError ? `<div style="color:#E53935;font-size:11px;margin-bottom:10px;text-align:center;">Skóre se nepodařilo uložit: ${saveError.message}</div>` : '';
   try{
-    const snap = await withTimeout(db.collection('quizScores').get(), 8000);
+    const snap = await withTimeout(db.collection('events').doc('_quiz_leaderboard').collection('scores').get(), 8000);
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div>
@@ -2851,9 +2854,9 @@ async function showQuizLeaderboard(saveError){
             if(!isNaN(d)) dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
           }
           return `
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.15);">
+          <div onclick="showQuizAttempts('${r.name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.15);cursor:pointer;">
             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);width:24px;">${i+1}.</span>
-            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--ink);">${r.name}</span>
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--ink);text-decoration:underline;text-decoration-color:rgba(60,180,80,0.4);">${r.name}</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;">${dateStr}</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);">${r.score}</span>
           </div>
@@ -2875,6 +2878,50 @@ async function showQuizLeaderboard(saveError){
         background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
         font-family:'JetBrains Mono',monospace;font-size:13px;
         padding:10px;border-radius:6px;cursor:pointer;">Zavřít</button>
+    `;
+  }
+}
+
+async function showQuizAttempts(name){
+  const content = document.getElementById('quizModalContent');
+  if(!content) return;
+  content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">📜 ${name} — pokusy</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
+  try{
+    const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
+    const snap = await withTimeout(ref.collection('attempts').get(), 8000);
+    const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
+    content.innerHTML = `
+      <div class="ev-modal-title" style="margin-bottom:12px;">📜 ${name} — pokusy</div>
+      <div style="text-align:left;max-height:300px;overflow-y:auto;">
+        ${rows.length === 0 ? `<div style="color:var(--muted);font-size:12px;text-align:center;">Žádné pokusy nenalezeny</div>` : rows.map((r,i) => {
+          let dateStr = '';
+          if(r.at){
+            const d = new Date(r.at);
+            if(!isNaN(d)) dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          }
+          return `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(60,180,80,0.15);">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);width:24px;">${i+1}.</span>
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">${dateStr}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);">${r.score}</span>
+          </div>
+        `;}).join('')}
+      </div>
+      <button onclick="showQuizLeaderboard()" style="
+        display:block;width:100%;margin-top:16px;
+        background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;">← Zpět na žebříček</button>
+    `;
+  }catch(e){
+    console.error('Chyba při načítání pokusů:', e);
+    content.innerHTML = `
+      <div style="color:#E53935;font-size:12px;text-align:center;margin-bottom:12px;">Nepodařilo se načíst pokusy: ${e.message}</div>
+      <button onclick="showQuizLeaderboard()" style="
+        display:block;width:100%;
+        background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;">← Zpět na žebříček</button>
     `;
   }
 }
