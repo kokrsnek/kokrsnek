@@ -1862,6 +1862,10 @@ function pinSVG(){
   return `<svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12.2A7 7 0 0 1 19 8.8C19 13.8 12 21 12 21z"/><circle cx="12" cy="8.8" r="2.4"/></svg>`;
 }
 
+function albumIconSVG(){
+  return `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 19"/></svg>`;
+}
+
 let _searchRenderToken = 0;
 
 function renderResults(query){
@@ -1900,7 +1904,7 @@ function renderResults(query){
     row.innerHTML = `
       <div class="result-main">
         ${isCurrent ? `<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px;">aktuální</div>` : ``}
-        <div class="result-title">${ev.title}</div>
+        <div class="result-title">${ev.title}${ev.photoAlbum ? ` <span title="Má fotoalbum" style="display:inline-flex;vertical-align:middle;margin-left:4px;">${albumIconSVG()}</span>` : ``}</div>
         <div class="result-meta">${fmtDate(ev.start)} · ${fmtTime(ev.start, ev.end)}${ev.place ? ' · '+ev.place : ''}</div>
       </div>
       ${ev.place ? `<a class="map-pin" href="${mapUrl(ev.place)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${pinSVG()}</a>` : ``}
