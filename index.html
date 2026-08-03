@@ -2180,7 +2180,7 @@ function _showAlbumsModal(){
       rows += `<div id="albumYear_${year}" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:0.15em;color:var(--accent);padding:14px 0 6px;${yi>0?'border-top:1px solid rgba(60,180,80,0.15);':''}cursor:pointer;user-select:none;" onclick="showYearPicker('${allYears}','${year}')">${year} ▾</div>`;
       byYear[year].forEach(ev => {
         rows += `
-          <div class="album-item" onclick="this.closest('.ev-modal-backdrop').remove();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
+          <div class="album-item" onclick="checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
             <div class="album-dot" style="background:${getEventColor(ev)};"></div>
             <div class="album-info">
               <div class="album-date">${fmtDate(ev.start)}</div>
