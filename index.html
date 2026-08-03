@@ -1311,11 +1311,14 @@ function showEventDetail(idx){
         if(KNOWN_PLACES[clean]){ gpsCoords = KNOWN_PLACES[clean]; break; }
       }
     }
-    const placeLabel = ev.place
+    let placeLabel = ev.place
       .replace(urlMatch ? urlMatch[0] : '', '')
       .replace(/\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[NSns][,\s]+\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[EWew]/, '')
       .replace(decMatch ? decMatch[0] : '', '')
       .trim() || 'Zobrazit místo';
+    // Zkrátit na samotný název místa — usekni před adresou (číslo popisné, Okres, PSČ, čárka)
+    const cutMatch = placeLabel.match(/\s\d|\bOkres\b|,/);
+    if(cutMatch) placeLabel = placeLabel.slice(0, cutMatch.index).trim() || placeLabel;
     rows.push({label:'Místo', value: placeLabel, mapUrl, gpsCoords, isPlace: true});
   }
 
