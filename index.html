@@ -1637,8 +1637,16 @@ function renderTimeline(){
     if(evYear !== lastYear){
       const yd = document.createElement('div');
       yd.id = `yr_${evYear}`;
-      yd.style.cssText = 'text-align:center;font-family:"JetBrains Mono",monospace;font-size:18px;letter-spacing:0.15em;color:var(--muted);padding:10px 0 4px;cursor:pointer;user-select:none;';
-      yd.textContent = `— ${evYear} —`;
+      yd.style.cssText = 'text-align:center;font-family:"JetBrains Mono",monospace;color:var(--muted);padding:14px 0 8px;cursor:pointer;user-select:none;';
+      if(lastYear !== null){
+        yd.innerHTML = `
+          <div style="font-size:18px;letter-spacing:0.15em;">${lastYear}</div>
+          <div style="width:56px;height:1px;background:rgba(120,150,130,0.4);margin:6px auto;"></div>
+          <div style="font-size:18px;letter-spacing:0.15em;">${evYear}</div>
+        `;
+      } else {
+        yd.innerHTML = `<div style="font-size:18px;letter-spacing:0.15em;">— ${evYear} —</div>`;
+      }
       yd.onclick = () => openYearPicker(window._yearsInTimeline, evYear);
       app.appendChild(yd);
       lastYear = evYear;
