@@ -2503,40 +2503,41 @@ async function refreshComments(evIdx, key){
 
 // =====================================================
 // KVÍZ (skryté vajíčko — klik na "KoKrŠNeK v.t.s." v detailu události)
+// Vše navěšeno na window a inicializováno líně uvnitř startQuiz(),
+// aby to nezáviselo na tom, kdy/jestli proběhlo top-level spuštění skriptu.
 // =====================================================
-const QUIZ_QUESTIONS = [
-  {q:"Jak se jmenuje nejvyšší hora ČR?", a:["Sněžka","Praděd","Lysá hora"], correct:0},
-  {q:"Kolik nohou má pavouk?", a:["6","8","10"], correct:1},
-  {q:"Který orgán v těle produkuje inzulín?", a:["Slinivka břišní","Játra","Ledviny"], correct:0},
-  {q:"Jak dlouho trvá oběh Země kolem Slunce?", a:["365 dní","30 dní","24 hodin"], correct:0},
-  {q:"Kolik je 7 × 8?", a:["54","56","58"], correct:1},
-  {q:"Kolik strun má klasická kytara?", a:["4","6","8"], correct:1},
-  {q:"Jak se jmenuje hlavní město Rakouska?", a:["Vídeň","Salcburk","Graz"], correct:0},
-  {q:"Kolik planet má sluneční soustava (bez Pluta)?", a:["7","8","9"], correct:1},
-  {q:"Který živočich je největší savec na Zemi?", a:["Slon africký","Plejtvák obrovský","Žirafa"], correct:1},
-  {q:"Kolik barev má duha?", a:["5","7","9"], correct:1},
-  {q:"Jaký je chemický symbol pro zlato?", a:["Au","Ag","Gd"], correct:0},
-  {q:"Kolik hráčů má fotbalový tým na hřišti (bez náhradníků)?", a:["9","11","13"], correct:1},
-  {q:"Který měsíc má nejméně dní (v přestupném roce)?", a:["Únor","Duben","Listopad"], correct:0},
-  {q:"Jak se nazývá nejdelší řeka protékající ČR?", a:["Vltava","Labe","Morava"], correct:1},
-  {q:"Kolik komor má lidské srdce?", a:["2","4","6"], correct:1},
-  {q:"Jak se jmenuje český vynálezce kontaktní čočky?", a:["Otto Wichterle","Emil Škoda","František Křižík"], correct:0},
-  {q:"Kolik kontinentů je na Zemi?", a:["5","6","7"], correct:2},
-  {q:"Který plyn tvoří většinu zemské atmosféry?", a:["Kyslík","Dusík","Oxid uhličitý"], correct:1},
-];
-
-var quizState = null;
-
 function startQuiz(){
+  if(!window.QUIZ_QUESTIONS){
+    window.QUIZ_QUESTIONS = [
+      {q:"Jak se jmenuje nejvyšší hora ČR?", a:["Sněžka","Praděd","Lysá hora"], correct:0},
+      {q:"Kolik nohou má pavouk?", a:["6","8","10"], correct:1},
+      {q:"Který orgán v těle produkuje inzulín?", a:["Slinivka břišní","Játra","Ledviny"], correct:0},
+      {q:"Jak dlouho trvá oběh Země kolem Slunce?", a:["365 dní","30 dní","24 hodin"], correct:0},
+      {q:"Kolik je 7 × 8?", a:["54","56","58"], correct:1},
+      {q:"Kolik strun má klasická kytara?", a:["4","6","8"], correct:1},
+      {q:"Jak se jmenuje hlavní město Rakouska?", a:["Vídeň","Salcburk","Graz"], correct:0},
+      {q:"Kolik planet má sluneční soustava (bez Pluta)?", a:["7","8","9"], correct:1},
+      {q:"Který živočich je největší savec na Zemi?", a:["Slon africký","Plejtvák obrovský","Žirafa"], correct:1},
+      {q:"Kolik barev má duha?", a:["5","7","9"], correct:1},
+      {q:"Jaký je chemický symbol pro zlato?", a:["Au","Ag","Gd"], correct:0},
+      {q:"Kolik hráčů má fotbalový tým na hřišti (bez náhradníků)?", a:["9","11","13"], correct:1},
+      {q:"Který měsíc má nejméně dní (v přestupném roce)?", a:["Únor","Duben","Listopad"], correct:0},
+      {q:"Jak se nazývá nejdelší řeka protékající ČR?", a:["Vltava","Labe","Morava"], correct:1},
+      {q:"Kolik komor má lidské srdce?", a:["2","4","6"], correct:1},
+      {q:"Jak se jmenuje český vynálezce kontaktní čočky?", a:["Otto Wichterle","Emil Škoda","František Křižík"], correct:0},
+      {q:"Kolik kontinentů je na Zemi?", a:["5","6","7"], correct:2},
+      {q:"Který plyn tvoří většinu zemské atmosféry?", a:["Kyslík","Dusík","Oxid uhličitý"], correct:1},
+    ];
+  }
+  window.quizState = { streak: 0, usedIndices: [], timerInterval: null, timeLeft: 10 };
   document.getElementById('quizBackdrop')?.remove();
-  quizState = { streak: 0, usedIndices: [], timerInterval: null, timeLeft: 10 };
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.id = 'quizBackdrop';
-  backdrop.onclick = (e) => { if(e.target===backdrop){ clearInterval(quizState.timerInterval); backdrop.remove(); } };
+  backdrop.onclick = (e) => { if(e.target===backdrop){ clearInterval(window.quizState.timerInterval); backdrop.remove(); } };
   backdrop.innerHTML = `
     <div class="ev-modal" style="text-align:center;position:relative;">
-      <button class="ev-modal-close" onclick="clearInterval(quizState.timerInterval);this.closest('.ev-modal-backdrop').remove()">×</button>
+      <button class="ev-modal-close" onclick="clearInterval(window.quizState.timerInterval);this.closest('.ev-modal-backdrop').remove()">×</button>
       <div id="quizModalContent"></div>
     </div>`;
   document.body.appendChild(backdrop);
@@ -2544,22 +2545,25 @@ function startQuiz(){
 }
 
 function pickQuizQuestion(){
-  if(quizState.usedIndices.length >= QUIZ_QUESTIONS.length) quizState.usedIndices = [];
+  const qs = window.QUIZ_QUESTIONS;
+  const st = window.quizState;
+  if(st.usedIndices.length >= qs.length) st.usedIndices = [];
   let idx;
-  do { idx = Math.floor(Math.random()*QUIZ_QUESTIONS.length); } while(quizState.usedIndices.includes(idx));
-  quizState.usedIndices.push(idx);
-  return QUIZ_QUESTIONS[idx];
+  do { idx = Math.floor(Math.random()*qs.length); } while(st.usedIndices.includes(idx));
+  st.usedIndices.push(idx);
+  return qs[idx];
 }
 
 function nextQuizQuestion(){
-  clearInterval(quizState.timerInterval);
+  const st = window.quizState;
+  clearInterval(st.timerInterval);
   const question = pickQuizQuestion();
-  quizState.timeLeft = 10;
+  st.timeLeft = 10;
   const content = document.getElementById('quizModalContent');
   if(!content) return;
   const order = [0,1,2].sort(() => Math.random()-0.5);
   content.innerHTML = `
-    <div style="font-size:11px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Série: ${quizState.streak}</div>
+    <div style="font-size:11px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Série: ${st.streak}</div>
     <div id="quizTimer" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);margin-bottom:10px;">10</div>
     <div class="ev-modal-title" style="margin-bottom:16px;">${question.q}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
@@ -2570,21 +2574,22 @@ function nextQuizQuestion(){
     </div>
   `;
   const timerEl = document.getElementById('quizTimer');
-  quizState.timerInterval = setInterval(() => {
-    quizState.timeLeft--;
-    if(timerEl) timerEl.textContent = quizState.timeLeft;
-    if(quizState.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
-    if(quizState.timeLeft <= 0){
-      clearInterval(quizState.timerInterval);
+  st.timerInterval = setInterval(() => {
+    st.timeLeft--;
+    if(timerEl) timerEl.textContent = st.timeLeft;
+    if(st.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
+    if(st.timeLeft <= 0){
+      clearInterval(st.timerInterval);
       answerQuiz(false);
     }
   }, 1000);
 }
 
 function answerQuiz(isCorrect){
-  clearInterval(quizState.timerInterval);
+  const st = window.quizState;
+  clearInterval(st.timerInterval);
   if(isCorrect){
-    quizState.streak++;
+    st.streak++;
     nextQuizQuestion();
   } else {
     endQuiz();
@@ -2592,13 +2597,14 @@ function answerQuiz(isCorrect){
 }
 
 function endQuiz(){
+  const st = window.quizState;
   const content = document.getElementById('quizModalContent');
   if(!content) return;
   const savedName = localStorage.getItem('kokrsnekUser') || '';
-  const streakWord = quizState.streak===1 ? 'otázku' : (quizState.streak>=2 && quizState.streak<=4 ? 'otázky' : 'otázek');
+  const streakWord = st.streak===1 ? 'otázku' : (st.streak>=2 && st.streak<=4 ? 'otázky' : 'otázek');
   content.innerHTML = `
     <div class="ev-modal-title" style="margin-bottom:6px;">Konec!</div>
-    <div class="ev-modal-label" style="margin-bottom:16px;font-size:14px;text-transform:none;letter-spacing:0;">Uhodl jsi <span style="color:var(--accent);font-weight:700;">${quizState.streak}</span> ${streakWord} v řadě</div>
+    <div class="ev-modal-label" style="margin-bottom:16px;font-size:14px;text-transform:none;letter-spacing:0;">Uhodl jsi <span style="color:var(--accent);font-weight:700;">${st.streak}</span> ${streakWord} v řadě</div>
     <input id="quizNameInput" type="text" placeholder="Tvoje jméno…" value="${savedName}" style="
       width:100%; box-sizing:border-box;
       background:#0B0B0B; border:1px solid rgba(60,180,80,0.4);
@@ -2616,6 +2622,7 @@ function endQuiz(){
 }
 
 async function submitQuizScore(){
+  const st = window.quizState;
   const input = document.getElementById('quizNameInput');
   const name = (input?.value || '').trim();
   if(!name){ input?.focus(); return; }
@@ -2624,8 +2631,8 @@ async function submitQuizScore(){
     const ref = db.collection('quizScores').doc(name);
     const snap = await ref.get();
     const prevBest = snap.exists ? (snap.data().score || 0) : -1;
-    if(quizState.streak > prevBest){
-      await ref.set({ name, score: quizState.streak, at: new Date().toISOString() });
+    if(st.streak > prevBest){
+      await ref.set({ name, score: st.streak, at: new Date().toISOString() });
     }
   }catch(e){}
   showQuizLeaderboard();
