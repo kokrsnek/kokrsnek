@@ -2261,11 +2261,17 @@ function openEventGroupTimeline(rawTitle){
   document.body.appendChild(overlay);
 
   const groupApp = document.getElementById('eventGroupApp');
+  const spacerTop = document.createElement('div');
+  spacerTop.style.cssText = 'height:50vh;';
+  groupApp.appendChild(spacerTop);
   ordered.forEach(({idx, kind}) => {
     const ev = rawEvents[idx];
     const slot = buildTimelineSlot(ev, idx, kind==='now', kind==='past', 'grp'+idx);
     groupApp.appendChild(slot);
   });
+  const spacerBottom = document.createElement('div');
+  spacerBottom.style.cssText = 'height:50vh;';
+  groupApp.appendChild(spacerBottom);
 
   const nowSlot = groupApp.querySelector('.slot.now');
   if(nowSlot) nowSlot.scrollIntoView({block:'center'});
