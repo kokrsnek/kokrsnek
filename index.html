@@ -1435,9 +1435,24 @@ function showEventDetail(idx){
   document.body.appendChild(backdrop);
   window['evKey_'+idx] = getEventKey(ev);
 
-  // Kvíz — klik na 'KoKrŠNeK v.t.s.' (addEventListener místo inline onclick, spolehlivější na iOS)
+  // Kvíz — klik na 'KoKrŠNeK v.t.s.' (addEventListener + delegace + dočasná diagnostika chyb)
   const orgEl = document.getElementById('orgQuiz_'+idx);
-  if(orgEl) orgEl.addEventListener('click', startQuiz);
+  if(orgEl){
+    orgEl.addEventListener('click', () => {
+      try{ startQuiz(); }
+      catch(err){ alert('Chyba při spouštění kvízu: ' + err.message); }
+    });
+  } else {
+    console.warn('orgQuiz_'+idx+' element nenalezen v DOM');
+  }
+  // Záložní delegovaný posluchač na celý modal (pro případ, že by výše selhalo)
+  backdrop.addEventListener('click', (e) => {
+    const target = e.target.closest('#orgQuiz_'+idx);
+    if(target){
+      try{ startQuiz(); }
+      catch(err){ alert('Chyba při spouštění kvízu (delegace): ' + err.message); }
+    }
+  });
 
   // Načti počasí pro všechny události s místem
   if(ev.place){
