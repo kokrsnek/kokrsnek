@@ -1319,6 +1319,7 @@ function showEventDetail(idx){
     // Zkrátit na samotný název místa — usekni před adresou (číslo popisné, Okres, PSČ, čárka)
     const cutMatch = placeLabel.match(/\s\d|\bOkres\b|,/);
     if(cutMatch) placeLabel = placeLabel.slice(0, cutMatch.index).trim() || placeLabel;
+    placeLabel = placeLabel + ' [v2]'; // DOČASNÁ DIAGNOSTICKÁ ZNAČKA — smažu, jakmile potvrdíš, že vidíš
     rows.push({label:'Místo', value: placeLabel, mapUrl, gpsCoords, isPlace: true});
   }
 
