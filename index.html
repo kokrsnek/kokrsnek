@@ -2232,14 +2232,28 @@ function renderAlbumsContent(mode){
     }
     content.innerHTML = rows;
   } else {
-    // Dle akce — unikátní názvy (bez úvodní číslovky), seřazené abecedně
+    // Dle akce — unikátní názvy (bez úvodní číslovky), s vlastním pořadím
     const byTitle = {};
     withAlbums.forEach(ev => {
-      const key = stripOrdinalPrefix(ev.title);
+      let key = stripOrdinalPrefix(ev.title);
+      key = key.charAt(0).toUpperCase() + key.slice(1); // velké písmeno na začátku
       if(!byTitle[key]) byTitle[key] = [];
       byTitle[key].push(ev);
     });
-    const titles = Object.keys(byTitle).sort((a,b) => a.localeCompare(b, 'cs'));
+
+    const PRIORITY_ORDER = ["Rolf","Velkopáteční pochod","Pálení čarodějnic","Výroční oheň","Zakončení léta","Mikuláš u Hastrmana","Vánoční pochod","Silvestrovský výšlap"];
+
+    const titles = Object.keys(byTitle).sort((a,b) => {
+      const ia = PRIORITY_ORDER.indexOf(a);
+      const ib = PRIORITY_ORDER.indexOf(b);
+      if(ia !== -1 && ib !== -1) return ia - ib;
+      if(ia !== -1) return -1;
+      if(ib !== -1) return 1;
+      // ostatní akce — chronologicky od nejnovější (dle posledního výskytu)
+      const lastA = Math.max(...byTitle[a].map(ev => ev.start.getTime()));
+      const lastB = Math.max(...byTitle[b].map(ev => ev.start.getTime()));
+      return lastB - lastA;
+    });
 
     let rows = '';
     if(titles.length){
@@ -2270,7 +2284,11 @@ function toggleAlbumsMode(){
 
 function showAlbumInstances(title){
   const withAlbums = window._albumsWithAlbums || [];
-  const matches = withAlbums.filter(ev => stripOrdinalPrefix(ev.title) === title).sort((a,b) => b.start - a.start); // nejnovější první
+  const matches = withAlbums.filter(ev => {
+    let key = stripOrdinalPrefix(ev.title);
+    key = key.charAt(0).toUpperCase() + key.slice(1);
+    return key === title;
+  }).sort((a,b) => b.start - a.start); // nejnovější první
 
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
