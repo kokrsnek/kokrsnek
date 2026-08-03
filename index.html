@@ -2569,7 +2569,7 @@ function nextQuizQuestion(){
   if(!content) return;
   const order = [0,1,2].sort(() => Math.random()-0.5);
   content.innerHTML = `
-    <div style="font-size:11px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Série: ${st.streak}</div>
+    <div style="font-size:11px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Série: ${st.streak} · [diag v3]</div>
     <div id="quizTimer" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent);margin-bottom:10px;">10</div>
     <div class="ev-modal-title" style="margin-bottom:16px;">${question.q}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
@@ -2588,24 +2588,24 @@ function nextQuizQuestion(){
     if(st.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
     if(st.timeLeft <= 0){
       clearInterval(myIntervalId);
-      answerQuiz(false);
+      answerQuiz(false, 'vypršel čas');
     }
   }, 1000);
   st.timerInterval = myIntervalId;
 }
 
-function answerQuiz(isCorrect){
+function answerQuiz(isCorrect, reason){
   const st = window.quizState;
   clearInterval(st.timerInterval);
   if(isCorrect){
     st.streak++;
     nextQuizQuestion();
   } else {
-    endQuiz();
+    endQuiz(reason || 'špatná odpověď (klik)');
   }
 }
 
-function endQuiz(){
+function endQuiz(reason){
   const st = window.quizState;
   const content = document.getElementById('quizModalContent');
   if(!content) return;
@@ -2613,6 +2613,7 @@ function endQuiz(){
   const streakWord = st.streak===1 ? 'otázku' : (st.streak>=2 && st.streak<=4 ? 'otázky' : 'otázek');
   content.innerHTML = `
     <div class="ev-modal-title" style="margin-bottom:6px;">Konec!</div>
+    <div style="font-size:10px;color:#E53935;margin-bottom:8px;">[diag] důvod: ${reason || 'neznámý'} · zbývalo: ${st.timeLeft}s · otázka č.: ${st.token}</div>
     <div class="ev-modal-label" style="margin-bottom:16px;font-size:14px;text-transform:none;letter-spacing:0;">Uhodl jsi <span style="color:var(--accent);font-weight:700;">${st.streak}</span> ${streakWord} v řadě</div>
     <input id="quizNameInput" type="text" placeholder="Tvoje jméno…" value="${savedName}" style="
       width:100%; box-sizing:border-box;
