@@ -2806,7 +2806,10 @@ function endQuiz(reason){
 function withTimeout(promise, ms){
   return Promise.race([
     promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Vypršel časový limit (databáze neodpověděla do ' + (ms/1000) + 's)')), ms))
+    new Promise((_, reject) => setTimeout(() => {
+      const netInfo = navigator.onLine ? 'telefon si myslí, že je online' : 'telefon hlásí, že je OFFLINE';
+      reject(new Error(`Vypršel časový limit (databáze neodpověděla do ${ms/1000}s — ${netInfo})`));
+    }, ms))
   ]);
 }
 
