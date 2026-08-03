@@ -2810,6 +2810,16 @@ function withTimeout(promise, ms){
   ]);
 }
 
+// Zkusí akci vícekrát za sebou, než se definitivně vzdá (pro nespolehlivé připojení)
+async function withRetry(fn, attempts = 2){
+  let lastErr;
+  for(let i = 0; i < attempts; i++){
+    try{ return await fn(); }
+    catch(e){ lastErr = e; console.warn(`Pokus ${i+1}/${attempts} selhal:`, e.message); }
+  }
+  throw lastErr;
+}
+
 async function submitQuizScore(){
   const st = window.quizState;
   const input = document.getElementById('quizNameInput');
@@ -2820,13 +2830,14 @@ async function submitQuizScore(){
   let saveError = null;
   try{
     const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
-    // Ulož tento konkrétní pokus do historie (vždy, i když není nový rekord)
-    await withTimeout(ref.collection('attempts').add({ score: st.streak, at: new Date().toISOString() }), 8000);
-    // Aktualizuj nejlepší skóre pro řazení žebříčku
-    const snap = await withTimeout(ref.get(), 8000);
+    // Ulož pokus do historie a zjisti dosavadní nejlepší skóre paralelně (rychlejší, méně náchylné na výpadek)
+    const [, snap] = await withRetry(() => Promise.all([
+      withTimeout(ref.collection('attempts').add({ score: st.streak, at: new Date().toISOString() }), 8000),
+      withTimeout(ref.get(), 8000),
+    ]));
     const prevBest = snap.exists ? (snap.data().score || 0) : -1;
     if(st.streak > prevBest){
-      await withTimeout(ref.set({ name, score: st.streak, at: new Date().toISOString() }), 8000);
+      await withRetry(() => withTimeout(ref.set({ name, score: st.streak, at: new Date().toISOString() }), 8000));
     }
   }catch(e){
     saveError = e;
@@ -2841,7 +2852,7 @@ async function showQuizLeaderboard(saveError){
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
   const saveErrorHtml = saveError ? `<div style="color:#E53935;font-size:11px;margin-bottom:10px;text-align:center;">Skóre se nepodařilo uložit: ${saveError.message}</div>` : '';
   try{
-    const snap = await withTimeout(db.collection('events').doc('_quiz_leaderboard').collection('scores').get(), 8000);
+    const snap = await withRetry(() => withTimeout(db.collection('events').doc('_quiz_leaderboard').collection('scores').get(), 8000));
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div>
@@ -2888,7 +2899,7 @@ async function showQuizAttempts(name){
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">📜 ${name} — pokusy</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
   try{
     const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
-    const snap = await withTimeout(ref.collection('attempts').get(), 8000);
+    const snap = await withRetry(() => withTimeout(ref.collection('attempts').get(), 8000));
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:12px;">📜 ${name} — pokusy</div>
