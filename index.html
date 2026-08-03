@@ -1316,10 +1316,7 @@ function showEventDetail(idx){
       .replace(/\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[NSns][,\s]+\d+[°\s]+\d+['\s]+\d+\.?\d*["″\s]*[EWew]/, '')
       .replace(decMatch ? decMatch[0] : '', '')
       .trim() || 'Zobrazit místo';
-    // Zkrátit na samotný název místa — usekni před adresou (číslo popisné, Okres, PSČ, čárka)
-    const cutMatch = placeLabel.match(/\s\d|\bOkres\b|,/);
-    if(cutMatch) placeLabel = placeLabel.slice(0, cutMatch.index).trim() || placeLabel;
-    placeLabel = placeLabel + ' [v2]'; // DOČASNÁ DIAGNOSTICKÁ ZNAČKA — smažu, jakmile potvrdíš, že vidíš
+    placeLabel = shortenPlace(placeLabel);
     rows.push({label:'Místo', value: placeLabel, mapUrl, gpsCoords, isPlace: true});
   }
 
@@ -1667,7 +1664,7 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
       <div class="date-row">${fmtDateRange(ev)}</div>
       <div class="time-row">${fmtTimeRow(ev)}</div>
       <div class="title-row title-clickable" id="titleRow_${uid}" onclick="showEventDetail(${i})">${ev.title}</div>
-      ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
+      ${ev.place ? `<div class="place-row">${shortenPlace(ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place)}</div>` : ``}
       ${isNow && !isPast && ev.place ? `<div id="slotWx_${uid}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
       ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
       ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
@@ -2223,6 +2220,13 @@ function _showAlbumsModal(){
     </div>`;
   document.body.appendChild(backdrop);
   renderAlbumsContent('date');
+}
+
+function shortenPlace(place){
+  if(!place) return place;
+  const cutMatch = place.match(/\s\d|\bOkres\b|,/);
+  if(cutMatch) return place.slice(0, cutMatch.index).trim() || place;
+  return place;
 }
 
 function stripOrdinalPrefix(title){
