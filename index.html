@@ -2259,8 +2259,11 @@ function renderAlbumsContent(mode){
     if(titles.length){
       titles.forEach(title => {
         const list = byTitle[title];
+        const clickAction = list.length === 1
+          ? `checkAlbumAccess('${list[0].photoAlbum.replace(/'/g,"\\'")}')`
+          : `showAlbumInstances('${title.replace(/'/g,"\\'")}')`;
         rows += `
-          <div class="album-item" onclick="showAlbumInstances('${title.replace(/'/g,"\\'")}')">
+          <div class="album-item" onclick="${clickAction}">
             <div class="album-dot" style="background:${getEventColor(list[0])};"></div>
             <div class="album-info">
               <div class="album-title">${title}</div>
