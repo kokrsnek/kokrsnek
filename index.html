@@ -2188,6 +2188,10 @@ function _showAlbumsModal(){
   renderAlbumsContent('date');
 }
 
+function stripOrdinalPrefix(title){
+  return title.replace(/^\d+\.\s*/, '').trim();
+}
+
 function renderAlbumsContent(mode){
   const content = document.getElementById('albumsContent');
   const modeBtn = document.getElementById('albumsModeBtn');
@@ -2228,11 +2232,12 @@ function renderAlbumsContent(mode){
     }
     content.innerHTML = rows;
   } else {
-    // Dle akce — unikátní názvy, seřazené abecedně
+    // Dle akce — unikátní názvy (bez úvodní číslovky), seřazené abecedně
     const byTitle = {};
     withAlbums.forEach(ev => {
-      if(!byTitle[ev.title]) byTitle[ev.title] = [];
-      byTitle[ev.title].push(ev);
+      const key = stripOrdinalPrefix(ev.title);
+      if(!byTitle[key]) byTitle[key] = [];
+      byTitle[key].push(ev);
     });
     const titles = Object.keys(byTitle).sort((a,b) => a.localeCompare(b, 'cs'));
 
@@ -2265,7 +2270,7 @@ function toggleAlbumsMode(){
 
 function showAlbumInstances(title){
   const withAlbums = window._albumsWithAlbums || [];
-  const matches = withAlbums.filter(ev => ev.title === title).sort((a,b) => b.start - a.start); // nejnovější první
+  const matches = withAlbums.filter(ev => stripOrdinalPrefix(ev.title) === title).sort((a,b) => b.start - a.start); // nejnovější první
 
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
