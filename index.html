@@ -1628,6 +1628,86 @@ function openYearPicker(years, currentYear){
   },100);
 }
 
+function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
+  const uid = uidSuffix !== undefined ? uidSuffix : i;
+  const kind = isNow ? "now" : (isPast ? "past" : "future");
+  const evYear = ev.start.getFullYear();
+  const color = getEventColor(ev);
+
+  const evStart = new Date(ev.start); evStart.setHours(0,0,0,0);
+  const today = new Date(now); today.setHours(0,0,0,0);
+  const isToday = evStart.getTime() === today.getTime() || (ev.start <= now && ev.end >= now);
+  const isHappeningNow = ev.start <= now && ev.end >= now;
+
+  let eyebrowText;
+  if(isNow && isToday) eyebrowText = "Žhavíme";
+  else if(isNow && !isToday) eyebrowText = "Nadcházející";
+  else if(isPast) eyebrowText = "Skončilo";
+  else eyebrowText = fmtRelativeFuture(ev.start);
+
+  const countdownStyle = isNow
+    ? `font-size:15.75px;color:#E53935;margin-left:6px;letter-spacing:0.04em;`
+    : `font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;`;
+  const countdown = (!isPast && !(isNow && isToday)) ? `<span style="${countdownStyle}">${getDaysText(ev)}</span>` : '';
+
+  const slot = document.createElement('div');
+  slot.className = `slot ${kind}`;
+  slot.innerHTML = `
+    <div class="card">
+      ${isNow ? `<div onclick="openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'JetBrains Mono',monospace;font-size:18px;letter-spacing:0.15em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
+      <div class="eyebrow">${isNow ? '' : `<span class="pip" style="background:${color};"></span>`}${eyebrowText}${countdown}</div>
+      <div class="date-row">${fmtDateRange(ev)}</div>
+      <div class="time-row">${fmtTimeRow(ev)}</div>
+      <div class="title-row title-clickable" id="titleRow_${uid}" onclick="showEventDetail(${i})">${ev.title}</div>
+      ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
+      ${isNow && !isPast && ev.place ? `<div id="slotWx_${uid}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
+      ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
+      ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
+    </div>
+  `;
+  slot.dataset.idx = i;
+
+  if(isNow && !isPast && ev.place){
+    const wxDateStr = ev.start.toISOString().split('T')[0];
+    const wxCoords = (() => {
+      const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
+      const words = ev.place.trim().toLowerCase().split(/\s+/);
+      for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
+      return null;
+    })();
+    const isAllDayNow = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
+    const startHourNow = isAllDayNow ? 9 : ev.start.getHours();
+    fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNow, 22).then(wx => {
+      const el = document.getElementById('slotWx_'+uid);
+      if(el && wx) el.textContent = wx;
+    });
+  }
+
+  // Dlouhé podržení na názvu -> filtrovaná mini-timeline stejných opakujících se akcí
+  setTimeout(() => {
+    const titleEl = document.getElementById('titleRow_'+uid);
+    if(!titleEl) return;
+    let pressTimer, longPressed = false;
+    titleEl.style.webkitTouchCallout = 'none';
+    titleEl.addEventListener('touchstart', () => {
+      longPressed = false;
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        try{ openEventGroupTimeline(ev.title); }
+        catch(err){ console.error('Chyba při otevírání filtrované timeline:', err); }
+      }, 500);
+    }, {passive:true});
+    titleEl.addEventListener('touchend', e => {
+      clearTimeout(pressTimer);
+      if(longPressed) e.preventDefault();
+    });
+    titleEl.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+    titleEl.addEventListener('contextmenu', e => e.preventDefault());
+  }, 0);
+
+  return slot;
+}
+
 function renderTimeline(){
   app.innerHTML = "";
 
@@ -1677,83 +1757,8 @@ function renderTimeline(){
       lastYear = evYear;
     }
 
-    const slot = document.createElement('div');
-    slot.className = `slot ${kind}`;
-
-    const color = getEventColor(ev);
-
-    // Zjisti jestli událost probíhá právě teď nebo dnes
-    const evStart = new Date(ev.start); evStart.setHours(0,0,0,0);
-    const today = new Date(now); today.setHours(0,0,0,0);
-    const isToday = evStart.getTime() === today.getTime() || (ev.start <= now && ev.end >= now);
-    const isHappeningNow = ev.start <= now && ev.end >= now;
-
-    let eyebrowText;
-    if(isNow && isToday) eyebrowText = "Žhavíme";
-    else if(isNow && !isToday) eyebrowText = "Nadcházející";
-    else if(isPast) eyebrowText = "Skončilo";
-    else eyebrowText = fmtRelativeFuture(ev.start);
-
-    const countdownStyle = isNow
-      ? `font-size:15.75px;color:#E53935;margin-left:6px;letter-spacing:0.04em;`
-      : `font-size:10px;background:${color}22;color:${color};border-radius:100px;padding:2px 8px;margin-left:6px;letter-spacing:0.04em;`;
-    // Pokud je Žhavíme (dnes), nezobrazujeme countdown
-    const countdown = (!isPast && !(isNow && isToday)) ? `<span style="${countdownStyle}">${getDaysText(ev)}</span>` : '';
-
-    slot.innerHTML = `
-      <div class="card">
-        ${isNow ? `<div onclick="openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'JetBrains Mono',monospace;font-size:18px;letter-spacing:0.15em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
-        <div class="eyebrow">${isNow ? '' : `<span class="pip" style="background:${color};"></span>`}${eyebrowText}${countdown}</div>
-        <div class="date-row">${fmtDateRange(ev)}</div>
-        <div class="time-row">${fmtTimeRow(ev)}</div>
-        <div class="title-row title-clickable" id="titleRow_${i}" onclick="showEventDetail(${i})">${ev.title}</div>
-        ${ev.place ? `<div class="place-row">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ``}
-        ${isNow && !isPast && ev.place ? `<div id="slotWx_${i}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
-        ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
-        ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
-      </div>
-    `;
-    slot.dataset.idx = i;
+    const slot = buildTimelineSlot(ev, i, isNow, isPast);
     app.appendChild(slot);
-
-    // Dlouhé podržení na názvu -> filtrovaná timeline stejných opakujících se akcí
-    (() => {
-      const titleEl = document.getElementById('titleRow_'+i);
-      if(!titleEl) return;
-      let pressTimer, longPressed = false;
-      titleEl.style.webkitTouchCallout = 'none';
-      titleEl.addEventListener('touchstart', () => {
-        longPressed = false;
-        pressTimer = setTimeout(() => {
-          longPressed = true;
-          try{ openEventGroupTimeline(ev.title, i); }
-          catch(err){ console.error('Chyba při otevírání filtrované timeline:', err); }
-        }, 500);
-      }, {passive:true});
-      titleEl.addEventListener('touchend', e => {
-        clearTimeout(pressTimer);
-        if(longPressed) e.preventDefault();
-      });
-      titleEl.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
-      titleEl.addEventListener('contextmenu', e => e.preventDefault());
-    })();
-
-    // Počasí pro now slot
-    if(isNow && !isPast && ev.place){
-      const wxDateStr = ev.start.toISOString().split('T')[0];
-      const wxCoords = (() => {
-        const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
-        const words = ev.place.trim().toLowerCase().split(/\s+/);
-        for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
-        return null;
-      })();
-      const isAllDayNow = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
-      const startHourNow = isAllDayNow ? 9 : ev.start.getHours();
-      fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNow, 22).then(wx => {
-        const el = document.getElementById('slotWx_'+i);
-        if(el && wx) el.textContent = wx;
-      });
-    }
   });
 
   const nowSlot = document.querySelector('.slot.now');
@@ -2220,41 +2225,45 @@ function normalizeGroupTitle(title){
 }
 
 function openEventGroupTimeline(rawTitle){
-  const curNow = new Date();
   const key = normalizeGroupTitle(rawTitle);
+  const matchIndices = [];
+  rawEvents.forEach((ev, idx) => { if(normalizeGroupTitle(ev.title) === key) matchIndices.push(idx); });
+  if(matchIndices.length === 0) return;
 
-  const matches = [];
-  rawEvents.forEach((ev, idx) => {
-    if(normalizeGroupTitle(ev.title) === key) matches.push({ev, idx});
-  });
-  matches.sort((a,b) => b.ev.start - a.ev.start); // nejnovější první
+  // Najdi "teď" v rámci téhle podmnožiny (stejná logika jako hlavní timeline)
+  let subCenter = matchIndices[0];
+  for(const idx of matchIndices){
+    if(rawEvents[idx].end >= now){ subCenter = idx; break; }
+    subCenter = idx;
+  }
+  const centerPos = matchIndices.indexOf(subCenter);
 
-  const rows = matches.map(({ev, idx}) => {
-    const isPastEv = ev.end < curNow;
-    return `
-      <div class="album-item" onclick="closeEventGroupTimeline();showEventDetail(${idx})">
-        <div class="album-dot" style="background:${getEventColor(ev)};"></div>
-        <div class="album-info">
-          <div class="album-date">${fmtDate(ev.start)}${isPastEv ? '' : ' · nadcházející'}</div>
-          <div class="album-title">${ev.title}</div>
-        </div>
-        <div class="album-arrow">›</div>
-      </div>`;
-  }).join('');
+  const ordered = [];
+  for(let p = matchIndices.length - 1; p > centerPos; p--) ordered.push({idx: matchIndices[p], kind:'future'});
+  ordered.push({idx: subCenter, kind:'now'});
+  for(let p = centerPos - 1; p >= 0; p--) ordered.push({idx: matchIndices[p], kind:'past'});
 
   const overlay = document.createElement('div');
   overlay.id = 'eventGroupOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;';
   overlay.innerHTML = `
-    <div style="position:sticky;top:0;background:var(--bg);padding:20px 22px 14px;z-index:2;border-bottom:1px solid rgba(60,180,80,0.15);display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--ink);">${key}</div>
+    <div style="flex-shrink:0;background:var(--bg);padding:16px 22px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(60,180,80,0.15);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.04em;">${key}</div>
       <button onclick="closeEventGroupTimeline()" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:2px 6px;">×</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:8px 22px 22px;">
-      ${rows || `<div class="albums-empty">Žádné další výskyty</div>`}
-    </div>
+    <div class="app" id="eventGroupApp" style="flex:1;padding-bottom:40px;scroll-padding-bottom:40px;"></div>
   `;
   document.body.appendChild(overlay);
+
+  const groupApp = document.getElementById('eventGroupApp');
+  ordered.forEach(({idx, kind}) => {
+    const ev = rawEvents[idx];
+    const slot = buildTimelineSlot(ev, idx, kind==='now', kind==='past', 'grp'+idx);
+    groupApp.appendChild(slot);
+  });
+
+  const nowSlot = groupApp.querySelector('.slot.now');
+  if(nowSlot) nowSlot.scrollIntoView({block:'center'});
 }
 
 function closeEventGroupTimeline(){
