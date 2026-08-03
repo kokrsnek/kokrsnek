@@ -2252,11 +2252,11 @@ function openEventGroupTimeline(rawTitle){
   overlay.id = 'eventGroupOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;';
   overlay.innerHTML = `
-    <div style="flex-shrink:0;background:var(--bg);padding:max(16px, env(safe-area-inset-top)) 22px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(60,180,80,0.15);">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.04em;">${key}</div>
-      <button onclick="closeEventGroupTimeline()" style="background:none;border:none;color:var(--muted);font-size:28px;cursor:pointer;line-height:1;padding:8px 10px;">×</button>
+    <div class="app" id="eventGroupApp" style="flex:1;"></div>
+    <div style="flex-shrink:0;background:var(--bg);position:relative;padding:12px 60px max(14px, env(safe-area-inset-bottom)) 60px;display:flex;align-items:center;justify-content:center;border-top:1px solid rgba(60,180,80,0.15);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.04em;text-align:center;">${key}</div>
+      <button onclick="closeEventGroupTimeline()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:28px;cursor:pointer;line-height:1;padding:8px 10px;">×</button>
     </div>
-    <div class="app" id="eventGroupApp" style="flex:1;padding-bottom:40px;scroll-padding-bottom:40px;"></div>
   `;
   document.body.appendChild(overlay);
 
