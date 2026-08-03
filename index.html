@@ -2803,32 +2803,46 @@ function endQuiz(reason){
   setTimeout(() => document.getElementById('quizNameInput')?.focus(), 100);
 }
 
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Vypršel časový limit (databáze neodpověděla do ' + (ms/1000) + 's)')), ms))
+  ]);
+}
+
 async function submitQuizScore(){
   const st = window.quizState;
   const input = document.getElementById('quizNameInput');
   const name = (input?.value || '').trim();
   if(!name){ input?.focus(); return; }
   localStorage.setItem('kokrsnekUser', name);
+  const content = document.getElementById('quizModalContent');
+  let saveError = null;
   try{
     const ref = db.collection('quizScores').doc(name);
-    const snap = await ref.get();
+    const snap = await withTimeout(ref.get(), 8000);
     const prevBest = snap.exists ? (snap.data().score || 0) : -1;
     if(st.streak > prevBest){
-      await ref.set({ name, score: st.streak, at: new Date().toISOString() });
+      await withTimeout(ref.set({ name, score: st.streak, at: new Date().toISOString() }), 8000);
     }
-  }catch(e){}
-  showQuizLeaderboard();
+  }catch(e){
+    saveError = e;
+    console.error('Chyba při ukládání skóre kvízu:', e);
+  }
+  showQuizLeaderboard(saveError);
 }
 
-async function showQuizLeaderboard(){
+async function showQuizLeaderboard(saveError){
   const content = document.getElementById('quizModalContent');
   if(!content) return;
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
+  const saveErrorHtml = saveError ? `<div style="color:#E53935;font-size:11px;margin-bottom:10px;text-align:center;">Skóre se nepodařilo uložit: ${saveError.message}</div>` : '';
   try{
-    const snap = await db.collection('quizScores').get();
+    const snap = await withTimeout(db.collection('quizScores').get(), 8000);
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div>
+      ${saveErrorHtml}
       <div style="text-align:left;max-height:300px;overflow-y:auto;">
         ${rows.length === 0 ? `<div style="color:var(--muted);font-size:12px;text-align:center;">Zatím nikdo nehrál</div>` : rows.map((r,i) => {
           let dateStr = '';
@@ -2852,7 +2866,16 @@ async function showQuizLeaderboard(){
         padding:10px;border-radius:6px;cursor:pointer;">Zavřít</button>
     `;
   }catch(e){
-    content.innerHTML = `<div style="color:#E53935;font-size:12px;text-align:center;">${e.message}</div>`;
+    console.error('Chyba při načítání žebříčku:', e);
+    content.innerHTML = `
+      ${saveErrorHtml}
+      <div style="color:#E53935;font-size:12px;text-align:center;margin-bottom:12px;">Nepodařilo se načíst žebříček: ${e.message}</div>
+      <button onclick="document.getElementById('quizBackdrop')?.remove()" style="
+        display:block;width:100%;
+        background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
+        font-family:'JetBrains Mono',monospace;font-size:13px;
+        padding:10px;border-radius:6px;cursor:pointer;">Zavřít</button>
+    `;
   }
 }
 
