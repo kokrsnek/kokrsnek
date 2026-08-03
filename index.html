@@ -2557,6 +2557,8 @@ function pickQuizQuestion(){
 function nextQuizQuestion(){
   const st = window.quizState;
   clearInterval(st.timerInterval);
+  st.token = (st.token || 0) + 1;
+  const myToken = st.token;
   const question = pickQuizQuestion();
   st.timeLeft = 10;
   const content = document.getElementById('quizModalContent');
@@ -2575,6 +2577,7 @@ function nextQuizQuestion(){
   `;
   const timerEl = document.getElementById('quizTimer');
   st.timerInterval = setInterval(() => {
+    if(st.token !== myToken){ clearInterval(st.timerInterval); return; } // zastaralý časovač ze starší otázky — ignoruj
     st.timeLeft--;
     if(timerEl) timerEl.textContent = st.timeLeft;
     if(st.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
