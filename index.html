@@ -1354,10 +1354,7 @@ function showEventDetail(idx){
   backdrop.innerHTML = `
     <div class="ev-modal" id="evModal_${idx}">
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
-        <div class="ev-modal-title" style="margin-bottom:0;">${ev.title}</div>
-      </div>
+      <div class="ev-modal-title" style="margin-bottom:16px;text-align:center;font-size:30px;">${ev.title}</div>
       ${rows.map(r=> r.isPlace ? `
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value" style="margin-bottom:10px;">${r.value}</div>
@@ -1417,7 +1414,7 @@ function showEventDetail(idx){
           display:block;width:100%;
           background:var(--accent-soft);border:1px solid rgba(77,191,106,0.3);
           color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;
-          padding:10px;border-radius:6px;cursor:pointer;text-align:left;">
+          padding:10px;border-radius:6px;cursor:pointer;text-align:center;">
           Napiš komentář…
         </button>
       </div>
