@@ -2195,10 +2195,20 @@ function _showAlbumsModal(){
   }
 
   backdrop.innerHTML = `
-    <div class="ev-modal">
-      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="text-align:center;">Fotoalba z akcí</div>
-      ${rows}
+    <div class="ev-modal" style="padding:0;text-align:center;">
+      <div style="position:sticky;top:0;background:#0F1117;padding:20px 22px 14px;z-index:2;border-bottom:1px solid rgba(60,180,80,0.15);border-radius:12px 12px 0 0;">
+        <div class="ev-modal-title" style="margin:0;">Fotoalba z akcí</div>
+      </div>
+      <div style="padding:0 22px;">
+        ${rows}
+      </div>
+      <div style="position:sticky;bottom:0;background:#0F1117;padding:14px 22px 20px;z-index:2;border-top:1px solid rgba(60,180,80,0.15);border-radius:0 0 12px 12px;">
+        <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
+          display:block;width:100%;
+          background:var(--accent-soft);border:1px solid rgba(60,180,80,0.3);color:var(--ink);
+          font-family:'JetBrains Mono',monospace;font-size:13px;
+          padding:10px;border-radius:6px;cursor:pointer;">Zavřít</button>
+      </div>
     </div>`;
   document.body.appendChild(backdrop);
 }
