@@ -2507,6 +2507,10 @@ async function refreshComments(evIdx, key){
 // aby to nezáviselo na tom, kdy/jestli proběhlo top-level spuštění skriptu.
 // =====================================================
 function startQuiz(){
+  // Zruš případný "osiřelý" časovač z předchozího spuštění kvízu
+  if(window.quizState && window.quizState.timerInterval){
+    clearInterval(window.quizState.timerInterval);
+  }
   if(!window.QUIZ_QUESTIONS){
     window.QUIZ_QUESTIONS = [
       {q:"Jak se jmenuje nejvyšší hora ČR?", a:["Sněžka","Praděd","Lysá hora"], correct:0},
@@ -2576,16 +2580,18 @@ function nextQuizQuestion(){
     </div>
   `;
   const timerEl = document.getElementById('quizTimer');
-  st.timerInterval = setInterval(() => {
-    if(st.token !== myToken){ clearInterval(st.timerInterval); return; } // zastaralý časovač ze starší otázky — ignoruj
+  let myIntervalId;
+  myIntervalId = setInterval(() => {
+    if(window.quizState !== st || st.token !== myToken){ clearInterval(myIntervalId); return; } // osiřelý/zastaralý časovač — ignoruj a nezasahuj do aktuální hry
     st.timeLeft--;
     if(timerEl) timerEl.textContent = st.timeLeft;
     if(st.timeLeft <= 3 && timerEl) timerEl.style.color = '#E53935';
     if(st.timeLeft <= 0){
-      clearInterval(st.timerInterval);
+      clearInterval(myIntervalId);
       answerQuiz(false);
     }
   }, 1000);
+  st.timerInterval = myIntervalId;
 }
 
 function answerQuiz(isCorrect){
