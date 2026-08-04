@@ -714,7 +714,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.5L2 10.5h2.5V21a1 1 0 0 0 1 1h4v-7h5v7h4a1 1 0 0 0 1-1V10.5H22z"/></svg>
 </button>
 
-<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="if(!sessionStorage.getItem('excl')){sessionStorage.setItem('excl','1');showWelcome();}else{showFeedback();}">
+<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);">
   <svg viewBox="0 0 24 24" fill="#E53935" width="18" height="18"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
 </button>
 
@@ -1575,11 +1575,60 @@ function showFeedback(){
   setTimeout(() => document.getElementById('feedbackText')?.focus(), 150);
 }
 
+function compressImageToBase64(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveFeedbackReport(msg, file){
+  try{
+    let imageData = null;
+    if(file){
+      imageData = await compressImageToBase64(file, 1000, 0.6);
+      // Firestore má limit 1 MB na dokument — pokud je pořád moc velké, zkomprimuj víc
+      if(imageData.length > 900000){
+        imageData = await compressImageToBase64(file, 700, 0.4);
+      }
+    }
+    await withTimeout(
+      db.collection('events').doc('_feedback_reports').collection('reports').add({
+        message: msg,
+        image: imageData,
+        name: localStorage.getItem('kokrsnekUser') || 'neznámý',
+        at: new Date().toISOString()
+      }),
+      10000
+    );
+  }catch(e){
+    console.error('Nepodařilo se uložit report do databáze:', e);
+  }
+}
+
 async function submitFeedback(btn){
   const msg = document.getElementById('feedbackText').value.trim();
   if(!msg){ document.getElementById('feedbackText').focus(); return; }
   const fileInput = document.getElementById('feedbackImage');
   const file = fileInput && fileInput.files && fileInput.files[0];
+
+  // Ulož kopii do sdílené databáze, ať se k ní dostaneš z kteréhokoliv zařízení (nečekáme na výsledek)
+  saveFeedbackReport(msg, file);
 
   if(file && navigator.canShare && navigator.canShare({ files: [file] })){
     try{
@@ -1598,9 +1647,93 @@ async function submitFeedback(btn){
 
   // Fallback: prostý mailto text bez přílohy (mailto přílohy nepodporuje)
   const subject = encodeURIComponent('KoKrŠNeK – zpráva od uživatele');
-  const body = encodeURIComponent(msg + (file ? '\n\n(Screenshot se bohužel nepodařilo přiložit — zkus ho poslat ručně jako přílohu k tomuto emailu.)' : ''));
+  const body = encodeURIComponent(msg + (file ? '\n\n(Screenshot se bohužel nepodařilo přiložit — zkus ho poslat ručně jako přílohu k tomuto emailu, nebo si ho appka uložila i do sdílené databáze.)' : ''));
   window.location.href = 'mailto:kokrsnek@gmail.com?subject=' + subject + '&body=' + body;
   btn.closest('.ev-modal-backdrop').remove();
+}
+
+const FEEDBACK_REPORTS_PASSWORD = '8006293768';
+
+function promptFeedbackReportsPassword(){
+  document.getElementById('reportsPwBackdrop')?.remove();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.id = 'reportsPwBackdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:12px;">🔒 Přehled hlášení</div>
+      <input id="reportsPwInput" type="tel" inputmode="numeric" placeholder="Heslo…" style="
+        width:100%; box-sizing:border-box;
+        background:#0B0B0B; border:1px solid rgba(60,180,80,0.4);
+        color:var(--ink); font-family:'JetBrains Mono',monospace;
+        font-size:16px; padding:10px 12px; border-radius:4px; outline:none; margin-bottom:8px; text-align:center;
+      ">
+      <div id="reportsPwError" style="color:#E53935;font-size:12px;margin-bottom:8px;display:none;">Špatné heslo, zkus to znovu.</div>
+      <button onclick="
+        var val = document.getElementById('reportsPwInput').value.trim();
+        if(val === '${FEEDBACK_REPORTS_PASSWORD}'){
+          this.closest('.ev-modal-backdrop').remove();
+          showFeedbackReports();
+        } else {
+          document.getElementById('reportsPwError').style.display = 'block';
+          document.getElementById('reportsPwInput').value = '';
+          document.getElementById('reportsPwInput').focus();
+        }
+      " style="
+        display:block; width:100%;
+        background:var(--accent); border:none; color:#000;
+        font-family:'JetBrains Mono',monospace; font-size:13px;
+        padding:10px; border-radius:6px; cursor:pointer; font-weight:700;
+      ">Potvrdit</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  setTimeout(() => document.getElementById('reportsPwInput')?.focus(), 100);
+}
+
+async function showFeedbackReports(){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.id = 'reportsListBackdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:12px;">📋 Nahlášené chyby</div>
+      <div id="reportsListContent" style="text-align:left;max-height:60vh;overflow-y:auto;">
+        <div style="color:var(--muted);font-size:12px;text-align:center;">Načítám…</div>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const content = document.getElementById('reportsListContent');
+  try{
+    const snap = await withRetry(() => withTimeout(
+      db.collection('events').doc('_feedback_reports').collection('reports').get(), 8000
+    ));
+    const reports = snap.docs.map(d => d.data()).sort((a,b) => new Date(b.at) - new Date(a.at));
+    if(!reports.length){
+      content.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;">Zatím žádná hlášení</div>`;
+      return;
+    }
+    content.innerHTML = reports.map(r => {
+      let dateStr = '';
+      const d = new Date(r.at);
+      if(!isNaN(d)) dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      return `
+        <div style="border-bottom:1px solid rgba(60,180,80,0.15);padding:10px 0;">
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px;">
+            <span>${r.name || 'neznámý'}</span><span>${dateStr}</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);margin-bottom:6px;white-space:pre-wrap;">${(r.message||'').replace(/</g,'&lt;')}</div>
+          ${r.image ? `<img src="${r.image}" style="max-width:100%;border-radius:6px;border:1px solid rgba(60,180,80,0.3);cursor:pointer;" onclick="window.open(this.src,'_blank')">` : ''}
+        </div>`;
+    }).join('');
+  }catch(e){
+    console.error('Chyba při načítání hlášení:', e);
+    content.innerHTML = `<div style="color:#E53935;font-size:12px;text-align:center;">Nepodařilo se načíst: ${e.message}</div>`;
+  }
 }
 
 function openYearPicker(years, currentYear){
@@ -3255,6 +3388,38 @@ async function showQuizAttempts(name){
 renderTimeline();
 setTimeout(showWelcome, 300);
 setTimeout(initEmailJS, 1000);
+
+// Tlačítko nahlásit chybu — krátký klik = feedback/nápověda, dlouhé podržení = heslem chráněný přehled hlášení
+(() => {
+  const btn = document.getElementById('feedbackBtn');
+  if(!btn) return;
+  let pressTimer, longPressed = false;
+  btn.style.webkitTouchCallout = 'none';
+  btn.style.webkitUserSelect = 'none';
+  btn.style.userSelect = 'none';
+  btn.addEventListener('touchstart', () => {
+    longPressed = false;
+    pressTimer = setTimeout(() => {
+      longPressed = true;
+      promptFeedbackReportsPassword();
+    }, 600);
+  }, {passive:true});
+  btn.addEventListener('touchend', e => {
+    clearTimeout(pressTimer);
+    if(longPressed){ e.preventDefault(); return; }
+    if(!sessionStorage.getItem('excl')){ sessionStorage.setItem('excl','1'); showWelcome(); }
+    else { showFeedback(); }
+  });
+  btn.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  // Fallback pro myš (desktop)
+  btn.addEventListener('click', () => {
+    if(!('ontouchstart' in window)){
+      if(!sessionStorage.getItem('excl')){ sessionStorage.setItem('excl','1'); showWelcome(); }
+      else { showFeedback(); }
+    }
+  });
+})();
 </script>
 </body>
 </html>
