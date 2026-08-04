@@ -3398,14 +3398,19 @@ setTimeout(initEmailJS, 1000);
 // (krátký klik řeší onclick přímo na tlačítku, tohle jen hlídá dlouhé podržení a potlačí navazující klik)
 (() => {
   const btn = document.getElementById('feedbackBtn');
-  if(!btn) return;
+  if(!btn){ console.warn('feedbackBtn nenalezen v DOM při inicializaci dlouhého podržení'); return; }
   let pressTimer;
   window._feedbackLongPressed = false;
   btn.addEventListener('touchstart', () => {
     window._feedbackLongPressed = false;
     pressTimer = setTimeout(() => {
       window._feedbackLongPressed = true;
-      promptFeedbackReportsPassword();
+      alert('[diag] Dlouhé podržení detekováno, otevírám heslo…');
+      try{
+        promptFeedbackReportsPassword();
+      }catch(err){
+        alert('Chyba při otevírání hlášení: ' + err.message);
+      }
     }, 600);
   }, {passive:true});
   btn.addEventListener('touchend', () => {
