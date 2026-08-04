@@ -1538,14 +1538,29 @@ function showFeedback(){
         font-size:14px; padding:10px 12px; border-radius:4px;
         outline:none; resize:vertical; margin-bottom:12px;
       "></textarea>
-      <button onclick="
-        var msg = document.getElementById('feedbackText').value.trim();
-        if(!msg){ document.getElementById('feedbackText').focus(); return; }
-        var subject = encodeURIComponent('KoKrŠNeK – zpráva od uživatele');
-        var body = encodeURIComponent(msg);
-        window.location.href = 'mailto:kokrsnek@gmail.com?subject=' + subject + '&body=' + body;
-        this.closest('.ev-modal-backdrop').remove();
-      " style="
+
+      <input type="file" id="feedbackImage" accept="image/*" style="display:none;" onchange="
+        var f = this.files && this.files[0];
+        var label = document.getElementById('feedbackImageLabel');
+        var preview = document.getElementById('feedbackImagePreview');
+        if(f){
+          label.textContent = '📎 ' + f.name;
+          preview.src = URL.createObjectURL(f);
+          preview.style.display = 'block';
+        } else {
+          label.textContent = '📷 Přiložit screenshot / fotku';
+          preview.style.display = 'none';
+        }
+      ">
+      <button onclick="document.getElementById('feedbackImage').click()" id="feedbackImageLabel" style="
+        display:block; width:100%; margin-bottom:8px;
+        background:var(--accent-soft); border:1px solid rgba(77,191,106,0.3);
+        color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:13px;
+        padding:10px; border-radius:6px; cursor:pointer; text-align:center;
+      ">📷 Přiložit screenshot / fotku</button>
+      <img id="feedbackImagePreview" style="display:none;max-width:100%;border-radius:6px;margin-bottom:12px;border:1px solid rgba(77,191,106,0.3);">
+
+      <button onclick="submitFeedback(this)" style="
         display:block; width:100%;
         background:var(--accent); border:none; color:#000;
         font-family:'JetBrains Mono',monospace; font-size:13px;
@@ -1554,6 +1569,34 @@ function showFeedback(){
     </div>`;
   document.body.appendChild(backdrop);
   setTimeout(() => document.getElementById('feedbackText')?.focus(), 150);
+}
+
+async function submitFeedback(btn){
+  const msg = document.getElementById('feedbackText').value.trim();
+  if(!msg){ document.getElementById('feedbackText').focus(); return; }
+  const fileInput = document.getElementById('feedbackImage');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+
+  if(file && navigator.canShare && navigator.canShare({ files: [file] })){
+    try{
+      await navigator.share({
+        title: 'KoKrŠNeK – zpráva od uživatele',
+        text: msg,
+        files: [file]
+      });
+      btn.closest('.ev-modal-backdrop').remove();
+      return;
+    }catch(e){
+      // uživatel sdílení zrušil nebo selhalo — spadneme na mailto níž
+      if(e && e.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback: prostý mailto text bez přílohy (mailto přílohy nepodporuje)
+  const subject = encodeURIComponent('KoKrŠNeK – zpráva od uživatele');
+  const body = encodeURIComponent(msg + (file ? '\n\n(Screenshot se bohužel nepodařilo přiložit — zkus ho poslat ručně jako přílohu k tomuto emailu.)' : ''));
+  window.location.href = 'mailto:kokrsnek@gmail.com?subject=' + subject + '&body=' + body;
+  btn.closest('.ev-modal-backdrop').remove();
 }
 
 function openYearPicker(years, currentYear){
