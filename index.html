@@ -719,7 +719,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.5L2 10.5h2.5V21a1 1 0 0 0 1 1h4v-7h5v7h4a1 1 0 0 0 1-1V10.5H22z"/></svg>
 </button>
 
-<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);">
+<button class="search-btn" id="feedbackBtn" aria-label="Nahlásit chybu" style="right:64px;border-color:rgba(229,57,53,0.6);background:rgba(229,57,53,0.12);" onclick="if(!window._feedbackLongPressed){ if(!sessionStorage.getItem('excl')){sessionStorage.setItem('excl','1');showWelcome();}else{showFeedback();} }">
   <svg viewBox="0 0 24 24" fill="#E53935" width="18" height="18"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
 </button>
 
@@ -3394,36 +3394,25 @@ renderTimeline();
 setTimeout(showWelcome, 300);
 setTimeout(initEmailJS, 1000);
 
-// Tlačítko nahlásit chybu — krátký klik = feedback/nápověda, dlouhé podržení = heslem chráněný přehled hlášení
+// Tlačítko nahlásit chybu — dlouhé podržení otevře heslem chráněný přehled hlášení
+// (krátký klik řeší onclick přímo na tlačítku, tohle jen hlídá dlouhé podržení a potlačí navazující klik)
 (() => {
   const btn = document.getElementById('feedbackBtn');
   if(!btn) return;
-  let pressTimer, longPressed = false;
-  btn.style.webkitTouchCallout = 'none';
-  btn.style.webkitUserSelect = 'none';
-  btn.style.userSelect = 'none';
+  let pressTimer;
+  window._feedbackLongPressed = false;
   btn.addEventListener('touchstart', () => {
-    longPressed = false;
+    window._feedbackLongPressed = false;
     pressTimer = setTimeout(() => {
-      longPressed = true;
+      window._feedbackLongPressed = true;
       promptFeedbackReportsPassword();
     }, 600);
   }, {passive:true});
-  btn.addEventListener('touchend', e => {
+  btn.addEventListener('touchend', () => {
     clearTimeout(pressTimer);
-    if(longPressed){ e.preventDefault(); return; }
-    if(!sessionStorage.getItem('excl')){ sessionStorage.setItem('excl','1'); showWelcome(); }
-    else { showFeedback(); }
-  });
+    setTimeout(() => { window._feedbackLongPressed = false; }, 400);
+  }, {passive:true});
   btn.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
-  btn.addEventListener('contextmenu', e => e.preventDefault());
-  // Fallback pro myš (desktop)
-  btn.addEventListener('click', () => {
-    if(!('ontouchstart' in window)){
-      if(!sessionStorage.getItem('excl')){ sessionStorage.setItem('excl','1'); showWelcome(); }
-      else { showFeedback(); }
-    }
-  });
 })();
 </script>
 </body>
