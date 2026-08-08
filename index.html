@@ -1057,7 +1057,11 @@ async function shareEvent(ev){
   await navigator.clipboard.writeText(textBase + (shareUrl && !textBase.includes(shareUrl) ? NL+NL+shareUrl : ''));
   notifyShare();
   const btn = document.getElementById('shareEvBtn');
-  if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = 'Sdílet'; },2000); }
+  if(btn){
+    const original = btn.innerHTML;
+    btn.textContent = '✓ Zkopírováno';
+    setTimeout(()=>{ btn.innerHTML = original; },2000);
+  }
 }
 
 // =====================================================
@@ -1792,7 +1796,7 @@ function showEventDetail(idx){
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
-          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">Sdílet</button>
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Sdílet</button>
         ${isFuture ? `<button onclick="exportICS(rawEvents[${idx}])" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
