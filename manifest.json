@@ -1,24 +1,19 @@
 {
   "name": "KoKrŠNeK - tak život chode",
   "short_name": "KoKrŠNeK",
-  "description": "Osobní časová osa událostí",
+  "description": "Kalendář a společenský prostor pro partu KoKrŠNeKů",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#050505",
-  "theme_color": "#050505",
   "orientation": "portrait",
+  "background_color": "#1C1B20",
+  "theme_color": "#050505",
+  "lang": "cs",
   "icons": [
-    {
-      "src": "icon-192v2.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512v2.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ]
 }

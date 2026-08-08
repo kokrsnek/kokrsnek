@@ -3160,8 +3160,9 @@ function showWelcome(){
     ['Domeček','Vrátí na aktuální událost, znovu načte kalendář a obnoví dnešní datum.'],
     ['Fotoalba','Tlačítko fotek — přepínej mezi řazením "Dle data" (podle roku) a "Dle akce" (unikátní názvy, číslovky se ignorují). Nová alba mají značku "NOVÉ", tlačítko fotek ukazuje počet.'],
     ['Ochrana alb a souborů','Přístup chráněn tajnou otázkou o šerifovi.'],
-    ['Sdílení','V detailu události tlačítko Sdílet — název, datum, mapa místa, počasí a album fotek.'],
-    ['Do kalendáře','U budoucích událostí lze přidat do vlastního kalendáře.'],
+    ['✋ Dojdu','V detailu události i přímo na kartě v timeline — tlačítko "Dojdu" označí, že se zúčastníš. Appka ukazuje počet přihlášených, klikem na jména uvidíš celý seznam.'],
+    ['Sdílení','V detailu události ikona sdílení (šipka nahoru) — pošle název, datum, mapu místa, počasí a album fotek přes systémové sdílení nebo do schránky.'],
+    ['Do kalendáře','U budoucích událostí ikona kalendáře — stáhne .ics soubor pro přidání do vlastního kalendáře.'],
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
     ['💬 Komentáře a reakce','V detailu události lze psát komentáře, odpovídat na ně a reagovat rychlými emoji (👍❤️😂😮😢).'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
@@ -4189,7 +4190,11 @@ function restoreGrabber(grabber){}
 })();
 
 renderTimeline();
-setTimeout(showWelcome, 300);
+if(!localStorage.getItem('welcomeShownOnce')){
+  localStorage.setItem('welcomeShownOnce','1');
+  setTimeout(showWelcome, 300);
+}
+
 </script>
 </body>
 </html>
