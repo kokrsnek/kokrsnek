@@ -833,7 +833,7 @@
 
 <div class="search-overlay" id="searchOverlay">
   <div style="margin-bottom:10px;padding-top:4px;text-align:center;">
-    <span style="font-family:'Inter',sans-serif;font-size:21.75px;font-weight:700;color:var(--ink);">Hledej šmudlo v5</span>
+    <span style="font-family:'Inter',sans-serif;font-size:21.75px;font-weight:700;color:var(--ink);">Hledej šmudlo</span>
   </div>
   <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off" style="
     background:var(--surface);border:1px solid var(--line);
@@ -4021,76 +4021,6 @@ function restoreGrabber(grabber){}
   // iOS umí gesto zrušit (touchcancel) místo dokončit (touchend), např. když si myslí, že jde o scroll.
   // Bez tohohle by dialog zůstal viset uprostřed tažení.
   document.addEventListener('touchcancel', endDrag);
-})();
-
-// Zavírání dialogů tažením dolů odkudkoliv po jejich ploše (ne jen za čárku) - jako u nativních iOS sheetů.
-// Funguje jen když je obsah scrollnutý úplně nahoru, ať to nekoliduje se čtením/scrollováním.
-(() => {
-  let bodyDrag = null;
-  const ENGAGE_DISTANCE = 30; // vyšší práh než u čárky - běžné zachvění prstu při klikání na tlačítko nesmí spustit zavírání
-  const EXCLUDE_SELECTOR = 'button, a, input, textarea, select, [id^="commentList_"]';
-
-  document.addEventListener('touchstart', (e) => {
-    if(e.target.closest('.sheet-grabber-down, .sheet-grabber-up')) return; // o to se stará předchozí blok
-    if(e.target.closest(EXCLUDE_SELECTOR)) return; // tlačítka, odkazy a vnořený scroll komentářů necháme být
-    const sheet = e.target.closest('.ev-modal');
-    if(!sheet) return;
-    if(sheet.scrollTop > 0) return; // není nahoře - ať funguje normální scroll
-
-    const grabber = sheet.querySelector('.sheet-grabber-down');
-    if(!grabber) return; // umíme zavřít jen "down" sheety, které mají čárku dole doplněnou
-
-    const t = e.touches[0];
-    bodyDrag = {
-      sheet, grabber,
-      startX: t.clientX, startY: t.clientY,
-      height: sheet.getBoundingClientRect().height,
-      engaged: false
-    };
-  }, {passive:true});
-
-  document.addEventListener('touchmove', (e) => {
-    if(!bodyDrag) return;
-    const t = e.touches[0];
-    const dy = t.clientY - bodyDrag.startY;
-    const dx = t.clientX - bodyDrag.startX;
-
-    if(!bodyDrag.engaged){
-      if(bodyDrag.sheet.scrollTop > 0){ bodyDrag = null; return; } // mezitím se to samo odscrollovalo
-      if(dy < ENGAGE_DISTANCE || Math.abs(dx) > dy) return; // musí to být zřetelný tah dolů, ne do strany
-      bodyDrag.engaged = true;
-      bodyDrag.sheet.style.transition = 'none';
-      liftGrabber(bodyDrag.grabber);
-      if(document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')){
-        document.activeElement.blur();
-      }
-    }
-
-    e.preventDefault(); // potlač nativní rubber-band scroll, ať se to nepere s naším posouváním
-    bodyDrag.delta = Math.max(0, dy);
-    bodyDrag.sheet.style.transform = `translateY(${bodyDrag.delta}px)`;
-    updateGrabberTop(bodyDrag.grabber, bodyDrag.delta);
-  }, {passive:false});
-
-  function endBodyDrag(){
-    if(!bodyDrag) return;
-    const { sheet, grabber, delta, height, engaged } = bodyDrag;
-    bodyDrag = null;
-    if(!engaged) return;
-
-    const threshold = Math.min(120, height * 0.28);
-    sheet.style.transition = 'transform .28s cubic-bezier(0.32,0.72,0,1)';
-
-    if((delta || 0) > threshold){
-      sheet.style.transform = `translateY(${height + 40}px)`;
-      setTimeout(() => { restoreGrabber(grabber); grabber.click(); }, 220);
-    } else {
-      sheet.style.transform = 'translateY(0)';
-      restoreGrabber(grabber);
-    }
-  }
-  document.addEventListener('touchend', endBodyDrag);
-  document.addEventListener('touchcancel', endBodyDrag);
 })();
 
 renderTimeline();
