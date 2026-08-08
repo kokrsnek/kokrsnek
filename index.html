@@ -3982,7 +3982,7 @@ function restoreGrabber(grabber){}
     }
   }
 
-  function endDrag(){
+  function endDrag(e){
     if(!dragState) return;
     const { sheet, grabber, mode, delta, height, engaged, startY, currentY, startTime } = dragState;
     dragState = null;
@@ -3997,6 +3997,9 @@ function restoreGrabber(grabber){}
         sheet.style.transform = 'translateY(0)';
         restoreGrabber(grabber);
       }
+      // Po zavření tímhle dotykem prohlížeč ještě sám vyšle svůj vlastní 'click' - bez potlačení
+      // by dopadl na to, co se pod zavřeným dialogem objeví (proklik na kartu pod ním).
+      if(e && e.cancelable) e.preventDefault();
       closeGrabber(grabber);
       return;
     }
@@ -4011,13 +4014,14 @@ function restoreGrabber(grabber){}
       // Dotáhni mimo obrazovku a pak dialog skutečně zavři
       const exitY = mode === 'down' ? height + 40 : -(height + 40);
       sheet.style.transform = `translateY(${exitY}px)`;
+      if(e && e.cancelable) e.preventDefault();
       setTimeout(() => { closeGrabber(grabber); }, 220);
     } else {
       sheet.style.transform = 'translateY(0)';
       restoreGrabber(grabber);
     }
   }
-  document.addEventListener('touchend', endDrag);
+  document.addEventListener('touchend', endDrag, {passive:false});
   // iOS umí gesto zrušit (touchcancel) místo dokončit (touchend), např. když si myslí, že jde o scroll.
   // Bez tohohle by dialog zůstal viset uprostřed tažení.
   document.addEventListener('touchcancel', endDrag);
