@@ -1848,6 +1848,7 @@ function showEventDetail(idx){
     orgEl.style.webkitTouchCallout = 'none';
     let orgStartX = 0, orgStartY = 0;
     orgEl.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       orgLongPressed = false;
       const t = e.touches && e.touches[0];
       orgStartX = t ? t.clientX : 0;
@@ -1857,7 +1858,7 @@ function showEventDetail(idx){
         try{ openQuizLeaderboardDirect(); }
         catch(err){ console.error('Chyba při otevírání žebříčku:', err); }
       }, 500);
-    }, {passive:true});
+    }, {passive:false});
     orgEl.addEventListener('touchend', e => {
       clearTimeout(orgPressTimer);
       e.preventDefault(); // potlač simulovaný click po doteku, ať se kvíz nespustí 2×
@@ -1916,6 +1917,7 @@ function showEventDetail(idx){
     likeBtn.style.webkitUserSelect = 'none';
     likeBtn.style.webkitTouchCallout = 'none';
     likeBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
       longPressed = false;
       const t = e.touches && e.touches[0];
       likeStartX = t ? t.clientX : 0;
@@ -1924,10 +1926,13 @@ function showEventDetail(idx){
         longPressed = true;
         showLikers(idx, fbKey);
       }, 400);
-    }, {passive:true});
+    }, {passive:false});
     likeBtn.addEventListener('touchend', e => {
       clearTimeout(pressTimer);
-      if(longPressed) e.preventDefault();
+      e.preventDefault();
+      if(longPressed) return;
+      try{ toggleLike(idx); }
+      catch(err){ console.error('Chyba při lajkování:', err); }
     });
     likeBtn.addEventListener('touchmove', e => {
       const t = e.touches && e.touches[0];
@@ -1948,6 +1953,7 @@ function showEventDetail(idx){
     attendBtn.style.webkitUserSelect = 'none';
     attendBtn.style.webkitTouchCallout = 'none';
     attendBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
       attendLongPressed = false;
       const t = e.touches && e.touches[0];
       attendStartX = t ? t.clientX : 0;
@@ -1956,10 +1962,13 @@ function showEventDetail(idx){
         attendLongPressed = true;
         showAttendees(idx, fbKey);
       }, 400);
-    }, {passive:true});
+    }, {passive:false});
     attendBtn.addEventListener('touchend', e => {
       clearTimeout(attendPressTimer);
-      if(attendLongPressed) e.preventDefault();
+      e.preventDefault();
+      if(attendLongPressed) return;
+      try{ toggleAttend(idx); }
+      catch(err){ console.error('Chyba při označování účasti:', err); }
     });
     attendBtn.addEventListener('touchmove', e => {
       const t = e.touches && e.touches[0];
@@ -2228,6 +2237,29 @@ function sortByTimeDesc(docs){
   });
 }
 
+// Zabrání systémovému výběru textu / nabídce "Zkopírovat" při podržení prstu na tlačítku
+// (iOS na emoji ignoruje CSS user-select:none), a přitom zachová normální krátký tap.
+function blockCalloutTap(el, handler){
+  if(!el) return;
+  let moved = false, sx = 0, sy = 0;
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    moved = false;
+    const t = e.touches && e.touches[0];
+    sx = t ? t.clientX : 0; sy = t ? t.clientY : 0;
+  }, {passive:false});
+  el.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    if(Math.hypot(t.clientX - sx, t.clientY - sy) > 10) moved = true;
+  }, {passive:true});
+  el.addEventListener('touchend', e => {
+    e.preventDefault();
+    if(!moved) handler(e);
+  });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 async function openQuickLikes(evIdx){
   const ev = rawEvents[evIdx];
   const key = getEventKey(ev);
@@ -2243,6 +2275,7 @@ async function openQuickLikes(evIdx){
     </div>`;
   document.body.appendChild(backdrop);
   await refreshQuickLikers(evIdx, key);
+  blockCalloutTap(document.getElementById('quickLikeBtn_'+evIdx), () => quickToggleLike(evIdx));
 }
 async function refreshQuickLikers(evIdx, key){
   const snap = await db.collection('events').doc(key).collection('likes').get();
@@ -2284,6 +2317,7 @@ async function openQuickAttend(evIdx){
     </div>`;
   document.body.appendChild(backdrop);
   await refreshQuickAttend(evIdx, key, isFuture);
+  blockCalloutTap(document.getElementById('quickAttendBtn_'+evIdx), () => quickToggleAttend(evIdx));
 }
 async function refreshQuickAttend(evIdx, key, isFuture){
   const snap = await db.collection('events').doc(key).collection('attendees').get();
