@@ -1045,13 +1045,17 @@ async function shareEvent(ev){
     shareUrl = link || undefined;
   }
 
+  const notifyShare = () => { try{ sendNotification('share', localStorage.getItem('kokrsnekUser'), ev.title); }catch(emailErr){} };
+
   if(navigator.share){
     try{
       await navigator.share({ title: introFull, text: textBase, url: shareUrl });
+      notifyShare();
       return;
     }catch(e){}
   }
   await navigator.clipboard.writeText(textBase + (shareUrl && !textBase.includes(shareUrl) ? NL+NL+shareUrl : ''));
+  notifyShare();
   const btn = document.getElementById('shareEvBtn');
   if(btn){ btn.textContent = '✓ Zkopírováno'; setTimeout(()=>{ btn.textContent = 'Sdílet'; },2000); }
 }
@@ -1074,6 +1078,7 @@ function exportICS(ev){
   a.href = URL.createObjectURL(blob);
   a.download = `${ev.title.replace(/[^a-z0-9]/gi,'_')}.ics`;
   a.click();
+  try{ sendNotification('calendar', localStorage.getItem('kokrsnekUser'), ev.title); }catch(emailErr){}
 }
 
 // =====================================================
@@ -2298,7 +2303,10 @@ async function quickToggleAttend(evIdx){
   if(!user) return;
   const ref = db.collection('events').doc(key).collection('attendees').doc(user);
   const snap = await ref.get();
-  if(snap.exists){ await ref.delete(); } else { await ref.set({user, at: new Date()}); }
+  if(snap.exists){ await ref.delete(); } else {
+    await ref.set({user, at: new Date()});
+    try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
+  }
   await refreshQuickAttend(evIdx, key, true);
   fetchCardStats(ev, evIdx, null, evIdx);
 }
@@ -3191,12 +3199,20 @@ const EMAILJS_SERVICE_ID   = 'service_sp8lnel';
 const EMAILJS_TEMPLATE_ID  = 'template_pso6ebr';
 let _emailjsReady = false;
 
+const NOTIF_TYPE_LABELS = {
+  like: 'Novy lajk',
+  comment: 'Novy komentar',
+  attend: 'Novy zajem o ucast',
+  share: 'Sdileni udalosti',
+  calendar: 'Pridani do kalendare'
+};
+
 function sendNotification(type, user, eventTitle, extra){
   try{
     if(!window._ejReady || typeof emailjs === 'undefined') return;
     const now = new Date().toLocaleString('cs',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
     emailjs.send('service_sp8lnel', 'template_pso6ebr', {
-      type: type === 'like' ? 'Novy lajk' : 'Novy komentar',
+      type: NOTIF_TYPE_LABELS[type] || type,
       user: user || 'neznamy',
       event_title: eventTitle || '',
       extra: extra || '',
@@ -3330,6 +3346,7 @@ async function toggleAttend(evIdx){
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
       await ref.set({user, at: new Date()});
+      try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
     }
     refreshAttend(evIdx, key, true);
   }catch(e){ console.error('attend error',e); }
