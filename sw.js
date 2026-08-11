@@ -1,38 +1,46 @@
-const CACHE = 'kokrsnek-v3';
+// Service worker POUZE pro push notifikace (Firebase Cloud Messaging).
+// Záměrně NEDĚLÁ žádné cachování souborů ani network-first/cache-first logiku —
+// appka dřív měla problémy se starou zacachovanou verzí na iOS, takže tenhle SW
+// se do souborů appky vůbec neplete, jen čeká na push zprávy na pozadí.
 
-self.addEventListener('install', e => {
-  self.skipWaiting();
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDnWBkXpnGCSPMKPrbroJtP2QVt48YtURw",
+  authDomain: "kokrsnek-4bdc7.firebaseapp.com",
+  projectId: "kokrsnek-4bdc7",
+  storageBucket: "kokrsnek-4bdc7.firebasestorage.app",
+  messagingSenderId: "1079843186893",
+  appId: "1:1079843186893:web:b826958d3884ea34412184"
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+const messaging = firebase.messaging();
+
+// Appka je zavřená / na pozadí — zobraz systémovou notifikaci
+messaging.onBackgroundMessage((payload) => {
+  const title = (payload.notification && payload.notification.title) || 'KoKrŠNeK';
+  const options = {
+    body: (payload.notification && payload.notification.body) || '',
+    icon: 'icon-192v2.png',
+    badge: 'icon-192v2.png',
+    data: payload.data || {}
+  };
+  self.registration.showNotification(title, options);
 });
 
-// Network first pro HTML, cache first pro ostatní
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  const isHTML = e.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/';
-
-  if (isHTML) {
-    // Vždy ze sítě, nikdy z cache
-    e.respondWith(fetch(e.request));
-    return;
-  }
-
-  // Ostatní soubory (ikony, fonty) — cache first
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      });
+// Klik na notifikaci -> otevři appku (nebo přepni na už otevřenou záložku)
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('./index.html');
     })
   );
 });
+
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));

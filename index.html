@@ -119,6 +119,10 @@
     border-color:rgba(62,143,104,0.9);
     background:rgba(62,143,104,0.2);
   }
+  #notifBtn.connected{
+    border-color:rgba(62,143,104,0.9);
+    background:rgba(62,143,104,0.2);
+  }
   .search-btn svg{
     width:19px; height:19px;
     fill:var(--ink);
@@ -350,15 +354,14 @@
   }
 
   .slot{
-    height:33.34dvh;
-    min-height:180px;
     width:100%;
     display:flex;
     align-items:center;
     justify-content:center;
     scroll-snap-align:center;
     position:relative;
-    padding:8px 26px;
+    padding:0 26px;
+    margin-bottom:26px;
     box-sizing:border-box;
   }
 
@@ -780,6 +783,7 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
 
@@ -803,6 +807,10 @@
 <button class="search-btn" id="themeToggleBtn" aria-label="Přepnout světlý/tmavý režim" style="position:fixed;top:env(safe-area-inset-top,12px);right:12px;bottom:auto;z-index:25;width:38px;height:38px;" onclick="toggleTheme()">
   <svg id="themeIconMoon" viewBox="0 0 24 24" fill="var(--ink)" width="17" height="17" style="display:block;"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
   <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" width="17" height="17" style="display:none;"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+</button>
+
+<button class="search-btn" id="notifBtn" aria-label="Zapnout upozornění" style="position:fixed;top:env(safe-area-inset-top,12px);right:58px;bottom:auto;z-index:25;width:38px;height:38px;" onclick="toggleNotifications()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
 </button>
 
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
@@ -2343,7 +2351,7 @@ async function quickToggleAttend(evIdx){
   const ref = db.collection('events').doc(key).collection('attendees').doc(user);
   const snap = await ref.get();
   if(snap.exists){ await ref.delete(); } else {
-    await ref.set({user, at: new Date()});
+    await ref.set({user, at: new Date(), eventTitle: ev?.title || ''});
     try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
   }
   await refreshQuickAttend(evIdx, key, true);
@@ -2762,11 +2770,77 @@ document.addEventListener('touchstart', (e) => {
     closeSearch();
   }
 }, {passive:true});
-// Odstraň všechny staré service workery
+// Service worker: dřív se každý SW natvrdo odregistroval kvůli starým iOS cache bugům.
+// Nový sw.js žádné soubory necachuje (jen naslouchá push zprávám), takže je bezpečné
+// ho mít zaregistrovaný a aktivní.
+let swRegistration = null;
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
   caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  navigator.serviceWorker.register('sw.js')
+    .then(reg => { swRegistration = reg; })
+    .catch(e => console.error('Registrace service workeru selhala:', e));
 }
+
+// --- Push notifikace (Firebase Cloud Messaging) ---
+// VAPID klíč najdeš ve Firebase Console → Project settings → Cloud Messaging → Web Push certificates.
+const VAPID_KEY = 'VLOŽ_SEM_SVUJ_VAPID_KLIC';
+let messaging = null;
+try{
+  messaging = firebase.messaging();
+  messaging.onMessage(payload => {
+    const title = (payload.notification && payload.notification.title) || 'KoKrŠNeK';
+    const body = (payload.notification && payload.notification.body) || '';
+    if(Notification.permission === 'granted'){
+      try{ new Notification(title, {body, icon:'icon-192v2.png'}); }catch(e){}
+    }
+  });
+}catch(e){ console.warn('Push notifikace nejsou v tomto prohlížeči podporované.', e); }
+
+function updateNotifBtnUI(on){
+  const btn = document.getElementById('notifBtn');
+  if(!btn) return;
+  btn.classList.toggle('connected', on);
+  btn.setAttribute('aria-label', on ? 'Upozornění zapnuta (klikni pro vypnutí)' : 'Zapnout upozornění');
+}
+
+async function toggleNotifications(){
+  const user = getUserName();
+  if(!user) return;
+  const enabled = localStorage.getItem('pushEnabled') === '1';
+
+  if(enabled){
+    const token = localStorage.getItem('pushToken');
+    if(token){
+      try{ await db.collection('pushTokens').doc(token).delete(); }
+      catch(e){ console.error('Chyba při rušení tokenu:', e); }
+    }
+    localStorage.removeItem('pushEnabled');
+    localStorage.removeItem('pushToken');
+    updateNotifBtnUI(false);
+    return;
+  }
+
+  try{
+    if(!messaging || !('Notification' in window)){
+      alert('Tento prohlížeč nepodporuje push notifikace.');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ updateNotifBtnUI(false); return; }
+    if(!swRegistration) swRegistration = await navigator.serviceWorker.register('sw.js');
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
+    if(!token){ alert('Nepodařilo se získat token pro notifikace.'); return; }
+    await db.collection('pushTokens').doc(token).set({ user, token, at: new Date().toISOString() });
+    localStorage.setItem('pushEnabled', '1');
+    localStorage.setItem('pushToken', token);
+    updateNotifBtnUI(true);
+  }catch(e){
+    console.error('Chyba při zapínání notifikací:', e);
+    alert('Nepodařilo se zapnout notifikace. Zkus to prosím znovu.');
+  }
+}
+
+updateNotifBtnUI(localStorage.getItem('pushEnabled') === '1');
 
 // --- Notifikace 5 dní před událostí ---
 // --- Upozornění na blížící se události (in-app banner) ---
@@ -3447,7 +3521,7 @@ async function toggleLike(evIdx){
     const ref = db.collection('events').doc(key).collection('likes').doc(user);
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
-      await ref.set({user, at: new Date()});
+      await ref.set({user, at: new Date(), eventTitle: ev?.title || ''});
       try{ sendNotification('like', user, rawEvents[evIdx]?.title || ''); }catch(emailErr){}
     }
     refreshLikes(evIdx, key);
@@ -3473,7 +3547,7 @@ async function toggleAttend(evIdx){
     const ref = db.collection('events').doc(key).collection('attendees').doc(user);
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
-      await ref.set({user, at: new Date()});
+      await ref.set({user, at: new Date(), eventTitle: ev?.title || ''});
       try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
     }
     refreshAttend(evIdx, key, true);
@@ -3597,7 +3671,7 @@ function openCommentEditor(evIdx, key, parentId){
     sendBtn.disabled = true;
     try{
       await db.collection('events').doc(key).collection('comments').add({
-        user, text, at: new Date().toISOString(), parentId: parentId||null
+        user, text, at: new Date().toISOString(), parentId: parentId||null, eventTitle: rawEvents[evIdx]?.title || ''
       });
       try{ sendNotification('comment', user, rawEvents[evIdx]?.title || '', text); }catch(emailErr){}
       editor.remove();
@@ -3625,7 +3699,7 @@ async function postComment(evIdx, parentId){
     const user = getUserName();
     if(!user) return;
     await db.collection('events').doc(key).collection('comments').add({
-      user, text, at: new Date().toISOString(), parentId: parentId||null
+      user, text, at: new Date().toISOString(), parentId: parentId||null, eventTitle: ev?.title || ''
     });
     input.value = '';
     const replyBox = document.getElementById('replyBox_'+parentId);
