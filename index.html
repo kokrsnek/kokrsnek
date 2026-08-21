@@ -341,15 +341,15 @@
   }
   .topbar .today{
     font-family:'Inter', sans-serif;
-    font-weight:500;
-    font-size:12.5px;
+    font-weight:700;
+    font-size:17px;
     color:var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .topbar .nameday{
     font-family:'Inter', sans-serif;
-    font-weight:500;
-    font-size:12.5px;
+    font-weight:700;
+    font-size:17px;
     color:var(--muted);
   }
 
@@ -816,16 +816,14 @@
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
   refreshNow();
   fetchGoogleCalendarEvents(false).then(() => {
-    var app=document.getElementById('app');
-    var now=app.querySelector('.slot.now');
-    if(!now) return;
-    var top=0;
-    var el=now;
-    while(el && el!==app){top+=el.offsetTop;el=el.offsetParent;}
-    var offset=top-(app.clientHeight/2)+(now.offsetHeight/2);
-    app.style.scrollSnapType='none';
-    app.scrollTo({top:Math.max(0,offset),behavior:'smooth'});
-    setTimeout(()=>{ app.style.scrollSnapType=''; }, 800);
+    var appEl=document.getElementById('app');
+    var nowSlot=appEl.querySelector('.slot.now');
+    if(!nowSlot) return;
+    appEl.style.scrollSnapType='none';
+    requestAnimationFrame(() => {
+      nowSlot.scrollIntoView({block:'center', behavior:'smooth'});
+      setTimeout(()=>{ appEl.style.scrollSnapType=''; }, 800);
+    });
   });
 ">
   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.5L2 10.5h2.5V21a1 1 0 0 0 1 1h4v-7h5v7h4a1 1 0 0 0 1-1V10.5H22z"/></svg>
@@ -2483,9 +2481,16 @@ function renderTimeline(instantScroll = true){
   }
 
   centerIndex = 0;
+  const nowMs = now.getTime();
   for (let i=0;i<rawEvents.length;i++){
-    if (rawEvents[i].end >= now){ centerIndex = i; break; }
+    if (rawEvents[i].end.getTime() >= nowMs){ centerIndex = i; break; }
     centerIndex = i;
+  }
+  if(rawEvents[centerIndex]){
+    const daysOff = Math.round((rawEvents[centerIndex].start.getTime() - nowMs) / 86400000);
+    if(daysOff > 60 || daysOff < -1){
+      console.warn('[KoKrŠNeK] Podezřele vzdálená "aktuální" událost:', rawEvents[centerIndex].title, 'za', daysOff, 'dní od', now);
+    }
   }
 
   const orderedIndices = [];
@@ -2565,7 +2570,11 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
 
     rawEvents = allItems.map(it => {
       const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
-      const end   = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
+      let end = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
+      // Pojistka: pokud se datum konce z nějakého důvodu nepodařilo rozparsovat (Invalid Date),
+      // porovnání `end >= now` by pak bylo VŽDY false a appka by si spletla "aktuální" událost
+      // s tou úplně poslední v celém kalendáři. Radši spadneme zpět na datum začátku.
+      if(isNaN(end.getTime())) end = new Date(start);
       let photoAlbum = null;
       let driveFiles = [];
       if(it.attachments){
@@ -2593,7 +2602,7 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
       }
       const updated = it.updated ? new Date(it.updated) : null;
       return { start, end, title, place: it.location||'', photoAlbum, driveFiles, updated, raw: it };
-    }).sort((a,b)=>a.start-b.start);
+    }).filter(ev => !isNaN(ev.start.getTime())).sort((a,b)=>a.start-b.start);
     renderTimeline(instantScroll);
     updateAlbumsBadge();
     setTimeout(checkUpcomingNotifications, 1000);
