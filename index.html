@@ -820,9 +820,15 @@
     var nowSlot=appEl.querySelector('.slot.now');
     if(!nowSlot) return;
     appEl.style.scrollSnapType='none';
+    var fallbackTimer = setTimeout(finishScroll, 2500);
+    function finishScroll(){
+      clearTimeout(fallbackTimer);
+      appEl.removeEventListener('scrollend', finishScroll);
+      appEl.style.scrollSnapType='';
+    }
+    appEl.addEventListener('scrollend', finishScroll);
     requestAnimationFrame(() => {
       nowSlot.scrollIntoView({block:'center', behavior:'smooth'});
-      setTimeout(()=>{ appEl.style.scrollSnapType=''; }, 800);
     });
   });
 ">
@@ -1510,7 +1516,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou (zobrazuje se malým šedým textem pod názvem appky).
-const APP_VERSION = '2026-08-23.1';
+const APP_VERSION = '2026-08-23.2';
 {
   const vEl = document.getElementById('appVersionLabel');
   if(vEl) vEl.textContent = 'v' + APP_VERSION;
@@ -2152,8 +2158,14 @@ function openYearPicker(years, currentYear){
       appEl.style.scrollSnapType = 'none';
       const safeTop = parseInt(getComputedStyle(document.documentElement).paddingTop)||0;
       const offset = Math.max(safeTop, 30);
+      const fallbackT = setTimeout(finishYearScroll, 2500);
+      function finishYearScroll(){
+        clearTimeout(fallbackT);
+        appEl.removeEventListener('scrollend', finishYearScroll);
+        appEl.style.scrollSnapType = '';
+      }
+      appEl.addEventListener('scrollend', finishYearScroll);
       appEl.scrollTo({top: target.offsetTop - offset, behavior:'smooth'});
-      setTimeout(() => appEl.style.scrollSnapType = '', 800);
     };
     popup.appendChild(btn);
   });
@@ -2744,8 +2756,14 @@ function renderResults(query){
         if(target && app){
           app.style.scrollSnapType = 'none';
           const offset = target.offsetTop - (app.clientHeight/2) + (target.offsetHeight/2);
+          const fallbackT2 = setTimeout(finishSearchScroll, 2500);
+          function finishSearchScroll(){
+            clearTimeout(fallbackT2);
+            app.removeEventListener('scrollend', finishSearchScroll);
+            app.style.scrollSnapType = '';
+          }
+          app.addEventListener('scrollend', finishSearchScroll);
           app.scrollTo({top: Math.max(0, offset), behavior:'smooth'});
-          setTimeout(() => app.style.scrollSnapType = '', 800);
         }
       }, 50);
     });
