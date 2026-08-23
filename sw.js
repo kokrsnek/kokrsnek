@@ -1,7 +1,6 @@
-// Service worker POUZE pro push notifikace (Firebase Cloud Messaging).
-// Záměrně NEDĚLÁ žádné cachování souborů ani network-first/cache-first logiku —
-// appka dřív měla problémy se starou zacachovanou verzí na iOS, takže tenhle SW
-// se do souborů appky vůbec neplete, jen čeká na push zprávy na pozadí.
+// Service worker: push notifikace (Firebase Cloud Messaging) + ochrana proti
+// zastaralé zacachované appce na iOS (network-first pro HTML/JS, cache-first
+// pro statické soubory jako ikony/fonty).
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
@@ -16,8 +15,10 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const CACHE = 'kokrsnek-static-v1';
 
-// Appka je zavřená / na pozadí — zobraz systémovou notifikaci
+// --- Push notifikace ---------------------------------------------------
+
 messaging.onBackgroundMessage((payload) => {
   const title = (payload.notification && payload.notification.title) || 'KoKrŠNeK';
   const options = {
@@ -29,7 +30,6 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(title, options);
 });
 
-// Klik na notifikaci -> otevři appku (nebo přepni na už otevřenou záložku)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -42,5 +42,36 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// --- Cachování: HTML vždy čerstvé ze sítě, statické soubory cache-first ---
+// DŮLEŽITÉ: appka na iOS bez tohohle mívá tendenci držet si starou přidanou-na-plochu
+// verzi napořád, i po nasazení oprav. Proto HTML/JS vždy jde přímo na síť.
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  const isHTML = event.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/';
+
+  if (isHTML) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE).then((c) => c.put(event.request, clone));
+        return res;
+      });
+    })
+  );
+});
+
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
