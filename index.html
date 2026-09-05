@@ -329,7 +329,7 @@
   .topbar{
     position:fixed;
     top:auto !important;
-    bottom:calc(env(safe-area-inset-bottom, 0px) + 24px); left:0; right:0;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 62px); left:0; right:0;
     padding:8px 16px 6px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     z-index:5;
@@ -1526,7 +1526,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.8';
+const APP_VERSION = '2026-08-23.9';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
