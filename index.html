@@ -318,6 +318,15 @@
     margin-top:24px;
   }
 
+  .bottomPanelBg{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:calc(env(safe-area-inset-bottom, 0px) + 195px);
+    background:var(--bg);
+    border-top:1px solid var(--nav-border);
+    z-index:4;
+    pointer-events:none;
+  }
   .topbar{
     position:fixed;
     top:auto !important;
@@ -325,7 +334,6 @@
     padding:8px 16px 6px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     z-index:5;
-    background:linear-gradient(transparent, var(--bg) 22px);
     pointer-events:none;
   }
   .topbar .label{
@@ -850,6 +858,7 @@
   <div id="searchClose" class="sheet-grabber-up" style="width:100%;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
 </div>
 
+<div class="bottomPanelBg"></div>
 <div class="topbar">
   <span class="today" id="todayLabel"></span>
   <span class="nameday" id="namedayLabel"></span>
@@ -1507,7 +1516,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou (zobrazuje se malým šedým textem pod názvem appky).
-const APP_VERSION = '2026-08-23.5';
+const APP_VERSION = '2026-08-23.6';
 {
   const vEl = document.getElementById('appVersionLabel');
   if(vEl) vEl.textContent = 'v' + APP_VERSION;
