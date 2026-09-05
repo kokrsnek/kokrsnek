@@ -89,8 +89,8 @@
     overflow-y:auto;
     scroll-snap-type:y proximity;
     position:relative;
-    padding-bottom:200px;
-    scroll-padding-bottom:200px;
+    padding-bottom:135px;
+    scroll-padding-bottom:135px;
     box-sizing:border-box;
     -webkit-overflow-scrolling:touch;
   }
@@ -321,7 +321,7 @@
   .bottomPanelBg{
     position:fixed;
     left:0; right:0; bottom:0;
-    height:calc(env(safe-area-inset-bottom, 0px) + 195px);
+    height:calc(env(safe-area-inset-bottom, 0px) + 132px);
     background:linear-gradient(to bottom, transparent, var(--bg) 28px, var(--bg) 100%);
     z-index:4;
     pointer-events:none;
@@ -1526,7 +1526,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.9';
+const APP_VERSION = '2026-08-23.10';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -1563,7 +1563,7 @@ function showVersionDialog(){
 // "ukusuje" viditelnou plochu, ale scrollIntoView({block:'center'}) o něm neví a centruje
 // vůči celé výšce obrazovky — na některých iOS verzích/telefonech se proto karta vycentruje
 // jinam, než reálně vidíš. Tahle funkce centruje ručně vůči SKUTEČNĚ viditelné ploše.
-const BOTTOM_OVERLAY_RESERVE = 200; // musí odpovídat .app scroll-padding-bottom v CSS
+const BOTTOM_OVERLAY_RESERVE = 135; // musí odpovídat .app scroll-padding-bottom v CSS
 function centerSlotInView(el){
   if(!el) return;
   const appEl = document.getElementById('app');
