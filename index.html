@@ -89,14 +89,14 @@
     overflow-y:auto;
     scroll-snap-type:y proximity;
     position:relative;
-    padding-bottom:160px;
-    scroll-padding-bottom:160px;
+    padding-bottom:200px;
+    scroll-padding-bottom:200px;
     box-sizing:border-box;
     -webkit-overflow-scrolling:touch;
   }
   .search-btn{
     position:fixed;
-    bottom:110px; right:18px;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 14px); right:18px;
     top:auto;
     z-index:20;
     width:46px; height:46px;
@@ -321,8 +321,8 @@
   .topbar{
     position:fixed;
     top:auto !important;
-    bottom:0; left:0; right:0;
-    padding:10px 16px 28px;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 68px); left:0; right:0;
+    padding:8px 16px 6px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     z-index:5;
     background:linear-gradient(transparent, var(--bg) 22px);
@@ -820,7 +820,7 @@
     var nowSlot=appEl.querySelector('.slot.now');
     if(!nowSlot) return;
     requestAnimationFrame(() => {
-      nowSlot.scrollIntoView({block:'center'});
+      centerSlotInView(nowSlot);
     });
   });
 ">
@@ -1507,10 +1507,27 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou (zobrazuje se malým šedým textem pod názvem appky).
-const APP_VERSION = '2026-08-23.3';
+const APP_VERSION = '2026-08-23.5';
 {
   const vEl = document.getElementById('appVersionLabel');
   if(vEl) vEl.textContent = 'v' + APP_VERSION;
+}
+
+// Appka má dole přes celou šířku fixní pruh (datum/svátek/název + ikony), který appce
+// "ukusuje" viditelnou plochu, ale scrollIntoView({block:'center'}) o něm neví a centruje
+// vůči celé výšce obrazovky — na některých iOS verzích/telefonech se proto karta vycentruje
+// jinam, než reálně vidíš. Tahle funkce centruje ručně vůči SKUTEČNĚ viditelné ploše.
+const BOTTOM_OVERLAY_RESERVE = 200; // musí odpovídat .app scroll-padding-bottom v CSS
+function centerSlotInView(el){
+  if(!el) return;
+  const appEl = document.getElementById('app');
+  if(!appEl) return;
+  const rect = el.getBoundingClientRect();
+  const appRect = appEl.getBoundingClientRect();
+  const usableHeight = Math.max(100, appRect.height - BOTTOM_OVERLAY_RESERVE);
+  const elCenterRelative = (rect.top - appRect.top) + rect.height/2;
+  const targetScrollTop = appEl.scrollTop + elCenterRelative - usableHeight/2;
+  appEl.scrollTop = Math.max(0, targetScrollTop);
 }
 
 let now = new Date();
@@ -2536,7 +2553,7 @@ function renderTimeline(instantScroll = true){
   });
 
   const nowSlot = document.querySelector('.slot.now');
-  if (nowSlot && instantScroll) nowSlot.scrollIntoView({block:"center"});
+  if (nowSlot && instantScroll) centerSlotInView(nowSlot);
 }
 
 // Manuální fotoalba ke konkrétním událostem (podle názvu)
