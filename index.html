@@ -1526,7 +1526,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.10';
+const APP_VERSION = '2026-08-23.11';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -1563,14 +1563,18 @@ function showVersionDialog(){
 // "ukusuje" viditelnou plochu, ale scrollIntoView({block:'center'}) o něm neví a centruje
 // vůči celé výšce obrazovky — na některých iOS verzích/telefonech se proto karta vycentruje
 // jinam, než reálně vidíš. Tahle funkce centruje ručně vůči SKUTEČNĚ viditelné ploše.
+// Pozn.: BOTTOM_OVERLAY_RESERVE (135) odpovídá skutečné výšce podstavce (.app padding).
+// CENTER_TARGET_RESERVE je záměrně větší — určuje, KAM se "teď" karta vycentruje na
+// obrazovce (větší hodnota = karta výš), nezávisle na tom, jak velký je vizuální podstavec.
 const BOTTOM_OVERLAY_RESERVE = 135; // musí odpovídat .app scroll-padding-bottom v CSS
+const CENTER_TARGET_RESERVE = 260;
 function centerSlotInView(el){
   if(!el) return;
   const appEl = document.getElementById('app');
   if(!appEl) return;
   const rect = el.getBoundingClientRect();
   const appRect = appEl.getBoundingClientRect();
-  const usableHeight = Math.max(100, appRect.height - BOTTOM_OVERLAY_RESERVE);
+  const usableHeight = Math.max(100, appRect.height - CENTER_TARGET_RESERVE);
   const elCenterRelative = (rect.top - appRect.top) + rect.height/2;
   const targetScrollTop = appEl.scrollTop + elCenterRelative - usableHeight/2;
   appEl.scrollTop = Math.max(0, targetScrollTop);
