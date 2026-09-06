@@ -87,6 +87,7 @@
     height:100vh;
     width:100%;
     overflow-y:auto;
+    overflow-anchor:none;
     position:relative;
     padding-bottom:135px;
     scroll-padding-bottom:135px;
@@ -379,6 +380,7 @@
     box-sizing:border-box;
     scroll-margin-bottom:260px;
     scroll-margin-top:60px;
+    overflow-anchor:none;
   }
 
   .dot{
@@ -1519,7 +1521,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.16';
+const APP_VERSION = '2026-08-23.17';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
