@@ -869,7 +869,8 @@
   <span class="label">KoKrŠNeK - tak život chode</span>
 </div>
 <div class="miniInfoBlock">
-  <span id="todayLabel"></span>
+  <div id="debugRenderLog" style="position:fixed;top:env(safe-area-inset-top,4px);left:4px;right:110px;z-index:999;font-family:monospace;font-size:9px;line-height:1.3;color:#0f0;background:rgba(0,0,0,0.75);padding:4px 6px;border-radius:6px;white-space:pre-wrap;pointer-events:none;"></div>
+<span id="todayLabel"></span>
   <span id="namedayLabel"></span>
 </div>
 
@@ -1524,7 +1525,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.13';
+const APP_VERSION = '2026-08-23.14-debug';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -2560,6 +2561,19 @@ function renderTimeline(instantScroll = true){
       console.warn('[KoKrŠNeK] Podezřele vzdálená "aktuální" událost:', rawEvents[centerIndex].title, 'za', daysOff, 'dní od', now);
     }
   }
+  // DOČASNÝ diagnostický výpis na obrazovku
+  try{
+    window._debugRenderLog = window._debugRenderLog || [];
+    const dEv = rawEvents[centerIndex];
+    const entry = new Date().toLocaleTimeString('cs') + ' idx=' + centerIndex + '/' + rawEvents.length
+      + ' instant=' + instantScroll
+      + ' "' + (dEv ? dEv.title : '?') + '" ' + (dEv ? dEv.start.toLocaleDateString('cs') : '')
+      + ' now=' + now.toLocaleString('cs');
+    window._debugRenderLog.push(entry);
+    if(window._debugRenderLog.length > 5) window._debugRenderLog.shift();
+    const dbgEl = document.getElementById('debugRenderLog');
+    if(dbgEl) dbgEl.textContent = window._debugRenderLog.join('\n');
+  }catch(dErr){}
 
   const orderedIndices = [];
   for (let i = rawEvents.length - 1; i > centerIndex; i--) orderedIndices.push(i); // future, furthest first (top)
