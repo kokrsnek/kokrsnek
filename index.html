@@ -377,6 +377,8 @@
     padding:0 26px;
     margin-bottom:26px;
     box-sizing:border-box;
+    scroll-margin-bottom:260px;
+    scroll-margin-top:60px;
   }
 
   .dot{
@@ -834,7 +836,7 @@
     var nowSlot=appEl.querySelector('.slot.now');
     if(!nowSlot) return;
     requestAnimationFrame(() => {
-      centerSlotInView(nowSlot);
+      nowSlot.scrollIntoView({block:'center'});
     });
   });
 ">
@@ -869,8 +871,7 @@
   <span class="label">KoKrŠNeK - tak život chode</span>
 </div>
 <div class="miniInfoBlock">
-  <div id="debugRenderLog" style="position:fixed;top:env(safe-area-inset-top,4px);left:4px;right:110px;z-index:999;font-family:monospace;font-size:9px;line-height:1.3;color:#0f0;background:rgba(0,0,0,0.75);padding:4px 6px;border-radius:6px;white-space:pre-wrap;pointer-events:none;"></div>
-<span id="todayLabel"></span>
+  <span id="todayLabel"></span>
   <span id="namedayLabel"></span>
 </div>
 
@@ -1525,7 +1526,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.14-debug';
+const APP_VERSION = '2026-08-23.15';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -1559,25 +1560,11 @@ function showVersionDialog(){
 })();
 
 // Appka má dole přes celou šířku fixní pruh (datum/svátek/název + ikony), který appce
-// "ukusuje" viditelnou plochu, ale scrollIntoView({block:'center'}) o něm neví a centruje
-// vůči celé výšce obrazovky — na některých iOS verzích/telefonech se proto karta vycentruje
-// jinam, než reálně vidíš. Tahle funkce centruje ručně vůči SKUTEČNĚ viditelné ploše.
-// Pozn.: BOTTOM_OVERLAY_RESERVE (135) odpovídá skutečné výšce podstavce (.app padding).
-// CENTER_TARGET_RESERVE je záměrně větší — určuje, KAM se "teď" karta vycentruje na
-// obrazovce (větší hodnota = karta výš), nezávisle na tom, jak velký je vizuální podstavec.
+// "ukusuje" viditelnou plochu. Řešeno přes CSS scroll-margin-bottom na .slot (viz CSS výše)
+// v kombinaci s nativním scrollIntoView({block:'center'}) — spolehlivější napříč zařízeními
+// než ruční přepočet přes getBoundingClientRect, který se choval nekonzistentně na některých
+// iOS verzích/telefonech.
 const BOTTOM_OVERLAY_RESERVE = 135; // musí odpovídat .app scroll-padding-bottom v CSS
-const CENTER_TARGET_RESERVE = 260;
-function centerSlotInView(el){
-  if(!el) return;
-  const appEl = document.getElementById('app');
-  if(!appEl) return;
-  const rect = el.getBoundingClientRect();
-  const appRect = appEl.getBoundingClientRect();
-  const usableHeight = Math.max(100, appRect.height - CENTER_TARGET_RESERVE);
-  const elCenterRelative = (rect.top - appRect.top) + rect.height/2;
-  const targetScrollTop = appEl.scrollTop + elCenterRelative - usableHeight/2;
-  appEl.scrollTop = Math.max(0, targetScrollTop);
-}
 
 let now = new Date();
 
@@ -2561,19 +2548,6 @@ function renderTimeline(instantScroll = true){
       console.warn('[KoKrŠNeK] Podezřele vzdálená "aktuální" událost:', rawEvents[centerIndex].title, 'za', daysOff, 'dní od', now);
     }
   }
-  // DOČASNÝ diagnostický výpis na obrazovku
-  try{
-    window._debugRenderLog = window._debugRenderLog || [];
-    const dEv = rawEvents[centerIndex];
-    const entry = new Date().toLocaleTimeString('cs') + ' idx=' + centerIndex + '/' + rawEvents.length
-      + ' instant=' + instantScroll
-      + ' "' + (dEv ? dEv.title : '?') + '" ' + (dEv ? dEv.start.toLocaleDateString('cs') : '')
-      + ' now=' + now.toLocaleString('cs');
-    window._debugRenderLog.push(entry);
-    if(window._debugRenderLog.length > 5) window._debugRenderLog.shift();
-    const dbgEl = document.getElementById('debugRenderLog');
-    if(dbgEl) dbgEl.textContent = window._debugRenderLog.join('\n');
-  }catch(dErr){}
 
   const orderedIndices = [];
   for (let i = rawEvents.length - 1; i > centerIndex; i--) orderedIndices.push(i); // future, furthest first (top)
@@ -2615,7 +2589,7 @@ function renderTimeline(instantScroll = true){
   });
 
   const nowSlot = document.querySelector('.slot.now');
-  if (nowSlot && instantScroll) centerSlotInView(nowSlot);
+  if (nowSlot && instantScroll) nowSlot.scrollIntoView({block:"center"});
 }
 
 // Manuální fotoalba ke konkrétním událostem (podle názvu)
