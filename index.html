@@ -1524,7 +1524,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.12';
+const APP_VERSION = '2026-08-23.13';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -3411,6 +3411,40 @@ function sendNotification(type, user, eventTitle, extra){
 }
 // =====================================================
 
+// Dialog s dotazem na přezdívku hned při prvním spuštění appky (místo čekání,
+// až se člověk poprvé pokusí lajknout/napsat komentář a narazí na obyčejný
+// systémový prompt).
+function showNamePromptIfNeeded(onDone){
+  if(localStorage.getItem('kokrsnekUser')){
+    if(onDone) onDone();
+    return;
+  }
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <button class="ev-modal-close" id="nameSkipBtn">×</button>
+      <div class="ev-modal-title" style="margin-bottom:6px;">👋 Vítej u KoKrŠNeKů!</div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
+      <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;margin-bottom:12px;" />
+      <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const input = backdrop.querySelector('#nameInputField');
+  const finish = () => { backdrop.remove(); if(onDone) onDone(); };
+  const submit = () => {
+    const val = input.value.trim();
+    if(!val){ input.focus(); return; }
+    localStorage.setItem('kokrsnekUser', val);
+    finish();
+  };
+  backdrop.querySelector('#nameSubmitBtn').onclick = submit;
+  backdrop.querySelector('#nameSkipBtn').onclick = finish;
+  input.addEventListener('keydown', e => { if(e.key==='Enter') submit(); });
+  setTimeout(() => input.focus(), 250);
+}
+
 function getUserName(){
   let name = localStorage.getItem('kokrsnekUser');
   if(!name){
@@ -4462,10 +4496,12 @@ function restoreGrabber(grabber){}
 })();
 
 renderTimeline();
-if(!localStorage.getItem('welcomeShownOnce')){
-  localStorage.setItem('welcomeShownOnce','1');
-  setTimeout(showWelcome, 300);
-}
+showNamePromptIfNeeded(() => {
+  if(!localStorage.getItem('welcomeShownOnce')){
+    localStorage.setItem('welcomeShownOnce','1');
+    setTimeout(showWelcome, 300);
+  }
+});
 
 </script>
 </body>
