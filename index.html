@@ -87,7 +87,6 @@
     height:100vh;
     width:100%;
     overflow-y:auto;
-    overflow-anchor:none;
     position:relative;
     padding-bottom:135px;
     scroll-padding-bottom:135px;
@@ -380,7 +379,6 @@
     box-sizing:border-box;
     scroll-margin-bottom:260px;
     scroll-margin-top:60px;
-    overflow-anchor:none;
   }
 
   .dot{
@@ -1521,7 +1519,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.17';
+const APP_VERSION = '2026-08-23.18';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -2467,7 +2465,7 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
       ${isNow && !isPast && ev.place ? `<div id="slotWx_${uid}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
       ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
       ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();event.stopPropagation();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
-      <div id="statsRow_${uid}" style="display:flex;justify-content:center;gap:16px;margin-top:8px;"></div>
+      <div id="statsRow_${uid}" style="display:flex;justify-content:center;gap:16px;margin-top:8px;min-height:20px;"></div>
     </div>
   `;
   slot.dataset.idx = i;
