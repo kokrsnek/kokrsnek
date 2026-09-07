@@ -3641,9 +3641,10 @@ async function showPersonActivity(name){
       return `${ev.title} · ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
     };
 
-    const [likesSnap, attendSnap, commentsSnap] = await Promise.all([
+    const [likesSnap, attendSnap, declineSnap, commentsSnap] = await Promise.all([
       db.collectionGroup('likes').get(),
       db.collectionGroup('attendees').get(),
+      db.collectionGroup('declines').get(),
       db.collectionGroup('comments').get()
     ]);
 
@@ -3657,6 +3658,11 @@ async function showPersonActivity(name){
       if(d.id !== name) return;
       const key = d.ref.parent.parent ? d.ref.parent.parent.id : null;
       items.push({type:'attend', at: toDate(d.data().at), key});
+    });
+    declineSnap.docs.forEach(d => {
+      if(d.id !== name) return;
+      const key = d.ref.parent.parent ? d.ref.parent.parent.id : null;
+      items.push({type:'decline', at: toDate(d.data().at), key});
     });
     commentsSnap.docs.forEach(d => {
       const data = d.data();
@@ -3672,7 +3678,7 @@ async function showPersonActivity(name){
       return;
     }
 
-    const ICONS = {like:'❤️', attend:'✋', comment:'💬'};
+    const ICONS = {like:'❤️', attend:'👍', decline:'👎', comment:'💬'};
     list.innerHTML = items.map(it => {
       const time = it.at ? it.at.toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
       const label = evLabel(it.key);
@@ -4783,7 +4789,7 @@ async function showAttendanceLeaderboard(){
     sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
     listEl.innerHTML = sorted.length ? sorted.map(([user, count], i) => `
       <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
-        <span style="font-size:14px;color:var(--ink);font-weight:600;">${i+1}. ${user}</span>
+        <span ${personLink(user)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">${i+1}. ${user}</span>
         <span style="font-size:13px;color:var(--muted);">${count}×</span>
       </div>`).join('') : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádná data</div>';
   }catch(e){
@@ -4791,16 +4797,59 @@ async function showAttendanceLeaderboard(){
     listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
   }
 
-  document.getElementById('exportAttendanceXlsxBtn').onclick = () => exportAttendanceXlsx(sorted);
+  document.getElementById('exportAttendanceXlsxBtn').onclick = () => exportAttendanceXlsx();
 }
 
-async function exportAttendanceXlsx(sorted){
+async function exportAttendanceXlsx(){
   const btn = document.getElementById('exportAttendanceXlsxBtn');
   try{
     if(btn){ btn.textContent = '⬇ Exportuji…'; btn.disabled = true; }
     await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
-    const rows = [['Přezdívka', 'Počet účastí'], ...sorted];
-    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    const snap = await db.collectionGroup('attendees').get();
+    const events = {};      // eventId -> { title, start }
+    const userTotals = {};  // user -> počet účastí
+    const attended = {};    // `${user}__${eventId}` -> true
+
+    snap.forEach(d => {
+      const data = d.data();
+      if(!data.user) return;
+      const eventId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
+      if(!eventId) return;
+      if(!events[eventId]){
+        events[eventId] = { title: data.eventTitle || eventId, start: data.eventStart ? new Date(data.eventStart) : null };
+      }
+      userTotals[data.user] = (userTotals[data.user] || 0) + 1;
+      attended[data.user + '__' + eventId] = true;
+    });
+
+    const eventIds = Object.keys(events).sort((a,b) => {
+      const ta = events[a].start ? events[a].start.getTime() : 0;
+      const tb = events[b].start ? events[b].start.getTime() : 0;
+      return ta - tb;
+    });
+    const users = Object.entries(userTotals).sort((a,b) => b[1] - a[1]).map(([u]) => u);
+    const dateLabel = (d) => d ? `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.` : '?';
+
+    // Řádek 1: název akce, Řádek 2: datum, Řádek 3+: přezdívka / celkem / ✓ matice
+    const titleRow = ['', '', ...eventIds.map(id => events[id].title)];
+    const dateRow = ['Přezdívka', 'Celkem', ...eventIds.map(id => dateLabel(events[id].start))];
+    const dataRows = users.map(user => [
+      user,
+      userTotals[user],
+      ...eventIds.map(id => attended[user + '__' + id] ? '👍' : '')
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([titleRow, dateRow, ...dataRows]);
+    ws['!cols'] = [{ wch: 16 }, { wch: 8 }, ...eventIds.map(() => ({ wch: 13 }))];
+    ws['!rows'] = [{ hpt: 34 }, { hpt: 16 }];
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // "Přezdívka" přes obě hlavičkové řádky
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },  // "Celkem" přes obě hlavičkové řádky
+    ];
+    ws['!freeze'] = { xSplit: 2, ySplit: 2 };
+    ws['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 2, topLeftCell: 'C3', activePane: 'bottomRight' }];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Docházka');
     XLSX.writeFile(wb, 'kokrsnek-dochazka.xlsx');
