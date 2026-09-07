@@ -1519,7 +1519,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.18';
+const APP_VERSION = '2026-08-23.19';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -2886,6 +2886,14 @@ async function toggleNotifications(){
     if(!swRegistration) swRegistration = await navigator.serviceWorker.register('sw.js');
     const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
     if(!token){ alert('Nepodařilo se získat token pro notifikace.'); return; }
+    // Nejdřív ukliď staré tokeny stejného jména (typicky ze starších instalací appky),
+    // ať se notifikace neposílají na zařízení, co už appku ani nemá — a nezdvojovaly se.
+    try{
+      const oldTokens = await db.collection('pushTokens').where('user', '==', user).get();
+      const batch = db.batch();
+      oldTokens.forEach(doc => { if(doc.id !== token) batch.delete(doc.ref); });
+      await batch.commit();
+    }catch(cleanupErr){ console.error('Chyba při úklidu starých tokenů:', cleanupErr); }
     await db.collection('pushTokens').doc(token).set({ user, token, at: new Date().toISOString() });
     localStorage.setItem('pushEnabled', '1');
     localStorage.setItem('pushToken', token);
