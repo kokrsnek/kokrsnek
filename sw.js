@@ -20,9 +20,9 @@ const CACHE = 'kokrsnek-static-v1';
 // --- Push notifikace ---------------------------------------------------
 
 messaging.onBackgroundMessage((payload) => {
-  const title = (payload.notification && payload.notification.title) || 'KoKrŠNeK';
+  const title = (payload.data && payload.data.title) || 'KoKrŠNeK';
   const options = {
-    body: (payload.notification && payload.notification.body) || '',
+    body: (payload.data && payload.data.body) || '',
     icon: 'icon-192v2.png',
     badge: 'icon-192v2.png',
     data: payload.data || {}

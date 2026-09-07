@@ -1519,7 +1519,7 @@ async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
 // VERZE APPKY — při každé úpravě zvýšit, ať jde na první pohled poznat,
 // jakou verzi má appka nahranou. Zobrazuje se jako dialog po dlouhém podržení
 // červeného tlačítka s vykřičníkem (viz feedbackBtn long-press níže).
-const APP_VERSION = '2026-08-23.19';
+const APP_VERSION = '2026-08-23.20';
 function showVersionDialog(){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -2844,8 +2844,8 @@ let messaging = null;
 try{
   messaging = firebase.messaging();
   messaging.onMessage(payload => {
-    const title = (payload.notification && payload.notification.title) || 'KoKrŠNeK';
-    const body = (payload.notification && payload.notification.body) || '';
+    const title = (payload.data && payload.data.title) || 'KoKrŠNeK';
+    const body = (payload.data && payload.data.body) || '';
     if(Notification.permission === 'granted'){
       try{ new Notification(title, {body, icon:'icon-192v2.png'}); }catch(e){}
     }
