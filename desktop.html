@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KoKrŠNeK — Přehled (desktop)</title>
+<link rel="icon" type="image/png" href="icon-192v2.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#F6F4EF;
+    --bg2:#FFFFFF;
+    --card:#FFFFFF;
+    --line:rgba(20,18,14,0.09);
+    --ink:#242229;
+    --muted:#837E8A;
+    --accent:#2F7A56;
+    --accent-soft:rgba(47,122,86,0.12);
+    --coral:#C24B34;
+    --coral-soft:rgba(194,75,52,0.12);
+    --shadow-sm:0 2px 10px rgba(20,18,14,0.07);
+    --shadow-md:0 10px 30px rgba(20,18,14,0.16);
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    --surface:rgba(20,18,14,0.045);
+    --surface-strong:rgba(20,18,14,0.09);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:var(--accent);}
+  button{font-family:inherit;}
+
+  /* ---------- layout skeleton ---------- */
+  .page{height:100vh;display:flex;flex-direction:column;}
+  .topbar{
+    display:flex;align-items:center;gap:16px;padding:12px 20px;
+    background:var(--bg2);border-bottom:1px solid var(--line);flex:0 0 auto;
+  }
+  .brand{display:flex;align-items:baseline;gap:8px;flex:0 0 auto;text-decoration:none;color:inherit;}
+  .brand .mark{font-weight:800;font-size:17px;color:var(--accent);}
+  .brand .sub{font-size:12.5px;color:var(--muted);}
+  .searchbox-wrap{flex:1 1 auto;max-width:420px;}
+  .searchbox{
+    display:flex;align-items:center;gap:8px;background:var(--surface);
+    border:1px solid var(--line);border-radius:999px;padding:8px 14px;
+  }
+  .searchbox svg{flex:0 0 auto;opacity:.55;}
+  .searchbox input{background:none;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13.5px;width:100%;}
+  .searchbox input::placeholder{color:var(--muted);}
+  .topbar-spacer{flex:1;}
+  .backlink{color:var(--muted);font-size:13px;text-decoration:none;flex:0 0 auto;padding:8px 4px;}
+  .backlink:hover{color:var(--ink);}
+
+  .body-row{flex:1;display:flex;min-height:0;}
+
+  .rail{width:240px;flex:0 0 240px;border-right:1px solid var(--line);background:var(--bg2);padding:18px 12px;overflow-y:auto;}
+  .rail-group{margin-bottom:22px;}
+  .rail-title{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px;}
+  .rail-item{
+    display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;
+    cursor:pointer;font-size:13.5px;color:var(--ink);margin-bottom:1px;border:none;background:none;
+    width:100%;font-family:inherit;text-align:left;
+  }
+  .rail-item:hover{background:var(--surface);}
+  .rail-item.active{background:var(--accent-soft);color:var(--accent);font-weight:700;}
+  .rail-item .count{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+    background:var(--surface);border-radius:10px;padding:1px 7px;flex:0 0 auto;margin-left:8px;
+  }
+  .rail-item.active .count{color:var(--accent);background:rgba(47,122,86,0.16);}
+
+  .list-area{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .list-head{
+    display:grid;grid-template-columns:120px 1fr 220px 60px 60px 60px;gap:10px;
+    padding:12px 22px;border-bottom:1px solid var(--line);
+    font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  }
+  .list-head span:nth-child(n+4){text-align:center;}
+  .list-body{flex:1;overflow-y:auto;}
+  .list-empty{text-align:center;color:var(--muted);font-size:13.5px;margin-top:60px;line-height:1.6;}
+  .record-item{
+    display:grid;grid-template-columns:120px 1fr 220px 60px 60px 60px;gap:10px;align-items:center;
+    padding:13px 22px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;
+  }
+  .record-item:hover{background:var(--surface);}
+  .record-item .rec-date{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .record-item .rec-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .record-item .rec-place{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;}
+  .record-item .rec-stat{text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
+  .record-item.is-past{opacity:.68;}
+
+  /* ---------- detail overlay ---------- */
+  .backdrop{
+    position:fixed;inset:0;background:rgba(20,18,14,0.45);display:flex;
+    align-items:center;justify-content:center;z-index:50;padding:30px;
+  }
+  .detail{
+    background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
+    width:560px;max-width:100%;max-height:88vh;overflow-y:auto;padding:28px;position:relative;
+  }
+  .detail-close{
+    position:absolute;top:16px;right:18px;background:none;border:none;font-size:22px;
+    color:var(--muted);cursor:pointer;line-height:1;
+  }
+  .detail-close:hover{color:var(--ink);}
+  .detail h2{margin:0 6px 14px 0;font-size:24px;}
+  .detail-label{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;}
+  .detail-value{font-size:14.5px;}
+  .map-tile{display:block;border-radius:var(--radius-md);overflow:hidden;margin-top:6px;border:1px solid var(--line);}
+  .map-tile img{width:100%;display:block;}
+  .album-tile{
+    display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius-md);padding:12px 14px;text-decoration:none;color:var(--ink);margin-top:12px;
+  }
+  .album-tile:hover{background:var(--surface-strong);}
+  .drive-link{display:flex;align-items:center;gap:8px;font-size:13.5px;text-decoration:none;color:var(--ink);margin-top:6px;}
+  .drive-link:hover{color:var(--accent);}
+  .action-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+  .action-row button{
+    flex:1;min-width:100px;background:var(--surface);border:1px solid var(--line);
+    color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+    padding:10px;border-radius:var(--radius-sm);cursor:pointer;
+  }
+  .action-row button:hover{background:var(--surface-strong);}
+  .people-row{display:flex;justify-content:space-between;gap:16px;margin-top:14px;}
+  .people-col{flex:1;min-width:0;}
+  .people-col .names{font-size:13px;color:var(--muted);}
+  .comment-list{max-height:200px;overflow-y:auto;margin:10px 0;}
+  .comment-item{padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .comment-item .c-head{display:flex;justify-content:space-between;gap:8px;font-weight:600;}
+  .comment-item .c-time{font-weight:400;color:var(--muted);font-size:11px;white-space:nowrap;}
+  .comment-box{display:flex;gap:8px;margin-top:8px;}
+  .comment-box input{
+    flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+    font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;
+  }
+  .comment-box button{
+    background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;
+    padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;
+  }
+  .name-gate{
+    position:fixed;inset:0;background:rgba(20,18,14,0.45);display:flex;align-items:center;justify-content:center;z-index:60;
+  }
+  .name-gate .box{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px;width:360px;text-align:center;}
+  .name-gate input{
+    width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+    font-family:'Inter',sans-serif;font-size:15px;padding:11px 14px;border-radius:var(--radius-sm);outline:none;margin:14px 0;
+  }
+  .name-gate button{
+    background:var(--accent);border:none;color:#fff;font-weight:700;font-size:14px;
+    padding:11px 26px;border-radius:var(--radius-sm);cursor:pointer;width:100%;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="topbar">
+    <a class="brand" href="./index.html">
+      <span class="mark">KoKrŠNeK</span>
+      <span class="sub">přehled</span>
+    </a>
+    <div class="searchbox-wrap">
+      <div class="searchbox">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchInput" type="text" placeholder="Hledat podle názvu nebo místa…">
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <a class="backlink" href="./index.html">← mobilní appka</a>
+  </div>
+
+  <div class="body-row">
+    <div class="rail" id="rail"></div>
+    <div class="list-area">
+      <div class="list-head">
+        <span>Datum</span><span>Název</span><span>Místo</span><span>👍</span><span>❤️</span><span>💬</span>
+      </div>
+      <div class="list-body" id="listBody">
+        <div class="list-empty">Načítám akce…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDnWBkXpnGCSPMKPrbroJtP2QVt48YtURw",
+  authDomain: "kokrsnek-4bdc7.firebaseapp.com",
+  projectId: "kokrsnek-4bdc7",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
+const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
+const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
+const ALBUM_QUESTION = "Jaká je přezdívka šerifa?";
+const ALBUM_ANSWER   = "šuraj";
+
+const DAY_NAMES = ['ne','po','út','st','čt','pá','so'];
+const now = new Date();
+
+let rawEvents = [];
+let filter = { mode: 'upcoming', monthKey: null, query: '' }; // mode: upcoming | past | all
+
+// =====================================================
+// NAČTENÍ UDÁLOSTÍ Z GOOGLE KALENDÁŘE (stejná logika jako index.html)
+// =====================================================
+async function fetchGoogleCalendarEvents(){
+  try{
+    let allItems = [];
+    let pageToken = null;
+    const timeMin = '2000-01-01T00:00:00Z';
+    do {
+      let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
+        + `?key=${GOOGLE_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=2500`
+        + `&timeMin=${encodeURIComponent(timeMin)}`;
+      if(pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!res.ok) return;
+      const items = (data.items||[]).filter(it => it.start && (it.start.dateTime || it.start.date));
+      allItems = allItems.concat(items);
+      pageToken = data.nextPageToken || null;
+    } while(pageToken);
+
+    if(!allItems.length){ renderAll(); return; }
+
+    rawEvents = allItems.map(it => {
+      const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
+      let end = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
+      if(isNaN(end.getTime())) end = new Date(start);
+      let photoAlbum = null;
+      let driveFiles = [];
+      if(it.attachments){
+        const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
+        if(p) photoAlbum = p.fileUrl;
+        driveFiles = it.attachments
+          .filter(a => a.fileUrl && !(/photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl)))
+          .map(a => ({ url: a.fileUrl, title: a.title || 'Soubor', mime: a.mimeType || '' }));
+      }
+      if(!photoAlbum && it.description){
+        const clean = it.description.replace(/<[^>]+>/g, ' ');
+        const m = clean.match(/https?:\/\/photos(?:\.app)?\.goo\.gl\/[^\s"'<>]+|https?:\/\/photos\.google\.com\/[^\s"'<>]+/);
+        if(m) photoAlbum = m[0].replace(/&amp;/g,'&');
+      }
+      const title = (it.summary||'(bez názvu)').trim();
+      return { start, end, title, place: it.location||'', photoAlbum, driveFiles, raw: it };
+    }).filter(ev => !isNaN(ev.start.getTime())).sort((a,b)=>a.start-b.start);
+
+    renderAll();
+  }catch(e){
+    document.getElementById('listBody').innerHTML = '<div class="list-empty">Nepodařilo se načíst akce.</div>';
+  }
+}
+
+function getEventKey(ev){
+  return (ev.raw && ev.raw.id) ? ev.raw.id : ev.title.replace(/[^a-zA-Z0-9]/g,'_') + '_' + ev.start.toISOString().slice(0,10);
+}
+
+function normalizeCz(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+// =====================================================
+// UŽIVATELSKÉ JMÉNO (stejný localStorage klíč jako mobilní appka)
+// =====================================================
+function getUserName(){
+  return localStorage.getItem('kokrsnekUser');
+}
+function ensureUserName(cb){
+  const existing = localStorage.getItem('kokrsnekUser');
+  if(existing){ cb(existing); return; }
+  const gate = document.createElement('div');
+  gate.className = 'name-gate';
+  gate.innerHTML = `
+    <div class="box">
+      <div style="font-weight:800;font-size:16px;margin-bottom:4px;">Jak se jmenuješ?</div>
+      <div style="color:var(--muted);font-size:13px;">Přezdívka se použije u komentářů, lajků a účasti — stejná jako v mobilní appce.</div>
+      <input id="nameGateInput" type="text" placeholder="Přezdívka…">
+      <button id="nameGateBtn">Pokračovat</button>
+    </div>`;
+  document.body.appendChild(gate);
+  const input = gate.querySelector('#nameGateInput');
+  input.focus();
+  const submit = () => {
+    const val = input.value.trim();
+    if(!val) return;
+    localStorage.setItem('kokrsnekUser', val);
+    gate.remove();
+    cb(val);
+  };
+  gate.querySelector('#nameGateBtn').onclick = submit;
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+}
+
+// =====================================================
+// FORMÁTOVÁNÍ
+// =====================================================
+function fmtShortDate(d){
+  return `${DAY_NAMES[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+}
+function monthKeyOf(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+const MONTH_NAMES = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+
+// =====================================================
+// RENDER: POSTRANNÍ PANEL
+// =====================================================
+function renderRail(){
+  const rail = document.getElementById('rail');
+  const upcomingCount = rawEvents.filter(ev => ev.start >= now).length;
+  const pastCount = rawEvents.filter(ev => ev.start < now).length;
+
+  const monthCounts = {};
+  rawEvents.forEach(ev => {
+    const k = monthKeyOf(ev.start);
+    monthCounts[k] = (monthCounts[k]||0) + 1;
+  });
+  const monthKeys = Object.keys(monthCounts).sort();
+
+  const quickItem = (mode, label, count) => `
+    <button class="rail-item ${filter.mode===mode && !filter.monthKey ? 'active':''}" data-mode="${mode}">
+      <span>${label}</span><span class="count">${count}</span>
+    </button>`;
+
+  const monthItem = (k) => {
+    const [y,m] = k.split('-');
+    return `
+    <button class="rail-item ${filter.monthKey===k ? 'active':''}" data-month="${k}">
+      <span>${MONTH_NAMES[parseInt(m,10)-1]} ${y}</span><span class="count">${monthCounts[k]}</span>
+    </button>`;
+  };
+
+  rail.innerHTML = `
+    <div class="rail-group">
+      <div class="rail-title">Rychlé filtry</div>
+      ${quickItem('upcoming','Nadcházející', upcomingCount)}
+      ${quickItem('past','Proběhlé', pastCount)}
+      ${quickItem('all','Vše', rawEvents.length)}
+    </div>
+    <div class="rail-group">
+      <div class="rail-title">Podle měsíce</div>
+      ${monthKeys.map(monthItem).join('') || '<div style="color:var(--muted);font-size:12px;padding:0 10px;">Zatím nic</div>'}
+    </div>
+  `;
+
+  rail.querySelectorAll('[data-mode]').forEach(btn => {
+    btn.onclick = () => { filter.mode = btn.dataset.mode; filter.monthKey = null; renderAll(); };
+  });
+  rail.querySelectorAll('[data-month]').forEach(btn => {
+    btn.onclick = () => { filter.monthKey = btn.dataset.month; renderAll(); };
+  });
+}
+
+// =====================================================
+// RENDER: SEZNAM UDÁLOSTÍ
+// =====================================================
+function getFilteredEvents(){
+  let list = rawEvents.slice();
+  if(filter.monthKey){
+    list = list.filter(ev => monthKeyOf(ev.start) === filter.monthKey);
+  } else if(filter.mode === 'upcoming'){
+    list = list.filter(ev => ev.start >= now);
+  } else if(filter.mode === 'past'){
+    list = list.filter(ev => ev.start < now);
+  }
+  if(filter.query){
+    const q = normalizeCz(filter.query);
+    list = list.filter(ev => normalizeCz(ev.title).includes(q) || normalizeCz(ev.place).includes(q));
+  }
+  const isPastView = filter.mode === 'past' && !filter.monthKey;
+  list.sort((a,b) => isPastView ? (b.start - a.start) : (a.start - b.start));
+  return list;
+}
+
+async function renderList(){
+  const body = document.getElementById('listBody');
+  const list = getFilteredEvents();
+  if(!list.length){
+    body.innerHTML = '<div class="list-empty">Žádné akce neodpovídají filtru.</div>';
+    return;
+  }
+  body.innerHTML = list.map((ev, i) => `
+    <div class="record-item ${ev.start < now ? 'is-past' : ''}" data-idx="${rawEvents.indexOf(ev)}">
+      <span class="rec-date">${fmtShortDate(ev.start)}</span>
+      <span class="rec-title">${ev.title}</span>
+      <span class="rec-place">${ev.place || '—'}</span>
+      <span class="rec-stat" data-stat="like">…</span>
+      <span class="rec-stat" data-stat="attend">…</span>
+      <span class="rec-stat" data-stat="comment">…</span>
+    </div>
+  `).join('');
+
+  body.querySelectorAll('.record-item').forEach(row => {
+    row.onclick = () => openDetail(parseInt(row.dataset.idx, 10));
+  });
+
+  // Počty se dotáhnou zvlášť (paralelně), ať se seznam hned zobrazí i bez čekání na Firestore
+  list.forEach(async (ev) => {
+    try{
+      const key = getEventKey(ev);
+      const [likesSnap, attendSnap, commentsSnap] = await Promise.all([
+        db.collection('events').doc(key).collection('likes').get(),
+        db.collection('events').doc(key).collection('attendees').get(),
+        db.collection('events').doc(key).collection('comments').get(),
+      ]);
+      const row = body.querySelector(`.record-item[data-idx="${rawEvents.indexOf(ev)}"]`);
+      if(!row) return;
+      row.querySelector('[data-stat="like"]').textContent = likesSnap.size;
+      row.querySelector('[data-stat="attend"]').textContent = attendSnap.size;
+      row.querySelector('[data-stat="comment"]').textContent = commentsSnap.size;
+    }catch(e){}
+  });
+}
+
+function renderAll(){
+  renderRail();
+  renderList();
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  filter.query = e.target.value;
+  renderList();
+});
+
+// =====================================================
+// DETAIL UDÁLOSTI
+// =====================================================
+function mapUrlFor(place){
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+}
+
+function openAlbumUrl(url){
+  window.open(url, '_blank', 'noopener');
+}
+function checkAlbumAccess(url){
+  const saved = sessionStorage.getItem('albumAccess');
+  if(saved === 'ok'){ openAlbumUrl(url); return; }
+  const answer = prompt(ALBUM_QUESTION);
+  if(answer === null) return;
+  if(answer.trim().toLowerCase() === ALBUM_ANSWER){
+    sessionStorage.setItem('albumAccess','ok');
+    openAlbumUrl(url);
+  } else {
+    alert('Špatná odpověď, zkus to znovu.');
+  }
+}
+
+async function openDetail(idx){
+  const ev = rawEvents[idx];
+  if(!ev) return;
+  const key = getEventKey(ev);
+  const isFuture = ev.start > now;
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'backdrop';
+  backdrop.onclick = (e) => { if(e.target === backdrop) backdrop.remove(); };
+
+  const mapTile = ev.place ? `
+    <div class="detail-label">Místo</div>
+    <div class="detail-value">${ev.place}</div>
+    <a class="map-tile" href="${mapUrlFor(ev.place)}" target="_blank" rel="noopener">
+      <img src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(ev.place)}&zoom=14&size=520x200&scale=2&markers=color:red%7C${encodeURIComponent(ev.place)}&key=${GOOGLE_MAPS_KEY}" loading="lazy" onerror="this.parentElement.style.display='none';">
+    </a>` : '';
+
+  const albumTile = ev.photoAlbum ? `
+    <a class="album-tile" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
+      📷 <span>Otevřít album fotek</span>
+    </a>` : '';
+
+  const driveTiles = (ev.driveFiles||[]).map(f => `
+    <a class="drive-link" href="#" onclick="event.preventDefault();checkAlbumAccess('${f.url.replace(/'/g,"\\'")}')">📄 ${f.title}</a>
+  `).join('');
+
+  backdrop.innerHTML = `
+    <div class="detail">
+      <button class="detail-close" onclick="this.closest('.backdrop').remove()">×</button>
+      <h2>${ev.title}</h2>
+      <div class="detail-label">Datum a čas</div>
+      <div class="detail-value">${fmtShortDate(ev.start)}${ev.raw.start.dateTime ? ' · ' + ev.start.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      ${mapTile}
+      ${albumTile}
+      ${driveTiles}
+      ${isFuture ? `
+      <div class="action-row">
+        <button id="attendBtn">👍 Dojdu</button>
+        <button id="declineBtn">👎 Nedojdu</button>
+      </div>` : ''}
+      <div class="action-row">
+        <button id="likeBtn">🤍 0</button>
+        <button id="shareBtn">🔗 Sdílet</button>
+        <button id="icsBtn">📅 Export .ics</button>
+      </div>
+      <div class="people-row">
+        <div class="people-col"><div class="detail-label">Zúčastní se</div><div class="names" id="attendNames">…</div></div>
+        <div class="people-col"><div class="detail-label">Nezúčastní se</div><div class="names" id="declineNames">…</div></div>
+      </div>
+      <div class="detail-label" style="margin-top:20px;">Komentáře</div>
+      <div class="comment-list" id="commentList"><div style="color:var(--muted);font-size:12.5px;">Načítám…</div></div>
+      <div class="comment-box">
+        <input id="commentInput" type="text" placeholder="Napiš komentář…">
+        <button id="commentSend">Odeslat</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  refreshLikes();
+  refreshAttendance();
+  refreshComments();
+
+  async function refreshLikes(){
+    const snap = await db.collection('events').doc(key).collection('likes').get();
+    const user = getUserName();
+    const liked = snap.docs.some(d => d.id === user);
+    const btn = document.getElementById('likeBtn');
+    if(btn){ btn.textContent = (liked?'❤️':'🤍')+' '+snap.size; }
+  }
+  async function toggleLike(){
+    ensureUserName(async (user) => {
+      const ref = db.collection('events').doc(key).collection('likes').doc(user);
+      const snap = await ref.get();
+      if(snap.exists){ await ref.delete(); }
+      else{ await ref.set({user, at: new Date(), eventTitle: ev.title, eventStart: ev.start.toISOString()}); }
+      refreshLikes();
+    });
+  }
+
+  async function refreshAttendance(){
+    const [attendSnap, declineSnap] = await Promise.all([
+      db.collection('events').doc(key).collection('attendees').get(),
+      db.collection('events').doc(key).collection('declines').get(),
+    ]);
+    const user = getUserName();
+    const going = attendSnap.docs.some(d => d.id === user);
+    const notGoing = declineSnap.docs.some(d => d.id === user);
+    const aBtn = document.getElementById('attendBtn');
+    const dBtn = document.getElementById('declineBtn');
+    if(aBtn){
+      aBtn.textContent = (going ? '👍 Jdu' : '👍 Dojdu') + (attendSnap.size ? ' ('+attendSnap.size+')' : '');
+      aBtn.style.background = going ? 'var(--accent-soft)' : '';
+      aBtn.style.color = going ? 'var(--accent)' : '';
+    }
+    if(dBtn){
+      dBtn.textContent = (notGoing ? '👎 Nejdu' : '👎 Nedojdu') + (declineSnap.size ? ' ('+declineSnap.size+')' : '');
+      dBtn.style.background = notGoing ? 'var(--coral-soft)' : '';
+      dBtn.style.color = notGoing ? 'var(--coral)' : '';
+    }
+    const attendNames = document.getElementById('attendNames');
+    const declineNames = document.getElementById('declineNames');
+    if(attendNames) attendNames.textContent = attendSnap.empty ? 'Zatím nikdo' : attendSnap.docs.map(d=>d.id).join(', ');
+    if(declineNames) declineNames.textContent = declineSnap.empty ? 'Zatím nikdo' : declineSnap.docs.map(d=>d.id).join(', ');
+  }
+  async function toggleAttend(){
+    ensureUserName(async (user) => {
+      const ref = db.collection('events').doc(key).collection('attendees').doc(user);
+      const declineRef = db.collection('events').doc(key).collection('declines').doc(user);
+      const snap = await ref.get();
+      if(snap.exists){ await ref.delete(); }
+      else{
+        await ref.set({user, at: new Date(), eventTitle: ev.title, eventStart: ev.start.toISOString()});
+        try{ await declineRef.delete(); }catch(e){}
+      }
+      refreshAttendance();
+    });
+  }
+  async function toggleDecline(){
+    ensureUserName(async (user) => {
+      const ref = db.collection('events').doc(key).collection('declines').doc(user);
+      const attendRef = db.collection('events').doc(key).collection('attendees').doc(user);
+      const snap = await ref.get();
+      if(snap.exists){ await ref.delete(); }
+      else{
+        await ref.set({user, at: new Date(), eventTitle: ev.title, eventStart: ev.start.toISOString()});
+        try{ await attendRef.delete(); }catch(e){}
+      }
+      refreshAttendance();
+    });
+  }
+
+  async function refreshComments(){
+    const snap = await db.collection('events').doc(key).collection('comments').get();
+    const list = document.getElementById('commentList');
+    if(!list) return;
+    if(snap.empty){ list.innerHTML = '<div style="color:var(--muted);font-size:12.5px;">Zatím žádné komentáře</div>'; return; }
+    const docs = [...snap.docs].sort((a,b) => new Date(a.data().at) - new Date(b.data().at));
+    list.innerHTML = docs.map(d => {
+      const data = d.data();
+      const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div class="comment-item">
+        <div class="c-head"><span>${data.user}</span><span class="c-time">${time}</span></div>
+        <div>${data.text}</div>
+      </div>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+  async function postComment(){
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    if(!text) return;
+    ensureUserName(async (user) => {
+      input.value = '';
+      await db.collection('events').doc(key).collection('comments').add({
+        user, text, at: new Date().toISOString(), parentId: null,
+        eventTitle: ev.title, eventStart: ev.start.toISOString()
+      });
+      refreshComments();
+    });
+  }
+
+  function shareEvent(){
+    const dateLine = fmtShortDate(ev.start);
+    const parts = [`KoKrŠNeci tě zvou na ${ev.title}`, '', dateLine];
+    if(ev.place) parts.push('', ev.place);
+    if(ev.raw.htmlLink) parts.push('', ev.raw.htmlLink);
+    const text = parts.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('shareBtn');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Zkopírováno';
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    });
+  }
+
+  function exportICS(){
+    const fmt = d => d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+    const ics = [
+      'BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',
+      `DTSTART:${fmt(ev.start)}`,`DTEND:${fmt(ev.end)}`,`SUMMARY:${ev.title}`,
+      ev.place ? `LOCATION:${ev.place}` : '', 'END:VEVENT','END:VCALENDAR'
+    ].filter(Boolean).join('\r\n');
+    const blob = new Blob([ics], {type:'text/calendar'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${ev.title.replace(/[^a-z0-9]/gi,'_')}.ics`;
+    a.click();
+  }
+
+  document.getElementById('likeBtn').onclick = toggleLike;
+  if(document.getElementById('attendBtn')) document.getElementById('attendBtn').onclick = toggleAttend;
+  if(document.getElementById('declineBtn')) document.getElementById('declineBtn').onclick = toggleDecline;
+  document.getElementById('shareBtn').onclick = shareEvent;
+  document.getElementById('icsBtn').onclick = exportICS;
+  document.getElementById('commentSend').onclick = postComment;
+  document.getElementById('commentInput').addEventListener('keydown', e => { if(e.key==='Enter') postComment(); });
+}
+
+fetchGoogleCalendarEvents();
+</script>
+</body>
+</html>
