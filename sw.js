@@ -10,18 +10,23 @@
 const CACHE = 'kokrsnek-static-v1';
 
 self.addEventListener('push', (event) => {
-  let data = {};
+  let raw = {};
   try{
-    const payload = event.data ? event.data.json() : {};
-    data = payload.data || payload || {};
+    raw = event.data ? event.data.json() : {};
   }catch(e){}
 
-  const title = data.title || 'KoKrŠNeK';
+  // Firebase může doručit data v mírně jiné struktuře podle verze/cesty doručení
+  // (vnořené pod "data", nebo přímo na kořeni) — zkusíme obojí, ať appka nespadne
+  // na prázdný výchozí text.
+  const nested = raw && typeof raw.data === 'object' ? raw.data : {};
+  const title = nested.title || raw.title || 'KoKrŠNeK';
+  const body = nested.body || raw.body || '';
+
   const options = {
-    body: data.body || '',
+    body,
     icon: 'icon-192v2.png',
     badge: 'icon-192v2.png',
-    data
+    data: nested.title || nested.body ? nested : raw
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
