@@ -1840,19 +1840,21 @@ function showEventDetail(idx){
         <div class="ev-modal-label">Online meeting</div>
         <a class="ev-modal-link" href="${confLink}" target="_blank" rel="noopener">Připojit se</a>
       ` : ''}
-      <div style="display:flex;gap:8px;margin-top:16px;">
-        <button id="likeBtn_${idx}" onclick="toggleLike(${idx})" style="
-          flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
-          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">🤍 0</button>
-        ${isFuture ? `<button id="attendBtn_${idx}" onclick="toggleAttend(${idx})" style="
+      ${isFuture ? `<div style="display:flex;gap:8px;margin-top:16px;">
+        <button id="attendBtn_${idx}" onclick="toggleAttend(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
         <button id="declineBtn_${idx}" onclick="toggleDecline(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
-          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>` : ''}
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
+      </div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:${isFuture ? '8px' : '16px'};">
+        <button id="likeBtn_${idx}" onclick="toggleLike(${idx})" style="
+          flex:1;background:var(--surface);border:1px solid var(--line);
+          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">🤍 0</button>
         ${!isFuture ? `<button onclick="showPayment(window._payTitle_${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
@@ -4719,16 +4721,21 @@ function attachLongPress(el, onLongPress, ms){
   if(!el) return;
   ms = ms || 600;
   let timer, longPressed = false, sx = 0, sy = 0;
+  el.style.userSelect = 'none';
+  el.style.webkitUserSelect = 'none';
   el.style.webkitTouchCallout = 'none';
   el.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     longPressed = false;
     const t = e.touches && e.touches[0];
     sx = t ? t.clientX : 0; sy = t ? t.clientY : 0;
     timer = setTimeout(() => { longPressed = true; onLongPress(); }, ms);
-  }, {passive:true});
+  }, {passive:false});
   el.addEventListener('touchend', (e) => {
     clearTimeout(timer);
-    if(longPressed && e.cancelable) e.preventDefault();
+    e.preventDefault();
+    if(longPressed) return;
+    el.click();
   });
   el.addEventListener('touchmove', (e) => {
     const t = e.touches && e.touches[0];
