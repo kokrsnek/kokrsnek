@@ -2,32 +2,28 @@
 // zastaralé zacachované appce na iOS (network-first pro HTML/JS, cache-first
 // pro statické soubory jako ikony/fonty).
 
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "AIzaSyDnWBkXpnGCSPMKPrbroJtP2QVt48YtURw",
-  authDomain: "kokrsnek-4bdc7.firebaseapp.com",
-  projectId: "kokrsnek-4bdc7",
-  storageBucket: "kokrsnek-4bdc7.firebasestorage.app",
-  messagingSenderId: "1079843186893",
-  appId: "1:1079843186893:web:b826958d3884ea34412184"
-});
-
-const messaging = firebase.messaging();
+// Push zprávu zpracováváme RUČNĚ přes syrovou 'push' událost (ne přes
+// messaging.onBackgroundMessage z Firebase SDK) — ten totiž nezaručeně
+// obaloval zobrazení notifikace do event.waitUntil(), takže si prohlížeč
+// myslel, že se notifikace nezobrazila včas, a sám navíc přidal vlastní
+// prázdnou "záložní" notifikaci → chodily tak dvě najednou.
 const CACHE = 'kokrsnek-static-v1';
 
-// --- Push notifikace ---------------------------------------------------
+self.addEventListener('push', (event) => {
+  let data = {};
+  try{
+    const payload = event.data ? event.data.json() : {};
+    data = payload.data || payload || {};
+  }catch(e){}
 
-messaging.onBackgroundMessage((payload) => {
-  const title = (payload.data && payload.data.title) || 'KoKrŠNeK';
+  const title = data.title || 'KoKrŠNeK';
   const options = {
-    body: (payload.data && payload.data.body) || '',
+    body: data.body || '',
     icon: 'icon-192v2.png',
     badge: 'icon-192v2.png',
-    data: payload.data || {}
+    data
   };
-  self.registration.showNotification(title, options);
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
