@@ -19,8 +19,8 @@ self.addEventListener('push', (event) => {
   // (vnořené pod "data", nebo přímo na kořeni) — zkusíme obojí, ať appka nespadne
   // na prázdný výchozí text.
   const nested = raw && typeof raw.data === 'object' ? raw.data : {};
-  const title = nested.title || raw.title || '⚠️ SW-v22 fallback (data nenalezena)';
-  const body = nested.body || raw.body || ('RAW: ' + JSON.stringify(raw).slice(0, 150));
+  const title = nested.title || raw.title || 'KoKrŠNeK';
+  const body = nested.body || raw.body || '';
 
   const options = {
     body,
