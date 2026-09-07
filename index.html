@@ -4804,7 +4804,7 @@ async function exportAttendanceXlsx(){
   const btn = document.getElementById('exportAttendanceXlsxBtn');
   try{
     if(btn){ btn.textContent = '⬇ Exportuji…'; btn.disabled = true; }
-    await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js');
 
     const snap = await db.collectionGroup('attendees').get();
     const events = {};      // eventId -> { title, start }
@@ -4839,16 +4839,52 @@ async function exportAttendanceXlsx(){
       userTotals[user],
       ...eventIds.map(id => attended[user + '__' + id] ? '👍' : '')
     ]);
+    const aoa = [titleRow, dateRow, ...dataRows];
 
-    const ws = XLSX.utils.aoa_to_sheet([titleRow, dateRow, ...dataRows]);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [{ wch: 16 }, { wch: 8 }, ...eventIds.map(() => ({ wch: 13 }))];
     ws['!rows'] = [{ hpt: 34 }, { hpt: 16 }];
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // "Přezdívka" přes obě hlavičkové řádky
       { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },  // "Celkem" přes obě hlavičkové řádky
     ];
-    ws['!freeze'] = { xSplit: 2, ySplit: 2 };
     ws['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 2, topLeftCell: 'C3', activePane: 'bottomRight' }];
+
+    // --- Barvy a písmo (stejná paleta jako appka: tmavě zelený accent) ---
+    const BORDER = { style: 'thin', color: { rgb: 'D9D9D9' } };
+    const BORDER_ALL = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+    const HEADER_FILL = { patternType: 'solid', fgColor: { rgb: '2F7A56' } };
+    const HEADER_FONT = { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 };
+    const NAME_FONT = { bold: true, sz: 11, color: { rgb: '1A2A22' } };
+    const TOTAL_FILL = { patternType: 'solid', fgColor: { rgb: 'E7F3EC' } };
+    const TOTAL_FONT = { bold: true, sz: 11, color: { rgb: '2F7A56' } };
+    const CHECK_FILL = { patternType: 'solid', fgColor: { rgb: 'DCEFE3' } };
+    const ODD_ROW_FILL = { patternType: 'solid', fgColor: { rgb: 'F7F8F7' } };
+
+    const numRows = aoa.length, numCols = titleRow.length;
+    for(let r = 0; r < numRows; r++){
+      for(let c = 0; c < numCols; c++){
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if(!ws[addr]) ws[addr] = { t: 's', v: '' };
+        const style = { border: BORDER_ALL, alignment: { vertical: 'center', horizontal: c < 2 ? 'left' : 'center', wrapText: true } };
+        if(r < 2){
+          style.fill = HEADER_FILL;
+          style.font = HEADER_FONT;
+          style.alignment.horizontal = 'center';
+        } else if(c === 0){
+          style.font = NAME_FONT;
+          if((r - 2) % 2 === 1) style.fill = ODD_ROW_FILL;
+        } else if(c === 1){
+          style.fill = TOTAL_FILL;
+          style.font = TOTAL_FONT;
+          style.alignment.horizontal = 'center';
+        } else {
+          if(ws[addr].v === '👍') style.fill = CHECK_FILL;
+          else if((r - 2) % 2 === 1) style.fill = ODD_ROW_FILL;
+        }
+        ws[addr].s = style;
+      }
+    }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Docházka');
