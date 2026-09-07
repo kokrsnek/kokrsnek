@@ -2271,10 +2271,11 @@ async function fetchCardStats(ev, uid, row, evIdx){
   if(evIdx === undefined) evIdx = uid;
   try{
     const key = getEventKey(ev);
-    const [commentsSnap, likesSnap, attendSnap] = await Promise.all([
+    const [commentsSnap, likesSnap, attendSnap, declineSnap] = await Promise.all([
       db.collection('events').doc(key).collection('comments').get(),
       db.collection('events').doc(key).collection('likes').get(),
-      db.collection('events').doc(key).collection('attendees').get()
+      db.collection('events').doc(key).collection('attendees').get(),
+      db.collection('events').doc(key).collection('declines').get()
     ]);
     const lastSeenRaw = localStorage.getItem('kokrsnekSeen_' + key);
     const lastSeen = lastSeenRaw ? new Date(lastSeenRaw) : null;
@@ -2282,6 +2283,7 @@ async function fetchCardStats(ev, uid, row, evIdx){
     const commentCount = commentsSnap.size;
     const likeCount = likesSnap.size;
     const attendCount = attendSnap.size;
+    const declineCount = declineSnap.size;
 
     const newestOf = (snap) => snap.docs.reduce((max, d) => {
       const at = d.data().at;
@@ -2292,20 +2294,24 @@ async function fetchCardStats(ev, uid, row, evIdx){
     const newestComment = newestOf(commentsSnap);
     const newestLike = newestOf(likesSnap);
     const newestAttend = newestOf(attendSnap);
+    const newestDecline = newestOf(declineSnap);
 
     const commentsNew = commentCount > 0 && (!lastSeen || (newestComment && newestComment > lastSeen));
     const likesNew = likeCount > 0 && (!lastSeen || (newestLike && newestLike > lastSeen));
     const attendNew = attendCount > 0 && (!lastSeen || (newestAttend && newestAttend > lastSeen));
+    const declineNew = declineCount > 0 && (!lastSeen || (newestDecline && newestDecline > lastSeen));
 
     const mutedColor = 'var(--muted)';
     const commentColor = commentsNew ? 'var(--accent)' : mutedColor;
     const likeColor = likesNew ? '#E2664F' : mutedColor;
     const attendColor = attendNew ? 'var(--accent)' : mutedColor;
+    const declineColor = declineNew ? '#E2664F' : mutedColor;
 
     row.innerHTML = `
       <span onclick="event.stopPropagation();openQuickComments(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${commentColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">${commentIconSVG()}${commentCount}</span>
       <span onclick="event.stopPropagation();openQuickLikes(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${likeColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">${heartIconSVGSmall()}${likeCount}</span>
-      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${attendColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">${handIconSVGSmall()}${attendCount}</span>
+      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${attendColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">👍${attendCount}</span>
+      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${declineColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">👎${declineCount}</span>
     `;
   }catch(e){
     console.error('Chyba při načítání statistik karty:', e);
