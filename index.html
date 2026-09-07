@@ -1848,7 +1848,11 @@ function showEventDetail(idx){
         ${isFuture ? `<button id="attendBtn_${idx}" onclick="toggleAttend(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
-          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">✋ Dojdu</button>` : ''}
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
+        <button id="declineBtn_${idx}" onclick="toggleDecline(${idx})" style="
+          flex:1;background:var(--surface);border:1px solid var(--line);
+          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>` : ''}
         ${!isFuture ? `<button onclick="showPayment(window._payTitle_${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
@@ -1964,7 +1968,7 @@ function showEventDetail(idx){
   const fbKey = getEventKey(ev);
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
-  refreshAttend(idx, fbKey, isFuture);
+  refreshAttendance(idx, fbKey, isFuture);
 
   // Long press na like button = zobraz kdo lajkoval
   const likeBtn = document.getElementById('likeBtn_'+idx);
@@ -2036,6 +2040,42 @@ function showEventDetail(idx){
       if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(attendPressTimer);
     }, {passive:true});
     attendBtn.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  // Long press na tlačítko "Nedojdu" = zobraz kdo nedorazí (jen u budoucích akcí)
+  const declineBtn = document.getElementById('declineBtn_'+idx);
+  if(declineBtn){
+    let declinePressTimer;
+    let declineLongPressed = false;
+    let declineStartX = 0, declineStartY = 0;
+    declineBtn.style.userSelect = 'none';
+    declineBtn.style.webkitUserSelect = 'none';
+    declineBtn.style.webkitTouchCallout = 'none';
+    declineBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      declineLongPressed = false;
+      const t = e.touches && e.touches[0];
+      declineStartX = t ? t.clientX : 0;
+      declineStartY = t ? t.clientY : 0;
+      declinePressTimer = setTimeout(() => {
+        declineLongPressed = true;
+        showDecliners(idx, fbKey);
+      }, 400);
+    }, {passive:false});
+    declineBtn.addEventListener('touchend', e => {
+      clearTimeout(declinePressTimer);
+      e.preventDefault();
+      if(declineLongPressed) return;
+      try{ toggleDecline(idx); }
+      catch(err){ console.error('Chyba při označování neúčasti:', err); }
+    });
+    declineBtn.addEventListener('touchmove', e => {
+      const t = e.touches && e.touches[0];
+      if(!t) return;
+      const dx = t.clientX - declineStartX, dy = t.clientY - declineStartY;
+      if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(declinePressTimer);
+    }, {passive:true});
+    declineBtn.addEventListener('contextmenu', e => e.preventDefault());
   }
 }
 
@@ -2367,28 +2407,54 @@ async function openQuickAttend(evIdx){
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${ev.title}</div>
-      ${isFuture ? `<button id="quickAttendBtn_${evIdx}" onclick="quickToggleAttend(${evIdx})" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:14px;">✋ Dojdu</button>` : `<div class="ev-modal-label" style="text-align:center;">Zúčastnili se</div>`}
+      ${isFuture ? `<div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="quickAttendBtn_${evIdx}" onclick="quickToggleAttend(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
+        <button id="quickDeclineBtn_${evIdx}" onclick="quickToggleDecline(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
+      </div>` : ''}
+      <div class="ev-modal-label" style="text-align:center;">Zúčastní se</div>
       <div id="quickAttendList_${evIdx}"></div>
+      <div class="ev-modal-label" style="text-align:center;margin-top:12px;">Nezúčastní se</div>
+      <div id="quickDeclineList_${evIdx}"></div>
     </div>`;
   document.body.appendChild(backdrop);
   await refreshQuickAttend(evIdx, key, isFuture);
   blockCalloutTap(document.getElementById('quickAttendBtn_'+evIdx), () => quickToggleAttend(evIdx));
+  blockCalloutTap(document.getElementById('quickDeclineBtn_'+evIdx), () => quickToggleDecline(evIdx));
 }
 async function refreshQuickAttend(evIdx, key, isFuture){
-  const snap = await db.collection('events').doc(key).collection('attendees').get();
+  const [attendSnap, declineSnap] = await Promise.all([
+    db.collection('events').doc(key).collection('attendees').get(),
+    db.collection('events').doc(key).collection('declines').get()
+  ]);
   const user = localStorage.getItem('kokrsnekUser');
-  const going = snap.docs.some(d => d.id === user);
-  const btn = document.getElementById('quickAttendBtn_'+evIdx);
-  if(btn){
-    btn.textContent = going ? '✅ Jdu (klikni pro zrušení)' : '✋ Dojdu';
-    btn.style.color = going ? 'var(--accent)' : 'var(--ink)';
-    btn.style.borderColor = going ? 'var(--accent)' : 'var(--line)';
+  if(isFuture){
+    const going = attendSnap.docs.some(d => d.id === user);
+    const notGoing = declineSnap.docs.some(d => d.id === user);
+    const attendBtn = document.getElementById('quickAttendBtn_'+evIdx);
+    if(attendBtn){
+      attendBtn.textContent = going ? '👍 Jdu' : '👍 Dojdu';
+      attendBtn.style.color = going ? 'var(--accent)' : 'var(--ink)';
+      attendBtn.style.borderColor = going ? 'var(--accent)' : 'var(--line)';
+    }
+    const declineBtn = document.getElementById('quickDeclineBtn_'+evIdx);
+    if(declineBtn){
+      declineBtn.textContent = notGoing ? '👎 Nejdu' : '👎 Nedojdu';
+      declineBtn.style.color = notGoing ? 'var(--coral)' : 'var(--ink)';
+      declineBtn.style.borderColor = notGoing ? 'var(--coral)' : 'var(--line)';
+    }
   }
-  const list = document.getElementById('quickAttendList_'+evIdx);
-  if(!list) return;
-  list.innerHTML = snap.empty
-    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím se nikdo nepřihlásil</div>'
-    : sortByTimeDesc(snap.docs).map(d => personRow(d, '✋')).join('');
+  const attendList = document.getElementById('quickAttendList_'+evIdx);
+  if(attendList){
+    attendList.innerHTML = attendSnap.empty
+      ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím se nikdo nepřihlásil</div>'
+      : sortByTimeDesc(attendSnap.docs).map(d => personRow(d, '👍')).join('');
+  }
+  const declineList = document.getElementById('quickDeclineList_'+evIdx);
+  if(declineList){
+    declineList.innerHTML = declineSnap.empty
+      ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo neodmítl</div>'
+      : sortByTimeDesc(declineSnap.docs).map(d => personRow(d, '👎')).join('');
+  }
 }
 async function quickToggleAttend(evIdx){
   const ev = rawEvents[evIdx];
@@ -2396,10 +2462,28 @@ async function quickToggleAttend(evIdx){
   const user = getUserName();
   if(!user) return;
   const ref = db.collection('events').doc(key).collection('attendees').doc(user);
+  const declineRef = db.collection('events').doc(key).collection('declines').doc(user);
   const snap = await ref.get();
   if(snap.exists){ await ref.delete(); } else {
     await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
+    try{ await declineRef.delete(); }catch(e){}
     try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
+  }
+  await refreshQuickAttend(evIdx, key, true);
+  fetchCardStats(ev, evIdx, null, evIdx);
+}
+async function quickToggleDecline(evIdx){
+  const ev = rawEvents[evIdx];
+  const key = getEventKey(ev);
+  const user = getUserName();
+  if(!user) return;
+  const ref = db.collection('events').doc(key).collection('declines').doc(user);
+  const attendRef = db.collection('events').doc(key).collection('attendees').doc(user);
+  const snap = await ref.get();
+  if(snap.exists){ await ref.delete(); } else {
+    await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
+    try{ await attendRef.delete(); }catch(e){}
+    try{ sendNotification('decline', user, ev?.title || ''); }catch(emailErr){}
   }
   await refreshQuickAttend(evIdx, key, true);
   fetchCardStats(ev, evIdx, null, evIdx);
@@ -2658,7 +2742,45 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
     setTimeout(checkAnniversaries, 1500);
     setTimeout(checkBirthdaysAndNamedays, 2000);
     setTimeout(checkWeatherEffect, 2500);
+    syncAlbumAndExpenseNotifications(rawEvents);
   }catch(e){
+  }
+}
+
+// Zjednoduší text na porovnání bez diakritiky (pro hledání "náklady" v názvu přílohy).
+function normalizeCz(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+// Sleduje alba fotek a přílohy se "seznamem nákladů" u NEDÁVNO upravených událostí
+// (podle Google Calendar pole `updated`) a při první detekci zapíše doprovodný
+// dokument do Firestore — Cloud Function na jeho vytvoření pošle push notifikaci
+// celé partě. Zápis je idempotentní (.set() přepíše týž dokument), takže notifikace
+// odejde jen jednou, i když ho detekuje appka na víc zařízeních zároveň.
+async function syncAlbumAndExpenseNotifications(events){
+  const RECENT_MS = 7 * 24 * 60 * 60 * 1000; // jen události upravené v posledním týdnu
+  const nowTs = Date.now();
+  for(const ev of (events || [])){
+    if(!ev.updated || (nowTs - ev.updated.getTime()) > RECENT_MS) continue;
+    const key = getEventKey(ev);
+    const eventStart = ev.start ? ev.start.toISOString() : '';
+
+    if(ev.photoAlbum){
+      try{
+        await db.collection('photoAlbums').doc(key).set({
+          eventTitle: ev.title || '', eventStart, photoAlbum: ev.photoAlbum
+        });
+      }catch(e){ console.error('Chyba při zápisu photoAlbums:', e); }
+    }
+
+    const expenseFile = (ev.driveFiles || []).find(f => normalizeCz(f.title).includes('naklad'));
+    if(expenseFile){
+      try{
+        await db.collection('expenseLists').doc(key).set({
+          eventTitle: ev.title || '', eventStart, fileUrl: expenseFile.url, fileTitle: expenseFile.title || ''
+        });
+      }catch(e){ console.error('Chyba při zápisu expenseLists:', e); }
+    }
   }
 }
 
@@ -3392,6 +3514,7 @@ const NOTIF_TYPE_LABELS = {
   like: 'Novy lajk',
   comment: 'Novy komentar',
   attend: 'Novy zajem o ucast',
+  decline: 'Nekdo nedorazi',
   share: 'Sdileni udalosti',
   calendar: 'Pridani do kalendare'
 };
@@ -3674,40 +3797,105 @@ async function toggleAttend(evIdx){
     const user = getUserName();
     if(!user) return;
     const ref = db.collection('events').doc(key).collection('attendees').doc(user);
+    const declineRef = db.collection('events').doc(key).collection('declines').doc(user);
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
       await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
+      try{ await declineRef.delete(); }catch(e){}
       try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
     }
-    refreshAttend(evIdx, key, true);
+    refreshAttendance(evIdx, key, true);
   }catch(e){ console.error('attend error',e); }
 }
 
-async function refreshAttend(evIdx, key, isFuture){
+async function toggleDecline(evIdx){
   try{
-    const snap = await db.collection('events').doc(key).collection('attendees').get();
+    const ev = rawEvents[evIdx];
+    const key = getEventKey(ev);
+    const user = getUserName();
+    if(!user) return;
+    const ref = db.collection('events').doc(key).collection('declines').doc(user);
+    const attendRef = db.collection('events').doc(key).collection('attendees').doc(user);
+    const snap = await ref.get();
+    if(snap.exists){ await ref.delete(); } else {
+      await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
+      try{ await attendRef.delete(); }catch(e){}
+      try{ sendNotification('decline', user, ev?.title || ''); }catch(emailErr){}
+    }
+    refreshAttendance(evIdx, key, true);
+  }catch(e){ console.error('decline error',e); }
+}
+
+async function refreshAttendance(evIdx, key, isFuture){
+  try{
+    const [attendSnap, declineSnap] = await Promise.all([
+      db.collection('events').doc(key).collection('attendees').get(),
+      db.collection('events').doc(key).collection('declines').get()
+    ]);
+    const user = localStorage.getItem('kokrsnekUser');
     if(isFuture){
-      const user = localStorage.getItem('kokrsnekUser');
-      const going = snap.docs.some(d => d.id === user);
-      const btn = document.getElementById('attendBtn_'+evIdx);
-      if(btn){
-        btn.textContent = (going ? '✅ Jdu' : '✋ Dojdu') + (snap.size ? ' ('+snap.size+')' : '');
-        btn.style.color = going ? 'var(--accent)' : 'var(--ink)';
-        btn.style.borderColor = going ? 'var(--accent)' : 'var(--line)';
+      const going = attendSnap.docs.some(d => d.id === user);
+      const notGoing = declineSnap.docs.some(d => d.id === user);
+      const attendBtn = document.getElementById('attendBtn_'+evIdx);
+      if(attendBtn){
+        attendBtn.textContent = (going ? '👍 Jdu' : '👍 Dojdu') + (attendSnap.size ? ' ('+attendSnap.size+')' : '');
+        attendBtn.style.color = going ? 'var(--accent)' : 'var(--ink)';
+        attendBtn.style.borderColor = going ? 'var(--accent)' : 'var(--line)';
+      }
+      const declineBtn = document.getElementById('declineBtn_'+evIdx);
+      if(declineBtn){
+        declineBtn.textContent = (notGoing ? '👎 Nejdu' : '👎 Nedojdu') + (declineSnap.size ? ' ('+declineSnap.size+')' : '');
+        declineBtn.style.color = notGoing ? 'var(--coral)' : 'var(--ink)';
+        declineBtn.style.borderColor = notGoing ? 'var(--coral)' : 'var(--line)';
       }
     } else {
       const row = document.getElementById('attendedRow_'+evIdx);
       if(row){
-        if(snap.empty){
-          row.style.display = 'none';
-        } else {
-          const names = snap.docs.map(d => d.id).join(', ');
-          row.style.display = 'block';
-          row.innerHTML = `<div class="ev-modal-label">Zúčastnili se</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showAttendees(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`;
+        const parts = [];
+        if(!attendSnap.empty){
+          const names = attendSnap.docs.map(d => d.id).join(', ');
+          parts.push(`<div class="ev-modal-label">Zúčastnili se</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showAttendees(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`);
         }
+        if(!declineSnap.empty){
+          const names = declineSnap.docs.map(d => d.id).join(', ');
+          parts.push(`<div class="ev-modal-label">Nedorazili</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showDecliners(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`);
+        }
+        row.style.display = parts.length ? 'block' : 'none';
+        row.innerHTML = parts.join('');
       }
     }
-  }catch(e){ console.error('attend refresh error',e); }
+  }catch(e){ console.error('attendance refresh error',e); }
+}
+
+async function showDecliners(evIdx, key){
+  const snap = await db.collection('events').doc(key).collection('declines').get();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  const rows = snap.empty
+    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo neodmítl</div>'
+    : [...snap.docs].sort((a,b) => {
+        const ta = a.data().at; const tb = b.data().at;
+        const da = ta ? (ta.toDate ? ta.toDate() : new Date(ta)) : new Date(0);
+        const db2 = tb ? (tb.toDate ? tb.toDate() : new Date(tb)) : new Date(0);
+        return db2 - da;
+      }).map(d => {
+        const data = d.data();
+        const time = data.at
+          ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+          : '';
+        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+          <span ${personLink(d.id)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">👎 ${d.id}</span>
+          <span style="font-size:11.5px;color:var(--muted);">${time}</span>
+        </div>`;
+      }).join('');
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">Kdo nedorazí</div>
+      ${rows}
+    </div>`;
+  document.body.appendChild(backdrop);
 }
 
 async function showAttendees(evIdx, key){
@@ -4516,6 +4704,102 @@ function restoreGrabber(grabber){}
   // Bez tohohle by dialog zůstal viset uprostřed tažení.
   document.addEventListener('touchcancel', endDrag);
 })();
+
+// --- Skrytá funkce: žebříček docházky (dlouhé podržení tlačítka domečku) ---
+
+// Obecné dlouhé podržení prvku, které nekoliduje s krátkým tapem ani se
+// systémovou nabídkou iOS (kopírovat/vyhledat apod.).
+function attachLongPress(el, onLongPress, ms){
+  if(!el) return;
+  ms = ms || 600;
+  let timer, longPressed = false, sx = 0, sy = 0;
+  el.style.webkitTouchCallout = 'none';
+  el.addEventListener('touchstart', (e) => {
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    sx = t ? t.clientX : 0; sy = t ? t.clientY : 0;
+    timer = setTimeout(() => { longPressed = true; onLongPress(); }, ms);
+  }, {passive:true});
+  el.addEventListener('touchend', (e) => {
+    clearTimeout(timer);
+    if(longPressed && e.cancelable) e.preventDefault();
+  });
+  el.addEventListener('touchmove', (e) => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    if(Math.hypot(t.clientX - sx, t.clientY - sy) > 15) clearTimeout(timer);
+  }, {passive:true});
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+// Jednorázově dotáhne externí <script> (SheetJS pro export do xlsx), jen když je poprvé potřeba.
+function loadScriptOnce(src){
+  return new Promise((resolve, reject) => {
+    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Nepodařilo se načíst ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function showAttendanceLeaderboard(){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">🏆 Žebříček docházky</div>
+      <div id="attendanceLeaderboardList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <button id="exportAttendanceXlsxBtn" style="margin-top:14px;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">⬇ Export do XLSX</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('attendanceLeaderboardList');
+  let sorted = [];
+  try{
+    const snap = await db.collectionGroup('attendees').get();
+    const counts = {};
+    snap.forEach(d => {
+      const u = d.data().user;
+      if(!u) return;
+      counts[u] = (counts[u] || 0) + 1;
+    });
+    sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+    listEl.innerHTML = sorted.length ? sorted.map(([user, count], i) => `
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+        <span style="font-size:14px;color:var(--ink);font-weight:600;">${i+1}. ${user}</span>
+        <span style="font-size:13px;color:var(--muted);">${count}×</span>
+      </div>`).join('') : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádná data</div>';
+  }catch(e){
+    console.error('Chyba při načítání žebříčku docházky:', e);
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+
+  document.getElementById('exportAttendanceXlsxBtn').onclick = () => exportAttendanceXlsx(sorted);
+}
+
+async function exportAttendanceXlsx(sorted){
+  const btn = document.getElementById('exportAttendanceXlsxBtn');
+  try{
+    if(btn){ btn.textContent = '⬇ Exportuji…'; btn.disabled = true; }
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const rows = [['Přezdívka', 'Počet účastí'], ...sorted];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Docházka');
+    XLSX.writeFile(wb, 'kokrsnek-dochazka.xlsx');
+  }catch(e){
+    console.error('Chyba při exportu XLSX:', e);
+    alert('Export se nepodařil: ' + e.message);
+  }finally{
+    if(btn){ btn.textContent = '⬇ Export do XLSX'; btn.disabled = false; }
+  }
+}
+
+attachLongPress(document.getElementById('homeBtn'), showAttendanceLeaderboard);
 
 renderTimeline();
 showNamePromptIfNeeded(() => {
