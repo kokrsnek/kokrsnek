@@ -108,18 +108,18 @@
     pointer-events:auto;
     transition:transform .15s ease;
   }
-  /* Rozostření je na samostatné vrstvě POD ikonou (ne na .search-btn samotném) —
-     na některých iOS zařízeních (např. iPhone Air) totiž Safari backdrop-filter
-     omylem rozmazává i vlastní obsah prvku (ikonu), ne jen pozadí za ním. Když je
-     blur na vlastní vrstvě a ikona je až nad ní (z-index výš), ikona zůstane ostrá. */
+  /* POZOR: žádné backdrop-filter na tomhle prvku! Na iPhone Air (a možná dalších
+     nových zařízeních) v PWA/standalone režimu (appka přidaná na plochu) Safari
+     backdrop-filter renderuje chybně a rozmazává i ikonu uvnitř tlačítka —
+     v běžném Safari prohlížeči na stejném zařízení je to v pořádku, takže jde
+     jednoznačně o chybu ve standalone renderovací cestě. Jediné spolehlivé
+     řešení je použít místo živého rozostření jen barevné poloprůhledné pozadí. */
   .search-btn::before{
     content:'';
     position:absolute;
     inset:0;
     border-radius:inherit;
     background:var(--nav-bg);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
     border:1px solid var(--nav-border);
     box-shadow:var(--shadow-sm);
     z-index:0;
@@ -178,7 +178,6 @@
     inset:0;
     z-index:40;
     background:rgba(20,19,24,0.97);
-    backdrop-filter:blur(8px);
     display:flex;
     flex-direction:column;
     padding:22px 20px;
@@ -555,9 +554,7 @@
   }
   .ev-modal-backdrop{
     position:fixed; inset:0; z-index:60;
-    background:rgba(0,0,0,0.55);
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
+    background:rgba(0,0,0,0.62);
     display:flex; align-items:flex-end; justify-content:center;
     padding:0;
     animation: fadeIn .2s ease;
@@ -759,8 +756,6 @@
     width:46px; height:46px;
     border-radius:15px;
     background:var(--nav-bg);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
     border:1px solid var(--nav-border);
     box-shadow:var(--shadow-sm);
     display:none;
