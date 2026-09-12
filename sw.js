@@ -34,21 +34,27 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  // eventId je ID konkrétní akce (z data payloadu notifikace) — když je k dispozici,
-  // appka se má otevřít rovnou na kartě té akce (?event=ID), ne jen na obecné hlavní stránce.
+  // eventId otevře appku rovnou na kartě té akce, chatWith rovnou na dané vlákno
+  // v minichatu — obojí čteme z data payloadu notifikace.
   const eventId = event.notification.data && event.notification.data.eventId;
-  const targetUrl = eventId ? `./index.html?event=${encodeURIComponent(eventId)}` : './index.html';
+  const chatWith = event.notification.data && event.notification.data.chatWith;
+  let targetUrl = './index.html';
+  if (eventId) targetUrl = `./index.html?event=${encodeURIComponent(eventId)}`;
+  else if (chatWith) targetUrl = `./index.html?chat=${encodeURIComponent(chatWith)}`;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
           // Appka už běží: pošli jí zprávu (pro případ, že poslouchá) a zkus i tvrdou
-          // navigaci na URL s ?event=, ať se karta otevře spolehlivě i bez zprávy.
-          if (eventId && 'postMessage' in client) {
-            try { client.postMessage({ type: 'open-event', eventId }); } catch (e) {}
+          // navigaci na cílovou URL, ať se to otevře spolehlivě i bez zprávy.
+          if ((eventId || chatWith) && 'postMessage' in client) {
+            try {
+              if (eventId) client.postMessage({ type: 'open-event', eventId });
+              else client.postMessage({ type: 'open-chat', chatWith });
+            } catch (e) {}
           }
-          if (eventId && 'navigate' in client) {
+          if ((eventId || chatWith) && 'navigate' in client) {
             return client.navigate(targetUrl).then((c) => (c || client).focus()).catch(() => client.focus());
           }
           return client.focus();

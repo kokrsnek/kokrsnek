@@ -88,13 +88,15 @@ async function sendToTokens(tokens, notification) {
     // byly dvě notifikace na jednu událost. S čistě `data` payloadem to zobrazí
     // vždy jen náš vlastní kód, přesně jednou.
     // eventId cestuje spolu s notifikací, aby klik na ni (sw.js -> notificationclick)
-    // uměl appku otevřít rovnou na kartě té konkrétní akce.
+    // uměl appku otevřít rovnou na kartě té konkrétní akce. chatWith stejným
+    // způsobem otevře rovnou dané vlákno v minichatu.
     const resp = await messaging.sendEachForMulticast({
       tokens,
       data: {
         title: notification.title || '',
         body: notification.body || '',
         eventId: notification.eventId || '',
+        chatWith: notification.chatWith || '',
       },
     });
     const invalid = [];
@@ -714,6 +716,7 @@ exports.onChatMessageCreated = onDocumentCreated(
     await sendToTokens(tokens, {
       title: `💬 ${data.from}`,
       body: data.text,
+      chatWith: data.from,
     });
   }
 );
