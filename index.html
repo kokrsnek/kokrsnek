@@ -829,6 +829,10 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
 </button>
 
+<button class="search-btn" id="chatBtn" aria-label="Zprávy" style="position:fixed;top:env(safe-area-inset-top,12px);right:104px;bottom:auto;z-index:25;width:38px;height:38px;" onclick="openChatList()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+</button>
+
 <button class="search-btn" id="homeBtn" aria-label="Přejít na aktuální událost" style="right:auto;left:18px;" onclick="
   refreshNow();
   renderTimeline(true);
@@ -2750,7 +2754,7 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
     setTimeout(checkAnniversaries, 1500);
     setTimeout(checkBirthdaysAndNamedays, 2000);
     setTimeout(checkWeatherEffect, 2500);
-    syncAlbumAndExpenseNotifications(rawEvents);
+    syncEventNotifications(rawEvents);
   }catch(e){
   }
 }
@@ -2760,34 +2764,56 @@ function normalizeCz(s){
   return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
-// Sleduje alba fotek a přílohy se "seznamem nákladů" u NEDÁVNO upravených událostí
-// (podle Google Calendar pole `updated`) a při první detekci zapíše doprovodný
-// dokument do Firestore — Cloud Function na jeho vytvoření pošle push notifikaci
-// celé partě. Zápis je idempotentní (.set() přepíše týž dokument), takže notifikace
-// odejde jen jednou, i když ho detekuje appka na víc zařízeních zároveň.
-async function syncAlbumAndExpenseNotifications(events){
-  const RECENT_MS = 7 * 24 * 60 * 60 * 1000; // jen události upravené v posledním týdnu
+// Sleduje čtyři věci a při první detekci zapíše doprovodný dokument do Firestore —
+// Cloud Function na jeho vytvoření/změnu pošle odpovídající push notifikaci.
+// Zápis je vždy idempotentní (.set() přepíše týž dokument), takže notifikace
+// odejde jen jednou, i když to appka detekuje na víc zařízeních zároveň:
+//   1) album fotek / příloha "seznam nákladů" — jen u NEDÁVNO upravených událostí
+//   2) úplně nová událost v kalendáři — jen u NEDÁVNO vytvořených budoucích událostí
+//   3) snapshot data/místa u KAŽDÉ budoucí události — slouží k detekci pozdější
+//      změny (Cloud Function onEventSnapshotUpdated) a k připomenutí u akcí bez odezvy
+async function syncEventNotifications(events){
+  const RECENT_MS = 7 * 24 * 60 * 60 * 1000; // poslední týden
   const nowTs = Date.now();
+  const nowDate = new Date();
   for(const ev of (events || [])){
-    if(!ev.updated || (nowTs - ev.updated.getTime()) > RECENT_MS) continue;
     const key = getEventKey(ev);
     const eventStart = ev.start ? ev.start.toISOString() : '';
 
-    if(ev.photoAlbum){
-      try{
-        await db.collection('photoAlbums').doc(key).set({
-          eventTitle: ev.title || '', eventStart, photoAlbum: ev.photoAlbum
-        });
-      }catch(e){ console.error('Chyba při zápisu photoAlbums:', e); }
+    if(ev.updated && (nowTs - ev.updated.getTime()) <= RECENT_MS){
+      if(ev.photoAlbum){
+        try{
+          await db.collection('photoAlbums').doc(key).set({
+            eventTitle: ev.title || '', eventStart, photoAlbum: ev.photoAlbum
+          });
+        }catch(e){ console.error('Chyba při zápisu photoAlbums:', e); }
+      }
+
+      const expenseFile = (ev.driveFiles || []).find(f => normalizeCz(f.title).includes('naklad'));
+      if(expenseFile){
+        try{
+          await db.collection('expenseLists').doc(key).set({
+            eventTitle: ev.title || '', eventStart, fileUrl: expenseFile.url, fileTitle: expenseFile.title || ''
+          });
+        }catch(e){ console.error('Chyba při zápisu expenseLists:', e); }
+      }
     }
 
-    const expenseFile = (ev.driveFiles || []).find(f => normalizeCz(f.title).includes('naklad'));
-    if(expenseFile){
+    if(ev.start > nowDate){
+      const createdAt = ev.raw && ev.raw.created ? new Date(ev.raw.created) : null;
+      if(createdAt && !isNaN(createdAt.getTime()) && (nowTs - createdAt.getTime()) <= RECENT_MS){
+        try{
+          await db.collection('newEventAlerts').doc(key).set({
+            eventTitle: ev.title || '', eventStart, eventPlace: ev.place || ''
+          });
+        }catch(e){ console.error('Chyba při zápisu newEventAlerts:', e); }
+      }
+
       try{
-        await db.collection('expenseLists').doc(key).set({
-          eventTitle: ev.title || '', eventStart, fileUrl: expenseFile.url, fileTitle: expenseFile.title || ''
+        await db.collection('eventSnapshots').doc(key).set({
+          eventTitle: ev.title || '', eventStart, eventPlace: ev.place || ''
         });
-      }catch(e){ console.error('Chyba při zápisu expenseLists:', e); }
+      }catch(e){ console.error('Chyba při zápisu eventSnapshots:', e); }
     }
   }
 }
@@ -3729,6 +3755,102 @@ async function sendPrivateMessage(name, btn){
     await db.collection('pokes').add({ from: user, to: name, type: 'message', text: text.trim().slice(0,200), at: new Date().toISOString() });
     if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
   }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
+}
+
+// =====================================================
+// MINICHAT — jeden adresát = jedno vlákno, zprávy do 160 znaků.
+// ID vlákna je oba nicky seřazené abecedně a spojené "__", takže je stejné
+// bez ohledu na to, kdo psal první (Cloud Function ho stejným způsobem
+// rozparsuje zpátky na dvojici a pozná, komu poslat notifikaci).
+// =====================================================
+function chatThreadId(a, b){
+  return [a, b].sort().join('__');
+}
+
+async function openChatList(){
+  const me = getUserName();
+  if(!me) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">💬 Zprávy</div>
+      <div id="chatUserList" style="text-align:left;max-height:55vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const list = document.getElementById('chatUserList');
+  try{
+    const snap = await db.collection('pushTokens').get();
+    const names = [...new Set(snap.docs.map(d => d.data().user).filter(u => u && u !== me))].sort((a,b) => a.localeCompare(b, 'cs'));
+    if(!names.length){
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
+      return;
+    }
+    list.innerHTML = names.map(n => `
+      <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
+        <span>👤 ${n}</span><span style="color:var(--muted);font-size:16px;">›</span>
+      </button>`).join('');
+    list.querySelectorAll('[data-name]').forEach(btn => {
+      btn.onclick = () => { backdrop.remove(); openChatThread(me, btn.dataset.name); };
+    });
+  }catch(e){
+    console.error('Chyba při načítání seznamu:', e);
+    list.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+}
+
+let activeChatUnsub = null;
+function openChatThread(me, other){
+  if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
+  const threadId = chatThreadId(me, other);
+  const backdrop = document.createElement('div');
+  const closeThread = () => {
+    if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
+    backdrop.remove();
+  };
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) closeThread(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" id="chatThreadClose">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">👤 ${other}</div>
+      <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input id="chatInput" type="text" maxlength="160" placeholder="Napiš zprávu (max 160 znaků)…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
+        <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.getElementById('chatThreadClose').onclick = closeThread;
+
+  const msgsEl = document.getElementById('chatMessages');
+  activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
+    msgsEl.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      const mine = data.from === me;
+      const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;">
+        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:8px 12px;border-radius:14px;font-size:13.5px;">${data.text}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;text-align:${mine?'right':'left'};">${time}</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné zprávy</div>';
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }, err => { console.error('Chyba při načítání zpráv:', err); });
+
+  const send = async () => {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim().slice(0, 160);
+    if(!text) return;
+    input.value = '';
+    try{
+      await db.collection('chats').doc(threadId).collection('messages').add({ from: me, text, at: new Date().toISOString() });
+    }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
+  };
+  document.getElementById('chatSendBtn').onclick = send;
+  document.getElementById('chatInput').addEventListener('keydown', e => { if(e.key==='Enter') send(); });
 }
 
 function personLink(name){
