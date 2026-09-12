@@ -3,129 +3,170 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KoKrŠNeK — Přehled (desktop)</title>
+<title>KoKrŠNeK — tak život chode</title>
 <link rel="icon" type="image/png" href="icon-192v2.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg:#F6F4EF;
-    --bg2:#FFFFFF;
     --card:#FFFFFF;
     --line:rgba(20,18,14,0.09);
     --ink:#242229;
     --muted:#837E8A;
     --accent:#2F7A56;
+    --accent-dark:#20573E;
     --accent-soft:rgba(47,122,86,0.12);
     --coral:#C24B34;
     --coral-soft:rgba(194,75,52,0.12);
     --shadow-sm:0 2px 10px rgba(20,18,14,0.07);
-    --shadow-md:0 10px 30px rgba(20,18,14,0.16);
-    --radius-lg:20px;
-    --radius-md:14px;
-    --radius-sm:10px;
+    --shadow-md:0 14px 34px rgba(20,18,14,0.16);
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:11px;
     --surface:rgba(20,18,14,0.045);
     --surface-strong:rgba(20,18,14,0.09);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  html{scroll-behavior:smooth;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
   .mono{font-family:'JetBrains Mono',monospace;}
-  a{color:var(--accent);}
+  a{color:inherit;}
   button{font-family:inherit;}
+  img{max-width:100%;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 32px;}
 
-  /* ---------- layout skeleton ---------- */
-  .page{height:100vh;display:flex;flex-direction:column;}
-  .topbar{
-    display:flex;align-items:center;gap:16px;padding:12px 20px;
-    background:var(--bg2);border-bottom:1px solid var(--line);flex:0 0 auto;
+  /* ---------- nav ---------- */
+  .nav{
+    position:sticky;top:0;z-index:40;background:rgba(246,244,239,0.88);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
   }
-  .brand{display:flex;align-items:baseline;gap:8px;flex:0 0 auto;text-decoration:none;color:inherit;}
-  .brand .mark{font-weight:800;font-size:17px;color:var(--accent);}
-  .brand .sub{font-size:12.5px;color:var(--muted);}
-  .searchbox-wrap{flex:1 1 auto;max-width:420px;}
+  .nav-row{display:flex;align-items:center;gap:28px;padding:14px 32px;max-width:1120px;margin:0 auto;}
+  .nav-brand{font-weight:800;font-size:16px;color:var(--accent-dark);text-decoration:none;letter-spacing:.01em;}
+  .nav-links{display:flex;gap:22px;flex:1;}
+  .nav-links a{font-size:13.5px;font-weight:600;color:var(--muted);text-decoration:none;}
+  .nav-links a:hover{color:var(--ink);}
+  .nav-cta{
+    background:var(--accent);color:#fff;font-weight:700;font-size:13px;text-decoration:none;
+    padding:9px 18px;border-radius:999px;
+  }
+  .nav-cta:hover{background:var(--accent-dark);}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:radial-gradient(circle at 20% 20%, rgba(47,122,86,0.16), transparent 55%),
+               radial-gradient(circle at 85% 0%, rgba(194,75,52,0.10), transparent 45%),
+               var(--bg);
+    padding:76px 32px 64px;text-align:center;border-bottom:1px solid var(--line);
+  }
+  .hero-eyebrow{
+    display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);padding:6px 14px;border-radius:999px;margin-bottom:22px;
+  }
+  .hero h1{
+    font-size:clamp(40px,6vw,72px);font-weight:900;margin:0 0 14px;letter-spacing:-0.02em;line-height:1.02;
+  }
+  .hero h1 span{color:var(--accent);}
+  .hero p{font-size:17px;color:var(--muted);max-width:520px;margin:0 auto 32px;line-height:1.55;}
+  .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;text-decoration:none;
+    padding:13px 26px;border-radius:999px;border:none;cursor:pointer;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);}
+  .btn-ghost:hover{background:var(--surface);}
+
+  /* ---------- section shell ---------- */
+  section{padding:70px 32px;}
+  .section-head{text-align:center;margin-bottom:40px;}
+  .section-eyebrow{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+  .section-head h2{font-size:32px;font-weight:800;margin:0;letter-spacing:-0.01em;}
+  .section-head p{color:var(--muted);font-size:14.5px;margin:8px 0 0;}
+
   .searchbox{
-    display:flex;align-items:center;gap:8px;background:var(--surface);
-    border:1px solid var(--line);border-radius:999px;padding:8px 14px;
+    max-width:380px;margin:22px auto 0;display:flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:9px 16px;box-shadow:var(--shadow-sm);
   }
-  .searchbox svg{flex:0 0 auto;opacity:.55;}
-  .searchbox input{background:none;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13.5px;width:100%;}
-  .searchbox input::placeholder{color:var(--muted);}
-  .topbar-spacer{flex:1;}
-  .backlink{color:var(--muted);font-size:13px;text-decoration:none;flex:0 0 auto;padding:8px 4px;}
-  .backlink:hover{color:var(--ink);}
+  .searchbox svg{opacity:.5;flex:0 0 auto;}
+  .searchbox input{border:none;outline:none;background:none;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink);}
 
-  .body-row{flex:1;display:flex;min-height:0;}
+  /* ---------- upcoming: concert-style rows ---------- */
+  #upcoming{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .gig-list{max-width:760px;margin:0 auto;}
+  .gig-row{
+    display:flex;align-items:center;gap:22px;padding:18px 10px;border-bottom:1px solid var(--line);
+    cursor:pointer;transition:background .15s;border-radius:var(--radius-sm);
+  }
+  .gig-row:hover{background:var(--surface);}
+  .gig-date{
+    flex:0 0 68px;width:68px;height:68px;border-radius:var(--radius-md);background:var(--accent);color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+  }
+  .gig-date .d{font-size:24px;font-weight:800;}
+  .gig-date .m{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .gig-row.is-past .gig-date{background:var(--muted);}
+  .gig-info{flex:1;min-width:0;}
+  .gig-info .title{font-size:17px;font-weight:700;margin-bottom:3px;}
+  .gig-info .meta{font-size:13px;color:var(--muted);}
+  .gig-stats{display:flex;gap:14px;flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);}
+  .empty-note{text-align:center;color:var(--muted);font-size:14px;padding:30px 0;}
 
-  .rail{width:240px;flex:0 0 240px;border-right:1px solid var(--line);background:var(--bg2);padding:18px 12px;overflow-y:auto;}
-  .rail-group{margin-bottom:22px;}
-  .rail-title{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px;}
-  .rail-item{
-    display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;
-    cursor:pointer;font-size:13.5px;color:var(--ink);margin-bottom:1px;border:none;background:none;
-    width:100%;font-family:inherit;text-align:left;
+  /* ---------- history: album-style grid ---------- */
+  .history-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;max-width:1120px;margin:0 auto;
   }
-  .rail-item:hover{background:var(--surface);}
-  .rail-item.active{background:var(--accent-soft);color:var(--accent);font-weight:700;}
-  .rail-item .count{
-    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
-    background:var(--surface);border-radius:10px;padding:1px 7px;flex:0 0 auto;margin-left:8px;
+  .history-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;
+    cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s;
   }
-  .rail-item.active .count{color:var(--accent);background:rgba(47,122,86,0.16);}
+  .history-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);}
+  .history-cover{
+    height:110px;display:flex;align-items:center;justify-content:center;font-size:34px;
+    background:linear-gradient(135deg, rgba(47,122,86,0.18), rgba(194,75,52,0.14));
+  }
+  .history-body{padding:14px 16px 16px;}
+  .history-body .title{font-weight:700;font-size:14.5px;margin-bottom:4px;line-height:1.3;}
+  .history-body .meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .history-stats{display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .history-more{text-align:center;margin-top:30px;}
 
-  .list-area{flex:1;min-width:0;display:flex;flex-direction:column;}
-  .list-head{
-    display:grid;grid-template-columns:120px 1fr 220px 60px 60px 60px;gap:10px;
-    padding:12px 22px;border-bottom:1px solid var(--line);
-    font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  /* ---------- leaderboard: band-member style ---------- */
+  #leaderboard{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .board-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:26px;max-width:900px;margin:0 auto;}
+  .board-card{width:130px;text-align:center;}
+  .board-avatar{
+    width:84px;height:84px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-dark);font-weight:800;font-size:26px;position:relative;
   }
-  .list-head span:nth-child(n+4){text-align:center;}
-  .list-body{flex:1;overflow-y:auto;}
-  .list-empty{text-align:center;color:var(--muted);font-size:13.5px;margin-top:60px;line-height:1.6;}
-  .record-item{
-    display:grid;grid-template-columns:120px 1fr 220px 60px 60px 60px;gap:10px;align-items:center;
-    padding:13px 22px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;
-  }
-  .record-item:hover{background:var(--surface);}
-  .record-item .rec-date{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;}
-  .record-item .rec-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .record-item .rec-place{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;}
-  .record-item .rec-stat{text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
-  .record-item.is-past{opacity:.68;}
+  .board-card:nth-child(1) .board-avatar{background:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-soft);}
+  .board-medal{position:absolute;top:-6px;right:-4px;font-size:18px;}
+  .board-name{font-weight:700;font-size:13.5px;}
+  .board-count{color:var(--muted);font-size:12px;margin-top:2px;}
 
-  /* ---------- detail overlay ---------- */
-  .backdrop{
-    position:fixed;inset:0;background:rgba(20,18,14,0.45);display:flex;
-    align-items:center;justify-content:center;z-index:50;padding:30px;
-  }
-  .detail{
-    background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
-    width:560px;max-width:100%;max-height:88vh;overflow-y:auto;padding:28px;position:relative;
-  }
-  .detail-close{
-    position:absolute;top:16px;right:18px;background:none;border:none;font-size:22px;
-    color:var(--muted);cursor:pointer;line-height:1;
-  }
+  /* ---------- footer ---------- */
+  footer{padding:40px 32px;text-align:center;color:var(--muted);font-size:12.5px;}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600;}
+
+  /* ---------- detail overlay (shared) ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(20,18,14,0.5);display:flex;align-items:center;justify-content:center;z-index:80;padding:30px;}
+  .detail{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);width:560px;max-width:100%;max-height:88vh;overflow-y:auto;padding:28px;position:relative;}
+  .detail-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1;}
   .detail-close:hover{color:var(--ink);}
-  .detail h2{margin:0 6px 14px 0;font-size:24px;}
+  .detail h2{margin:0 26px 14px 0;font-size:24px;}
   .detail-label{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;}
   .detail-value{font-size:14.5px;}
   .map-tile{display:block;border-radius:var(--radius-md);overflow:hidden;margin-top:6px;border:1px solid var(--line);}
   .map-tile img{width:100%;display:block;}
-  .album-tile{
-    display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
-    border-radius:var(--radius-md);padding:12px 14px;text-decoration:none;color:var(--ink);margin-top:12px;
-  }
+  .album-tile{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;text-decoration:none;color:var(--ink);margin-top:12px;}
   .album-tile:hover{background:var(--surface-strong);}
   .drive-link{display:flex;align-items:center;gap:8px;font-size:13.5px;text-decoration:none;color:var(--ink);margin-top:6px;}
   .drive-link:hover{color:var(--accent);}
   .action-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
-  .action-row button{
-    flex:1;min-width:100px;background:var(--surface);border:1px solid var(--line);
-    color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
-    padding:10px;border-radius:var(--radius-sm);cursor:pointer;
-  }
+  .action-row button{flex:1;min-width:100px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;padding:10px;border-radius:var(--radius-sm);cursor:pointer;}
   .action-row button:hover{background:var(--surface-strong);}
   .people-row{display:flex;justify-content:space-between;gap:16px;margin-top:14px;}
   .people-col{flex:1;min-width:0;}
@@ -135,58 +176,74 @@
   .comment-item .c-head{display:flex;justify-content:space-between;gap:8px;font-weight:600;}
   .comment-item .c-time{font-weight:400;color:var(--muted);font-size:11px;white-space:nowrap;}
   .comment-box{display:flex;gap:8px;margin-top:8px;}
-  .comment-box input{
-    flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);
-    font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;
-  }
-  .comment-box button{
-    background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;
-    padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;
-  }
-  .name-gate{
-    position:fixed;inset:0;background:rgba(20,18,14,0.45);display:flex;align-items:center;justify-content:center;z-index:60;
-  }
+  .comment-box input{flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;}
+  .comment-box button{background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;}
+  .name-gate{position:fixed;inset:0;background:rgba(20,18,14,0.5);display:flex;align-items:center;justify-content:center;z-index:90;}
   .name-gate .box{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:26px;width:360px;text-align:center;}
-  .name-gate input{
-    width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);
-    font-family:'Inter',sans-serif;font-size:15px;padding:11px 14px;border-radius:var(--radius-sm);outline:none;margin:14px 0;
-  }
-  .name-gate button{
-    background:var(--accent);border:none;color:#fff;font-weight:700;font-size:14px;
-    padding:11px 26px;border-radius:var(--radius-sm);cursor:pointer;width:100%;
-  }
+  .name-gate input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;padding:11px 14px;border-radius:var(--radius-sm);outline:none;margin:14px 0;}
+  .name-gate button{background:var(--accent);border:none;color:#fff;font-weight:700;font-size:14px;padding:11px 26px;border-radius:var(--radius-sm);cursor:pointer;width:100%;}
 </style>
 </head>
 <body>
 
-<div class="page">
-  <div class="topbar">
-    <a class="brand" href="./index.html">
-      <span class="mark">KoKrŠNeK</span>
-      <span class="sub">přehled</span>
-    </a>
-    <div class="searchbox-wrap">
-      <div class="searchbox">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="searchInput" type="text" placeholder="Hledat podle názvu nebo místa…">
-      </div>
+<div class="nav">
+  <div class="nav-row">
+    <a class="nav-brand" href="#top">KoKrŠNeK</a>
+    <div class="nav-links">
+      <a href="#upcoming">Nadcházející</a>
+      <a href="#history">Historie</a>
+      <a href="#leaderboard">Žebříček</a>
     </div>
-    <div class="topbar-spacer"></div>
-    <a class="backlink" href="./index.html">← mobilní appka</a>
-  </div>
-
-  <div class="body-row">
-    <div class="rail" id="rail"></div>
-    <div class="list-area">
-      <div class="list-head">
-        <span>Datum</span><span>Název</span><span>Místo</span><span>👍</span><span>❤️</span><span>💬</span>
-      </div>
-      <div class="list-body" id="listBody">
-        <div class="list-empty">Načítám akce…</div>
-      </div>
-    </div>
+    <a class="nav-cta" href="./index.html">📱 Otevřít appku</a>
   </div>
 </div>
+
+<div id="top" class="hero">
+  <div class="hero-eyebrow">KoKrŠNeK v.t.s.</div>
+  <h1>Tak <span>život</span> chode</h1>
+  <p>Kalendář akcí, fotky a docházka jedné party — přehledně na jednom místě, ať jsi kdekoli.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#upcoming">Nadcházející akce</a>
+    <a class="btn btn-ghost" href="./index.html">📱 Stáhnout appku</a>
+  </div>
+</div>
+
+<section id="upcoming">
+  <div class="section-head">
+    <div class="section-eyebrow">Co nás čeká</div>
+    <h2>Nadcházející akce</h2>
+    <div class="searchbox">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Hledat podle názvu nebo místa…">
+    </div>
+  </div>
+  <div class="gig-list" id="upcomingList"><div class="empty-note">Načítám akce…</div></div>
+</section>
+
+<section id="history">
+  <div class="section-head">
+    <div class="section-eyebrow">Co se povedlo</div>
+    <h2>Historie akcí</h2>
+    <p>Poslední proběhlé akce party</p>
+  </div>
+  <div class="history-grid" id="historyGrid"></div>
+  <div class="history-more" id="historyMoreWrap" style="display:none;">
+    <button class="btn btn-ghost" id="historyMoreBtn">Zobrazit další</button>
+  </div>
+</section>
+
+<section id="leaderboard">
+  <div class="section-head">
+    <div class="section-eyebrow">Kdo drží partu pohromadě</div>
+    <h2>Žebříček docházky</h2>
+    <p>Kolikrát kdo zaťukal na "Dojdu"</p>
+  </div>
+  <div class="board-grid" id="boardGrid"><div class="empty-note">Počítám…</div></div>
+</section>
+
+<footer>
+  KoKrŠNeK — tak život chode · <a href="./index.html">mobilní appka</a>
+</footer>
 
 <script>
 const firebaseConfig = {
@@ -204,10 +261,11 @@ const ALBUM_QUESTION = "Jaká je přezdívka šerifa?";
 const ALBUM_ANSWER   = "šuraj";
 
 const DAY_NAMES = ['ne','po','út','st','čt','pá','so'];
+const MONTH_SHORT = ['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
 const now = new Date();
 
 let rawEvents = [];
-let filter = { mode: 'upcoming', monthKey: null, query: '' }; // mode: upcoming | past | all
+let historyShown = 8;
 
 // =====================================================
 // NAČTENÍ UDÁLOSTÍ Z GOOGLE KALENDÁŘE (stejná logika jako index.html)
@@ -256,14 +314,13 @@ async function fetchGoogleCalendarEvents(){
 
     renderAll();
   }catch(e){
-    document.getElementById('listBody').innerHTML = '<div class="list-empty">Nepodařilo se načíst akce.</div>';
+    document.getElementById('upcomingList').innerHTML = '<div class="empty-note">Nepodařilo se načíst akce.</div>';
   }
 }
 
 function getEventKey(ev){
   return (ev.raw && ev.raw.id) ? ev.raw.id : ev.title.replace(/[^a-zA-Z0-9]/g,'_') + '_' + ev.start.toISOString().slice(0,10);
 }
-
 function normalizeCz(s){
   return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
@@ -271,9 +328,7 @@ function normalizeCz(s){
 // =====================================================
 // UŽIVATELSKÉ JMÉNO (stejný localStorage klíč jako mobilní appka)
 // =====================================================
-function getUserName(){
-  return localStorage.getItem('kokrsnekUser');
-}
+function getUserName(){ return localStorage.getItem('kokrsnekUser'); }
 function ensureUserName(cb){
   const existing = localStorage.getItem('kokrsnekUser');
   if(existing){ cb(existing); return; }
@@ -301,108 +356,51 @@ function ensureUserName(cb){
 }
 
 // =====================================================
-// FORMÁTOVÁNÍ
+// RENDER: NADCHÁZEJÍCÍ (koncertní řádky)
 // =====================================================
-function fmtShortDate(d){
-  return `${DAY_NAMES[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-}
-function monthKeyOf(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-const MONTH_NAMES = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+let searchQuery = '';
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  renderUpcoming();
+  renderHistory();
+});
 
-// =====================================================
-// RENDER: POSTRANNÍ PANEL
-// =====================================================
-function renderRail(){
-  const rail = document.getElementById('rail');
-  const upcomingCount = rawEvents.filter(ev => ev.start >= now).length;
-  const pastCount = rawEvents.filter(ev => ev.start < now).length;
-
-  const monthCounts = {};
-  rawEvents.forEach(ev => {
-    const k = monthKeyOf(ev.start);
-    monthCounts[k] = (monthCounts[k]||0) + 1;
-  });
-  const monthKeys = Object.keys(monthCounts).sort();
-
-  const quickItem = (mode, label, count) => `
-    <button class="rail-item ${filter.mode===mode && !filter.monthKey ? 'active':''}" data-mode="${mode}">
-      <span>${label}</span><span class="count">${count}</span>
-    </button>`;
-
-  const monthItem = (k) => {
-    const [y,m] = k.split('-');
-    return `
-    <button class="rail-item ${filter.monthKey===k ? 'active':''}" data-month="${k}">
-      <span>${MONTH_NAMES[parseInt(m,10)-1]} ${y}</span><span class="count">${monthCounts[k]}</span>
-    </button>`;
-  };
-
-  rail.innerHTML = `
-    <div class="rail-group">
-      <div class="rail-title">Rychlé filtry</div>
-      ${quickItem('upcoming','Nadcházející', upcomingCount)}
-      ${quickItem('past','Proběhlé', pastCount)}
-      ${quickItem('all','Vše', rawEvents.length)}
-    </div>
-    <div class="rail-group">
-      <div class="rail-title">Podle měsíce</div>
-      ${monthKeys.map(monthItem).join('') || '<div style="color:var(--muted);font-size:12px;padding:0 10px;">Zatím nic</div>'}
-    </div>
-  `;
-
-  rail.querySelectorAll('[data-mode]').forEach(btn => {
-    btn.onclick = () => { filter.mode = btn.dataset.mode; filter.monthKey = null; renderAll(); };
-  });
-  rail.querySelectorAll('[data-month]').forEach(btn => {
-    btn.onclick = () => { filter.monthKey = btn.dataset.month; renderAll(); };
-  });
+function matchesQuery(ev){
+  if(!searchQuery) return true;
+  const q = normalizeCz(searchQuery);
+  return normalizeCz(ev.title).includes(q) || normalizeCz(ev.place).includes(q);
 }
 
-// =====================================================
-// RENDER: SEZNAM UDÁLOSTÍ
-// =====================================================
-function getFilteredEvents(){
-  let list = rawEvents.slice();
-  if(filter.monthKey){
-    list = list.filter(ev => monthKeyOf(ev.start) === filter.monthKey);
-  } else if(filter.mode === 'upcoming'){
-    list = list.filter(ev => ev.start >= now);
-  } else if(filter.mode === 'past'){
-    list = list.filter(ev => ev.start < now);
-  }
-  if(filter.query){
-    const q = normalizeCz(filter.query);
-    list = list.filter(ev => normalizeCz(ev.title).includes(q) || normalizeCz(ev.place).includes(q));
-  }
-  const isPastView = filter.mode === 'past' && !filter.monthKey;
-  list.sort((a,b) => isPastView ? (b.start - a.start) : (a.start - b.start));
-  return list;
-}
-
-async function renderList(){
-  const body = document.getElementById('listBody');
-  const list = getFilteredEvents();
-  if(!list.length){
-    body.innerHTML = '<div class="list-empty">Žádné akce neodpovídají filtru.</div>';
+function renderUpcoming(){
+  const list = document.getElementById('upcomingList');
+  const upcoming = rawEvents.filter(ev => ev.start >= now && matchesQuery(ev));
+  if(!upcoming.length){
+    list.innerHTML = '<div class="empty-note">Žádné nadcházející akce.</div>';
     return;
   }
-  body.innerHTML = list.map((ev, i) => `
-    <div class="record-item ${ev.start < now ? 'is-past' : ''}" data-idx="${rawEvents.indexOf(ev)}">
-      <span class="rec-date">${fmtShortDate(ev.start)}</span>
-      <span class="rec-title">${ev.title}</span>
-      <span class="rec-place">${ev.place || '—'}</span>
-      <span class="rec-stat" data-stat="like">…</span>
-      <span class="rec-stat" data-stat="attend">…</span>
-      <span class="rec-stat" data-stat="comment">…</span>
-    </div>
-  `).join('');
+  list.innerHTML = upcoming.map(ev => {
+    const idx = rawEvents.indexOf(ev);
+    return `
+    <div class="gig-row" data-idx="${idx}">
+      <div class="gig-date"><div class="d">${String(ev.start.getDate()).padStart(2,'0')}</div><div class="m">${MONTH_SHORT[ev.start.getMonth()]}</div></div>
+      <div class="gig-info">
+        <div class="title">${ev.title}</div>
+        <div class="meta">${DAY_NAMES[ev.start.getDay()]} · ${ev.start.getFullYear()}${ev.place ? ' · ' + ev.place : ''}</div>
+      </div>
+      <div class="gig-stats">
+        <span data-stat="like">👍 …</span>
+        <span data-stat="comment">💬 …</span>
+      </div>
+    </div>`;
+  }).join('');
+  wireRows(list, upcoming);
+}
 
-  body.querySelectorAll('.record-item').forEach(row => {
+function wireRows(container, events){
+  container.querySelectorAll('[data-idx]').forEach(row => {
     row.onclick = () => openDetail(parseInt(row.dataset.idx, 10));
   });
-
-  // Počty se dotáhnou zvlášť (paralelně), ať se seznam hned zobrazí i bez čekání na Firestore
-  list.forEach(async (ev) => {
+  events.forEach(async (ev) => {
     try{
       const key = getEventKey(ev);
       const [likesSnap, attendSnap, commentsSnap] = await Promise.all([
@@ -410,35 +408,99 @@ async function renderList(){
         db.collection('events').doc(key).collection('attendees').get(),
         db.collection('events').doc(key).collection('comments').get(),
       ]);
-      const row = body.querySelector(`.record-item[data-idx="${rawEvents.indexOf(ev)}"]`);
+      const row = container.querySelector(`[data-idx="${rawEvents.indexOf(ev)}"]`);
       if(!row) return;
-      row.querySelector('[data-stat="like"]').textContent = likesSnap.size;
-      row.querySelector('[data-stat="attend"]').textContent = attendSnap.size;
-      row.querySelector('[data-stat="comment"]').textContent = commentsSnap.size;
+      const likeEl = row.querySelector('[data-stat="like"]');
+      const attendEl = row.querySelector('[data-stat="attend"]');
+      const commentEl = row.querySelector('[data-stat="comment"]');
+      if(likeEl) likeEl.textContent = `👍 ${attendSnap.size}`;
+      if(attendEl) attendEl.textContent = `❤️ ${likesSnap.size}`;
+      if(commentEl) commentEl.textContent = `💬 ${commentsSnap.size}`;
     }catch(e){}
   });
 }
 
+// =====================================================
+// RENDER: HISTORIE (album-style grid)
+// =====================================================
+const HISTORY_ICONS = ['🎉','🔥','🌲','⛺','🏔️','🎸','🍻','☀️','🌟','🎇'];
+function iconFor(ev){
+  const key = getEventKey(ev);
+  let sum = 0; for(let i=0;i<key.length;i++) sum += key.charCodeAt(i);
+  return HISTORY_ICONS[sum % HISTORY_ICONS.length];
+}
+
+function renderHistory(){
+  const grid = document.getElementById('historyGrid');
+  const moreWrap = document.getElementById('historyMoreWrap');
+  const past = rawEvents.filter(ev => ev.start < now && matchesQuery(ev)).sort((a,b) => b.start - a.start);
+  if(!past.length){
+    grid.innerHTML = '<div class="empty-note">Zatím žádná historie.</div>';
+    moreWrap.style.display = 'none';
+    return;
+  }
+  const shown = past.slice(0, historyShown);
+  grid.innerHTML = shown.map(ev => {
+    const idx = rawEvents.indexOf(ev);
+    return `
+    <div class="history-card" data-idx="${idx}">
+      <div class="history-cover">${iconFor(ev)}</div>
+      <div class="history-body">
+        <div class="title">${ev.title}</div>
+        <div class="meta">${String(ev.start.getDate()).padStart(2,'0')}.${String(ev.start.getMonth()+1).padStart(2,'0')}.${ev.start.getFullYear()}${ev.place ? ' · ' + ev.place : ''}</div>
+        <div class="history-stats">
+          <span data-stat="like">👍 …</span>
+          <span data-stat="comment">💬 …</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  wireRows(grid, shown);
+  moreWrap.style.display = past.length > historyShown ? 'block' : 'none';
+}
+document.getElementById('historyMoreBtn').onclick = () => { historyShown += 8; renderHistory(); };
+
+// =====================================================
+// RENDER: ŽEBŘÍČEK DOCHÁZKY
+// =====================================================
+const MEDALS = ['🥇','🥈','🥉'];
+async function renderLeaderboard(){
+  const grid = document.getElementById('boardGrid');
+  try{
+    const snap = await db.collectionGroup('attendees').get();
+    const counts = {};
+    snap.forEach(d => {
+      const u = d.data().user;
+      if(!u) return;
+      counts[u] = (counts[u]||0) + 1;
+    });
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 12);
+    if(!sorted.length){ grid.innerHTML = '<div class="empty-note">Zatím žádná data.</div>'; return; }
+    grid.innerHTML = sorted.map(([user, count], i) => `
+      <div class="board-card">
+        <div class="board-avatar">
+          ${i < 3 ? `<span class="board-medal">${MEDALS[i]}</span>` : ''}
+          ${user.slice(0,2).toUpperCase()}
+        </div>
+        <div class="board-name">${user}</div>
+        <div class="board-count">${count}× Dojdu</div>
+      </div>`).join('');
+  }catch(e){
+    grid.innerHTML = '<div class="empty-note">Nepodařilo se načíst.</div>';
+  }
+}
+
 function renderAll(){
-  renderRail();
-  renderList();
+  renderUpcoming();
+  renderHistory();
+  renderLeaderboard();
 }
-
-document.getElementById('searchInput').addEventListener('input', (e) => {
-  filter.query = e.target.value;
-  renderList();
-});
 
 // =====================================================
-// DETAIL UDÁLOSTI
+// DETAIL UDÁLOSTI (stejné funkce jako v mobilní appce, přepojené na stejná Firestore data)
 // =====================================================
-function mapUrlFor(place){
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
-}
-
-function openAlbumUrl(url){
-  window.open(url, '_blank', 'noopener');
-}
+function mapUrlFor(place){ return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`; }
+function openAlbumUrl(url){ window.open(url, '_blank', 'noopener'); }
 function checkAlbumAccess(url){
   const saved = sessionStorage.getItem('albumAccess');
   if(saved === 'ok'){ openAlbumUrl(url); return; }
@@ -483,7 +545,7 @@ async function openDetail(idx){
       <button class="detail-close" onclick="this.closest('.backdrop').remove()">×</button>
       <h2>${ev.title}</h2>
       <div class="detail-label">Datum a čas</div>
-      <div class="detail-value">${fmtShortDate(ev.start)}${ev.raw.start.dateTime ? ' · ' + ev.start.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      <div class="detail-value">${DAY_NAMES[ev.start.getDay()]} ${String(ev.start.getDate()).padStart(2,'0')}.${String(ev.start.getMonth()+1).padStart(2,'0')}.${ev.start.getFullYear()}${ev.raw.start.dateTime ? ' · ' + ev.start.toLocaleTimeString('cs',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
       ${mapTile}
       ${albumTile}
       ${driveTiles}
@@ -615,7 +677,7 @@ async function openDetail(idx){
   }
 
   function shareEvent(){
-    const dateLine = fmtShortDate(ev.start);
+    const dateLine = `${DAY_NAMES[ev.start.getDay()]} ${String(ev.start.getDate()).padStart(2,'0')}.${String(ev.start.getMonth()+1).padStart(2,'0')}.${ev.start.getFullYear()}`;
     const parts = [`KoKrŠNeci tě zvou na ${ev.title}`, '', dateLine];
     if(ev.place) parts.push('', ev.place);
     if(ev.raw.htmlLink) parts.push('', ev.raw.htmlLink);
