@@ -3571,7 +3571,13 @@ function sendNotification(type, user, eventTitle, extra){
 // Dialog s dotazem na přezdívku hned při prvním spuštění appky (místo čekání,
 // až se člověk poprvé pokusí lajknout/napsat komentář a narazí na obyčejný
 // systémový prompt).
-const AVATAR_OPTIONS = ['🦊','🐻','🐼','🐨','🦁','🐯','🐰','🦉','🐺','🐸','🐵','🐷','🐔','🐢','🦝','🦔'];
+const AVATAR_CATEGORIES = {
+  'Zvířata': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🦟','🦗','🕷️','🕸️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐈‍⬛','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'],
+  'Sporty': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','🏂','🪂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️'],
+  'Doprava': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛴','🚲','🛵','🏍️','🛺','🚨','🚔','🚍','🚘','🚖','🚟','🚠','🚡','🛰️','🚀','✈️','🛩️','🛫','🛬','🚁','🛸','🚤','⛵','🛶','⛴️','🛳️','🚢','⚓','🚂','🚆','🚄','🚅','🚈','🚇','🚊','🚉','🚋','🚃'],
+  'Ovoce a zelenina': ['🍎','🍏','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠']
+};
+const AVATAR_OPTIONS = Object.values(AVATAR_CATEGORIES).flat();
 
 function showNamePromptIfNeeded(onDone){
   if(localStorage.getItem('kokrsnekUser')){
@@ -3588,8 +3594,12 @@ function showNamePromptIfNeeded(onDone){
       <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
       <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;margin-bottom:12px;" />
       <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;">Vyber si ikonku</div>
-      <div id="avatarPicker" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;">
-        ${AVATAR_OPTIONS.map((a,i) => `<button class="avatar-opt" data-avatar="${a}" style="font-size:22px;padding:8px 0;border-radius:var(--radius-sm);border:1px solid ${i===0?'var(--accent)':'var(--line)'};background:${i===0?'var(--accent-soft)':'var(--surface)'};cursor:pointer;">${a}</button>`).join('')}
+      <div id="avatarPicker" style="text-align:left;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:14px;">
+        ${Object.entries(AVATAR_CATEGORIES).map(([cat, emojis]) => `
+          <div style="font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px;">${cat}</div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:4px;">
+            ${emojis.map(a => `<button class="avatar-opt" data-avatar="${a}" style="font-size:19px;padding:6px 0;border-radius:var(--radius-sm);border:1px solid ${a===selectedAvatar?'var(--accent)':'var(--line)'};background:${a===selectedAvatar?'var(--accent-soft)':'var(--surface)'};cursor:pointer;">${a}</button>`).join('')}
+          </div>`).join('')}
       </div>
       <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
     </div>`;
