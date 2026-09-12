@@ -3571,11 +3571,14 @@ function sendNotification(type, user, eventTitle, extra){
 // Dialog s dotazem na přezdívku hned při prvním spuštění appky (místo čekání,
 // až se člověk poprvé pokusí lajknout/napsat komentář a narazí na obyčejný
 // systémový prompt).
+const AVATAR_OPTIONS = ['🦊','🐻','🐼','🐨','🦁','🐯','🐰','🦉','🐺','🐸','🐵','🐷','🐔','🐢','🦝','🦔'];
+
 function showNamePromptIfNeeded(onDone){
   if(localStorage.getItem('kokrsnekUser')){
     if(onDone) onDone();
     return;
   }
+  let selectedAvatar = AVATAR_OPTIONS[0];
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.innerHTML = `
@@ -3584,22 +3587,50 @@ function showNamePromptIfNeeded(onDone){
       <div class="ev-modal-title" style="margin-bottom:6px;">👋 Vítej u KoKrŠNeKů!</div>
       <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
       <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;margin-bottom:12px;" />
+      <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;">Vyber si ikonku</div>
+      <div id="avatarPicker" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;">
+        ${AVATAR_OPTIONS.map((a,i) => `<button class="avatar-opt" data-avatar="${a}" style="font-size:22px;padding:8px 0;border-radius:var(--radius-sm);border:1px solid ${i===0?'var(--accent)':'var(--line)'};background:${i===0?'var(--accent-soft)':'var(--surface)'};cursor:pointer;">${a}</button>`).join('')}
+      </div>
       <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
     </div>`;
   document.body.appendChild(backdrop);
 
   const input = backdrop.querySelector('#nameInputField');
+  backdrop.querySelectorAll('.avatar-opt').forEach(btn => {
+    btn.onclick = () => {
+      selectedAvatar = btn.dataset.avatar;
+      backdrop.querySelectorAll('.avatar-opt').forEach(b => {
+        b.style.borderColor = 'var(--line)';
+        b.style.background = 'var(--surface)';
+      });
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background = 'var(--accent-soft)';
+    };
+  });
+
   const finish = () => { backdrop.remove(); if(onDone) onDone(); };
-  const submit = () => {
+  const submit = async () => {
     const val = input.value.trim();
     if(!val){ input.focus(); return; }
     localStorage.setItem('kokrsnekUser', val);
+    localStorage.setItem('kokrsnekAvatar', selectedAvatar);
+    try{ await db.collection('userProfiles').doc(val).set({ avatar: selectedAvatar }, { merge: true }); }
+    catch(e){ console.error('Chyba při ukládání avataru:', e); }
     finish();
   };
   backdrop.querySelector('#nameSubmitBtn').onclick = submit;
   backdrop.querySelector('#nameSkipBtn').onclick = finish;
   input.addEventListener('keydown', e => { if(e.key==='Enter') submit(); });
   setTimeout(() => input.focus(), 250);
+}
+
+// Vrátí uloženou emoji ikonku dané osoby (viz AVATAR_OPTIONS ve showNamePromptIfNeeded),
+// nebo výchozí 👤, pokud si appku dosud nespustila po zavedení avatarů.
+async function getAvatar(name){
+  try{
+    const doc = await db.collection('userProfiles').doc(name).get();
+    return (doc.exists && doc.data().avatar) ? doc.data().avatar : '👤';
+  }catch(e){ return '👤'; }
 }
 
 function getUserName(){
@@ -3654,7 +3685,7 @@ async function showPersonActivity(name){
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:16px;">
         ${name !== viewer ? `<button id="pokeMsgBtn" title="Poslat zprávu" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">💬</button>` : ''}
-        <span>👤 ${name}</span>
+        <span id="personActivityAvatar">👤</span> <span>${name}</span>
         ${name !== viewer ? `<button id="pokeNudgeBtn" title="Šťouchnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
       <div id="personActivityList" style="text-align:left;max-height:55vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
@@ -3665,6 +3696,7 @@ async function showPersonActivity(name){
   const nudgeBtn = document.getElementById('pokeNudgeBtn');
   if(nudgeBtn) nudgeBtn.onclick = () => sendPoke(name, nudgeBtn);
   if(msgBtn) msgBtn.onclick = () => sendPrivateMessage(name, msgBtn);
+  getAvatar(name).then(a => { const el = document.getElementById('personActivityAvatar'); if(el) el.textContent = a; });
 
   const list = document.getElementById('personActivityList');
   try{
@@ -3783,15 +3815,20 @@ async function openChatList(){
 
   const list = document.getElementById('chatUserList');
   try{
-    const snap = await db.collection('pushTokens').get();
-    const names = [...new Set(snap.docs.map(d => d.data().user).filter(u => u && u !== me))].sort((a,b) => a.localeCompare(b, 'cs'));
+    const [tokensSnap, profilesSnap] = await Promise.all([
+      db.collection('pushTokens').get(),
+      db.collection('userProfiles').get()
+    ]);
+    const avatarMap = {};
+    profilesSnap.forEach(d => { if(d.data().avatar) avatarMap[d.id] = d.data().avatar; });
+    const names = [...new Set(tokensSnap.docs.map(d => d.data().user).filter(u => u && u !== me))].sort((a,b) => a.localeCompare(b, 'cs'));
     if(!names.length){
       list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
       return;
     }
     list.innerHTML = names.map(n => `
       <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-        <span>👤 ${n}</span><span style="color:var(--muted);font-size:16px;">›</span>
+        <span>${avatarMap[n] || '👤'} ${n}</span><span style="color:var(--muted);font-size:16px;">›</span>
       </button>`).join('');
     list.querySelectorAll('[data-name]').forEach(btn => {
       btn.onclick = () => { backdrop.remove(); openChatThread(me, btn.dataset.name); };
@@ -3816,15 +3853,16 @@ function openChatThread(me, other){
   backdrop.innerHTML = `
     <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="chatThreadClose">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">👤 ${other}</div>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;"><span id="chatThreadAvatar">👤</span> ${other}</div>
       <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="display:flex;gap:8px;margin-top:12px;">
-        <input id="chatInput" type="text" maxlength="160" placeholder="Napiš zprávu (max 160 znaků)…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
-        <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
+        <input id="chatInput" type="text" maxlength="160" placeholder="Napiš zprávu…" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
+        <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
       </div>
     </div>`;
   document.body.appendChild(backdrop);
   document.getElementById('chatThreadClose').onclick = closeThread;
+  getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
 
   const msgsEl = document.getElementById('chatMessages');
   activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
