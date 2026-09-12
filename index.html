@@ -3619,16 +3619,26 @@ if(navigator.serviceWorker){
 
 // Chronologický přehled veškeré aktivity (lajky, Dojdu, komentáře) jednoho člověka napříč všemi akcemi
 async function showPersonActivity(name){
+  const viewer = localStorage.getItem('kokrsnekUser');
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
   backdrop.innerHTML = `
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">👤 ${name}</div>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:16px;">
+        ${name !== viewer ? `<button id="pokeMsgBtn" title="Poslat zprávu" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">💬</button>` : ''}
+        <span>👤 ${name}</span>
+        ${name !== viewer ? `<button id="pokeNudgeBtn" title="Šťouchnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
+      </div>
       <div id="personActivityList" style="text-align:left;max-height:55vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
     </div>`;
   document.body.appendChild(backdrop);
+
+  const msgBtn = document.getElementById('pokeMsgBtn');
+  const nudgeBtn = document.getElementById('pokeNudgeBtn');
+  if(nudgeBtn) nudgeBtn.onclick = () => sendPoke(name, nudgeBtn);
+  if(msgBtn) msgBtn.onclick = () => sendPrivateMessage(name, msgBtn);
 
   const list = document.getElementById('personActivityList');
   try{
@@ -3697,6 +3707,28 @@ async function showPersonActivity(name){
     console.error('Chyba při načítání aktivity uživatele:', e);
     list.innerHTML = `<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">${e.message}</div>`;
   }
+}
+
+// Šťouchnutí / krátká zpráva — nic se nikde nezobrazuje, jen pošle push notifikaci
+// dané osobě (Cloud Function onPokeCreated). Žádná historie, žádné vlákno.
+async function sendPoke(name, btn){
+  const user = getUserName();
+  if(!user) return;
+  try{
+    await db.collection('pokes').add({ from: user, to: name, type: 'poke', at: new Date().toISOString() });
+    if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
+  }catch(e){ console.error('Chyba při odesílání šťouchnutí:', e); }
+}
+
+async function sendPrivateMessage(name, btn){
+  const user = getUserName();
+  if(!user) return;
+  const text = prompt(`Krátká zpráva pro ${name}:`);
+  if(!text || !text.trim()) return;
+  try{
+    await db.collection('pokes').add({ from: user, to: name, type: 'message', text: text.trim().slice(0,200), at: new Date().toISOString() });
+    if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
+  }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
 }
 
 function personLink(name){
