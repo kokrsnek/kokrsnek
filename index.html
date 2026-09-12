@@ -2098,7 +2098,7 @@ function showFeedback(){
         width:100%; box-sizing:border-box; min-height:120px;
         background:var(--surface); border:1px solid var(--line);
         color:var(--ink); font-family:'Inter',sans-serif;
-        font-size:15px; padding:12px 14px; border-radius:var(--radius-sm);
+        font-size:16px; padding:12px 14px; border-radius:var(--radius-sm);
         outline:none; resize:vertical; margin-bottom:12px;
       "></textarea>
 
@@ -2514,7 +2514,7 @@ async function openQuickComments(evIdx){
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${ev.title}</div>
       <div id="commentList_${evIdx}" style="max-height:45vh;overflow-y:auto;margin-bottom:12px;text-align:left;"></div>
       <div style="display:flex;gap:8px;">
-        <input id="commentInput_${evIdx}" placeholder="Napiš komentář…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;" />
+        <input id="commentInput_${evIdx}" placeholder="Napiš komentář…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;" />
         <button onclick="quickPostComment(${evIdx})" style="background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;">Odeslat</button>
       </div>
     </div>`;
@@ -3583,7 +3583,7 @@ function showNamePromptIfNeeded(onDone){
       <button class="ev-modal-close" id="nameSkipBtn">×</button>
       <div class="ev-modal-title" style="margin-bottom:6px;">👋 Vítej u KoKrŠNeKů!</div>
       <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
-      <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;margin-bottom:12px;" />
+      <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;margin-bottom:12px;" />
       <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
     </div>`;
   document.body.appendChild(backdrop);
@@ -3819,7 +3819,7 @@ function openChatThread(me, other){
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">👤 ${other}</div>
       <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="display:flex;gap:8px;margin-top:12px;">
-        <input id="chatInput" type="text" maxlength="160" placeholder="Napiš zprávu (max 160 znaků)…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
+        <input id="chatInput" type="text" maxlength="160" placeholder="Napiš zprávu (max 160 znaků)…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
         <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 18px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
       </div>
     </div>`;
