@@ -104,6 +104,7 @@ async function sendToTokens(tokens, notification) {
         chatWith: notification.chatWith || '',
       },
     });
+    console.log(`[sendToTokens] odesláno ${resp.successCount}/${tokens.length}, chyby: ${resp.responses.filter(r => !r.success).map(r => r.error && r.error.code).join(', ') || 'žádné'}`);
     const invalid = [];
     resp.responses.forEach((r, i) => {
       if (!r.success) {
@@ -715,17 +716,29 @@ exports.onChatMessageCreated = onDocumentCreated(
   'chats/{threadId}/messages/{msgId}',
   async (event) => {
     const data = event.data.data();
-    if (!data || !data.from || !data.text) return;
+    if (!data || !data.from || !data.text) {
+      console.log('[chat] chybí data, from nebo text — končím', data);
+      return;
+    }
     const participants = event.params.threadId.split('__');
     const to = participants.find((p) => p !== data.from);
-    if (!to) return;
+    console.log(`[chat] threadId="${event.params.threadId}" participants=${JSON.stringify(participants)} from="${data.from}" to="${to}"`);
+    if (!to) {
+      console.log('[chat] nepodařilo se určit příjemce — končím');
+      return;
+    }
     const tokens = await getTokensFor(to);
-    if (!tokens.length) return;
+    console.log(`[chat] nalezeno tokenů pro "${to}": ${tokens.length}`);
+    if (!tokens.length) {
+      console.log('[chat] žádný token pro příjemce — končím bez odeslání');
+      return;
+    }
     await sendToTokens(tokens, {
       title: `💬 ${data.from}`,
       body: data.text,
       chatWith: data.from,
     });
+    console.log('[chat] notifikace odeslána');
   }
 );
 
