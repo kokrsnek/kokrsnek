@@ -430,9 +430,12 @@ exports.onPokeCreated = onDocumentCreated(
         body: `${data.from}: ${data.text}`,
       });
     } else {
+      // Jednoduchý odhad rodu podle přezdívky (končí na "a" -> ženský tvar) —
+      // appka nemá nikde uložený rod, tohle je nejbližší dostupné vodítko.
+      const verb = /a$/i.test((data.from || '').trim()) ? 'hipla' : 'hipl';
       await sendToTokens(tokens, {
-        title: '👊 Šťouchnutí',
-        body: `${data.from} do tebe hipl`,
+        title: '👊 Hipnutí',
+        body: `${data.from} do tebe ${verb}`,
       });
     }
   }
