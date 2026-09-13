@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 <style>
   :root{
     --bg:#F6F4EF;
@@ -253,12 +255,79 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+const partyFunctions = firebase.app().functions('us-central1');
+
+// Stejná brána s heslem jako v mobilní appce (index.html) — viz tam podrobný
+// komentář. Bez ní by šlo appku obejít tím, že se otevře rovnou desktop.html.
+(function partyGate(){
+  const gate = document.createElement('div');
+  gate.id = 'partyGate';
+  gate.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--bg,#F6F4EF);display:flex;align-items:center;justify-content:center;padding:24px;';
+  gate.innerHTML = `
+    <div style="width:100%;max-width:340px;text-align:center;">
+      <div style="font-family:'Inter',sans-serif;font-weight:800;font-size:20px;color:var(--ink,#242229);margin-bottom:8px;">🔒 KoKrŠNeK</div>
+      <div id="partyGateMsg" style="font-family:'Inter',sans-serif;font-size:13.5px;color:var(--muted,#837E8A);margin-bottom:16px;">Ověřuji přístup…</div>
+      <div id="partyGateForm" style="display:none;">
+        <input id="partyGatePwd" type="password" placeholder="Heslo party" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid var(--line,#ddd);background:var(--card,#fff);color:var(--ink,#242229);font-family:'Inter',sans-serif;font-size:16px;outline:none;margin-bottom:10px;">
+        <button id="partyGateBtn" style="display:block;width:100%;background:var(--accent,#2F7A56);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;">Vstoupit</button>
+        <div id="partyGateError" style="color:#C24B34;font-family:'Inter',sans-serif;font-size:12.5px;margin-top:10px;min-height:16px;"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(gate);
+
+  const msgEl = () => document.getElementById('partyGateMsg');
+  const formEl = () => document.getElementById('partyGateForm');
+  const errEl = () => document.getElementById('partyGateError');
+
+  function showForm(error){
+    msgEl().style.display = 'none';
+    formEl().style.display = 'block';
+    if(error) errEl().textContent = error;
+    const input = document.getElementById('partyGatePwd');
+    const btn = document.getElementById('partyGateBtn');
+    const submit = async () => {
+      const pwd = input.value.trim();
+      if(!pwd) return;
+      btn.disabled = true; btn.textContent = 'Ověřuji…';
+      try{
+        const verify = partyFunctions.httpsCallable('verifyPartyPassword');
+        await verify({ password: pwd });
+        await auth.currentUser.getIdToken(true);
+        location.reload();
+      }catch(e){
+        console.error('Chyba při ověřování hesla:', e);
+        errEl().textContent = 'Špatné heslo, zkus to znovu.';
+        btn.disabled = false; btn.textContent = 'Vstoupit';
+      }
+    };
+    btn.onclick = submit;
+    input.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+    setTimeout(() => input.focus(), 150);
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    try{
+      if(!user){
+        await auth.signInAnonymously();
+        return;
+      }
+      const result = await user.getIdTokenResult();
+      if(result.claims && result.claims.partyMember){
+        gate.remove();
+      } else {
+        showForm();
+      }
+    }catch(e){
+      console.error('Chyba brány party:', e);
+      showForm('Něco se pokazilo, zkus to prosím znovu.');
+    }
+  });
+})();
 
 const GOOGLE_API_KEY     = "AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo";
 const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
-const ALBUM_QUESTION = "Jaká je přezdívka šerifa?";
-const ALBUM_ANSWER   = "šuraj";
 
 const DAY_NAMES = ['ne','po','út','st','čt','pá','so'];
 const MONTH_SHORT = ['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
@@ -501,17 +570,10 @@ function renderAll(){
 // =====================================================
 function mapUrlFor(place){ return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`; }
 function openAlbumUrl(url){ window.open(url, '_blank', 'noopener'); }
+// Hádanka o šerifovi byla nahrazena heslem party (appka se bez něj vůbec
+// nespustí) — funkce zůstává kvůli voláním na jiných místech, jen teď otevře rovnou.
 function checkAlbumAccess(url){
-  const saved = sessionStorage.getItem('albumAccess');
-  if(saved === 'ok'){ openAlbumUrl(url); return; }
-  const answer = prompt(ALBUM_QUESTION);
-  if(answer === null) return;
-  if(answer.trim().toLowerCase() === ALBUM_ANSWER){
-    sessionStorage.setItem('albumAccess','ok');
-    openAlbumUrl(url);
-  } else {
-    alert('Špatná odpověď, zkus to znovu.');
-  }
+  openAlbumUrl(url);
 }
 
 async function openDetail(idx){

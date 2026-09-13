@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Appka po zadání správného hesla (Cloud Function verifyPartyPassword)
+    // dostane anonymní identita razítko partyMember:true — bez něj tahle
+    // podmínka není splněná a Firestore nic nepovolí, ani čtení, ani zápis.
+    function isPartyMember() {
+      return request.auth != null && request.auth.token.partyMember == true;
+    }
+
+    match /{document=**} {
+      allow read, write: if isPartyMember();
+    }
+  }
+}

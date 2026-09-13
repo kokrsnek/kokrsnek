@@ -25,6 +25,9 @@
  *                            se CELÉ partě (ne jen tomu, kdo zrovna otevře appku)
  *  14. sendLowRsvpReminder — denně v 8:00: akce za 3 dny má skoro žádné odpovědi
  *  15. onChatMessageCreated — nová zpráva v minichatu (viz index.html -> openChatThread())
+ *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
+ *                            appky přidělí custom claim partyMember, které vyžadují
+ *                            pravidla Firestore databáze pro každé čtení/zápis
  *
  * Tokeny zařízení se čtou z kolekce `pushTokens` (doc ID = token, pole {user, token, at}),
  * kterou appka plní přes tlačítko zvonečku (viz index.html -> toggleNotifications()).
@@ -32,9 +35,11 @@
 
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 
 initializeApp();
 const db = getFirestore();
@@ -723,3 +728,27 @@ exports.onChatMessageCreated = onDocumentCreated(
     });
   }
 );
+
+// --- 16) Ověření hesla party ---------------------------------------------------
+// Volá appka (index.html i desktop.html) po anonymním přihlášení do Firebase Auth,
+// když ještě identita zařízení nemá razítko partyMember. Po správném heslu se
+// razítko nastaví na anonymní účet a od té chvíle ho appka posílá s každým
+// požadavkem na Firestore — pravidla databáze bez něj nic nepovolí.
+//
+// POZOR: heslo měň JEN tady, ne v appce — tenhle soubor (na rozdíl od index.html
+// nebo desktop.html) se nikdy neposílá do prohlížeče, takže je to jediné bezpečné
+// místo, kam ho zapsat. Po každé změně je potřeba znovu "firebase deploy --only functions".
+const PARTY_PASSWORD = 'ZMEN_SI_ME_1234';
+
+exports.verifyPartyPassword = onCall({ region: 'us-central1' }, async (request) => {
+  const password = request.data && request.data.password;
+  if (typeof password !== 'string' || password !== PARTY_PASSWORD) {
+    throw new HttpsError('permission-denied', 'Špatné heslo.');
+  }
+  const uid = request.auth && request.auth.uid;
+  if (!uid) {
+    throw new HttpsError('unauthenticated', 'Chybí anonymní přihlášení.');
+  }
+  await getAuth().setCustomUserClaims(uid, { partyMember: true });
+  return { ok: true };
+});
