@@ -751,7 +751,7 @@ exports.onChatMessageCreated = onDocumentCreated(
 // POZOR: heslo měň JEN tady, ne v appce — tenhle soubor (na rozdíl od index.html
 // nebo desktop.html) se nikdy neposílá do prohlížeče, takže je to jediné bezpečné
 // místo, kam ho zapsat. Po každé změně je potřeba znovu "firebase deploy --only functions".
-const PARTY_PASSWORD = 'ZMEN_SI_ME_1234';
+const PARTY_PASSWORD = '2026+Doubravice';
 
 exports.verifyPartyPassword = onCall({ region: 'us-central1' }, async (request) => {
   const password = request.data && request.data.password;
