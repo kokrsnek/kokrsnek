@@ -1492,16 +1492,29 @@ async function fetchWeather(place, dateStr, coords){
   }catch(e){ return null; }
 }
 
+// Nominatim (geokódování místa na souřadnice) dovoluje max. 1 dotaz za sekundu.
+// Když appka najednou vykresluje víc karet bez známých souřadnic, dotazy
+// seřadí do fronty místo aby je poslala najednou a riskovala zablokování.
+let _geocodeQueue = Promise.resolve();
+function queuedGeocode(place){
+  const run = _geocodeQueue.then(async () => {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
+      {headers:{'User-Agent':'KoKrSNeK-PWA'}});
+    await new Promise(r => setTimeout(r, 1100));
+    if(!res.ok){ console.error('Počasí: geokódování selhalo, status', res.status); return []; }
+    return res.json();
+  });
+  _geocodeQueue = run.catch(() => []);
+  return run;
+}
+
 async function fetchWeatherRange(place, dateStr, coords, hourStart, hourEnd){
   try{
     let lat, lon;
     if(coords){
       [lat, lon] = coords.split(',');
     } else {
-      const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
-        {headers:{'User-Agent':'KoKrSNeK-PWA'}});
-      if(!geo.ok){ console.error('Počasí: geokódování selhalo, status', geo.status); return null; }
-      const geoData = await geo.json();
+      const geoData = await queuedGeocode(place);
       if(!geoData.length){ console.error('Počasí: geokódování nenašlo místo:', place); return null; }
       lat = geoData[0].lat; lon = geoData[0].lon;
     }
@@ -2632,22 +2645,18 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
 
   if(ev.place){
     const wxDateStr = ev.start.toISOString().split('T')[0];
-    const wxCoords = (() => {
-      const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
-      const words = ev.place.trim().toLowerCase().split(/\s+/);
-      for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]) return KNOWN_PLACES[c]; }
-      return null;
-    })();
+    const wxCoords = getPlaceCoords(ev.place);
     const isAllDayNow = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
     const startHourNow = isAllDayNow ? 9 : ev.start.getHours();
-    // Malé rozprostření dotazů v čase (podle pořadí karty), ať appka při prvním
-    // vykreslení timeline nepošle na Open-Meteo/Nominatim desítky dotazů naráz.
+    // Malé rozprostření dotazů v čase, ať appka při prvním vykreslení timeline
+    // nepošle na Open-Meteo/Nominatim desítky dotazů naráz (viz i seřazená fronta
+    // pro geokódování v samotné fetchWeatherRange).
     setTimeout(() => {
       fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNow, 22).then(wx => {
         const el = document.getElementById('slotWx_'+uid);
         if(el && wx) el.textContent = wx;
       });
-    }, (i % 20) * 120);
+    }, i * 180);
   }
 
   // Dlouhé podržení kdekoliv na kartě -> filtrovaná mini-timeline stejných opakujících se akcí
