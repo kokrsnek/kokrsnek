@@ -1903,7 +1903,13 @@ function showEventDetail(idx){
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
-      ${ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"></div></div>` : ''}
+      ${ev.place ? (() => {
+        const c = getPlaceCoords(ev.place);
+        const href = c
+          ? `https://www.windy.com/${c.split(',')[0]}/${c.split(',')[1]}?${c.split(',')[0]},${c.split(',')[1]},9`
+          : `https://www.google.com/search?q=${encodeURIComponent('počasí ' + ev.place)}`;
+        return `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><a href="${href}" target="_blank" rel="noopener" class="ev-modal-value" id="wxVal_${idx}" style="display:inline-block;text-decoration:underline;text-underline-offset:3px;"></a></div>`;
+      })() : ''}
       ${ev.photoAlbum ? `
         <a class="album-tile" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
           <div class="album-tile-icon">
