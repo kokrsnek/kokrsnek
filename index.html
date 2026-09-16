@@ -1903,14 +1903,7 @@ function showEventDetail(idx){
         <div class="ev-modal-label">${r.label}</div>
         <div class="ev-modal-value">${r.value}</div>
       `).join('')}
-      ${ev.place ? (() => {
-        const c = getPlaceCoords(ev.place);
-        const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        const dateForQuery = `${MONTHS_EN[ev.start.getMonth()]} ${ev.start.getDate()}, ${ev.start.getFullYear()}`;
-        const query = `weather ${c || ev.place} on ${dateForQuery}`;
-        const href = `https://www.wolframalpha.com/input?i=${encodeURIComponent(query)}`;
-        return `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><a href="${href}" target="_blank" rel="noopener" class="ev-modal-value" id="wxVal_${idx}" style="display:inline-block;text-decoration:underline;text-underline-offset:3px;"></a></div>`;
-      })() : ''}
+      ${ev.place ? `<div id="wx_${idx}" style="display:none;"><div class="ev-modal-label">Počasí</div><div class="ev-modal-value" id="wxVal_${idx}"></div></div>` : ''}
       ${ev.photoAlbum ? `
         <a class="album-tile" href="#" onclick="event.preventDefault();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">
           <div class="album-tile-icon">
