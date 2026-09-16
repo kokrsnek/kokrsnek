@@ -1500,8 +1500,9 @@ async function fetchWeatherRange(place, dateStr, coords, hourStart, hourEnd){
     } else {
       const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`,
         {headers:{'User-Agent':'KoKrSNeK-PWA'}});
+      if(!geo.ok){ console.error('Počasí: geokódování selhalo, status', geo.status); return null; }
       const geoData = await geo.json();
-      if(!geoData.length) return null;
+      if(!geoData.length){ console.error('Počasí: geokódování nenašlo místo:', place); return null; }
       lat = geoData[0].lat; lon = geoData[0].lon;
     }
 
@@ -1514,8 +1515,9 @@ async function fetchWeatherRange(place, dateStr, coords, hourStart, hourEnd){
       : `https://api.open-meteo.com/v1/forecast`;
 
     const wx = await fetch(`${apiBase}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,weathercode&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
+    if(!wx.ok){ console.error('Počasí: API selhalo, status', wx.status, apiBase); return null; }
     const wxData = await wx.json();
-    if(!wxData.hourly || !wxData.hourly.time) return null;
+    if(!wxData.hourly || !wxData.hourly.time){ console.error('Počasí: API nevrátilo hodinová data pro', dateStr, wxData); return null; }
 
     // Vyber jen hodiny v zadaném rozmezí (výchozí 9:00–22:00)
     const temps = [], rains = [], codes = [];
@@ -1536,7 +1538,7 @@ async function fetchWeatherRange(place, dateStr, coords, hourStart, hourEnd){
     const icon = code<=1?'☀️':code<=3?'⛅':code<=48?'🌫':code<=67?'🌧':code<=77?'❄️':code<=82?'🌦':'⛈';
     const suffix = isPastDate ? ' (bylo)' : '';
     return `${icon} ${min}–${max}°C${rain>0?' · '+rain.toFixed(1)+'mm':''}${suffix}`;
-  }catch(e){ return null; }
+  }catch(e){ console.error('Počasí: neočekávaná chyba', e); return null; }
 }
 
 async function fetchWeatherAtTime(place, dateObj, coords, isAllDay){
@@ -2813,7 +2815,6 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
     renderTimeline(instantScroll);
     updateAlbumsBadge();
     updateChatBadge();
-    setTimeout(checkUpcomingNotifications, 1000);
     setTimeout(checkAnniversaries, 1500);
     setTimeout(checkBirthdaysAndNamedays, 2000);
     setTimeout(checkWeatherEffect, 2500);
@@ -3142,89 +3143,6 @@ async function toggleNotifications(){
 
 updateNotifBtnUI(localStorage.getItem('pushEnabled') === '1');
 
-// --- Notifikace 5 dní před událostí ---
-// --- Upozornění na blížící se události (in-app banner) ---
-function checkUpcomingNotifications(){
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  const upcoming = rawEvents.filter(ev => {
-    const evDay = new Date(ev.start);
-    evDay.setHours(0,0,0,0);
-    const diffDays = Math.round((evDay - today) / 86400000);
-    return diffDays > 0 && diffDays <= 5;
-  });
-
-  if (!upcoming.length) return;
-
-  const todayStr = today.toISOString().slice(0,10);
-  const lastShown = localStorage.getItem('notifShownDate');
-  if (lastShown === todayStr) return;
-  localStorage.setItem('notifShownDate', todayStr);
-
-  upcoming.forEach((ev, idx) => {
-    const evDay = new Date(ev.start);
-    evDay.setHours(0,0,0,0);
-    const diffDays = Math.round((evDay - today) / 86400000);
-    const daysText = diffDays === 1 ? 'zítra' : `za ${diffDays} dní`;
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'ev-modal-backdrop kokr-banner';
-    backdrop.onclick = (e) => { if(e.target===backdrop) backdrop.remove(); };
-
-    const evIdx = rawEvents.indexOf(ev);
-
-    backdrop.innerHTML = `
-      <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
-        <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-        <div class="ev-modal-label" style="font-family:'Inter',sans-serif;font-weight:800;font-size:clamp(18px,5.5vw,26px);letter-spacing:-0.01em;text-transform:none;color:var(--ink);text-align:center;padding:4px 0;">Už se těšíš?</div>
-        <div class="ev-modal-title">${ev.title}</div>
-        <div class="ev-modal-label">Kdy</div>
-        <div class="ev-modal-value">${fmtDateRange(ev)} · ${daysText}</div>
-        ${ev.place ? `<div class="ev-modal-label">Místo</div><div class="ev-modal-value">${ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place}</div>` : ''}
-        ${ev.place ? `<div id="notifWx_${evIdx}" style="font-family:'Inter',sans-serif;font-size:12.5px;color:var(--muted);text-align:center;margin-top:4px;"></div>` : ''}
-        <div class="ev-modal-value" style="margin-top:16px;font-family:'Inter',sans-serif;font-weight:600;font-size:clamp(13px,3.5vw,16px);color:var(--accent);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kokršneci na tebe ano.</div>
-        <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
-          display:block; width:100%; margin-top:16px;
-          background:var(--accent); border:none;
-          color:#12261C; font-family:'Inter',sans-serif; font-size:14px;
-          padding:12px; border-radius:var(--radius-sm); cursor:pointer; font-weight:700;
-        ">OK</button>
-      </div>
-    `;
-    document.body.appendChild(backdrop);
-    setTimeout(() => { if(backdrop.parentElement) backdrop.remove(); }, 15000);
-
-    // Načti počasí pro notifikaci
-    if(ev.place){
-      const wxDateStr = ev.start.toISOString().split('T')[0];
-      const KNOWN_PLACES = {'bouda':'49.432694,16.622583','hastrman':'49.463861,16.496667','funibrouk':'49.446694,16.665611','sjíždění':'49.482333,16.608556','sjizdeni':'49.482333,16.608556'};
-      const words = ev.place.trim().toLowerCase().split(/\s+/);
-      let wxCoords = null;
-      for(const w of words){ const c=w.replace(/[^a-záčďéěíňóřšťůúýž]/g,''); if(KNOWN_PLACES[c]){ wxCoords=KNOWN_PLACES[c]; break; } }
-      const isAllDayNotif = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
-      const startHourNotif = isAllDayNotif ? 9 : ev.start.getHours();
-      fetchWeatherRange(ev.place, wxDateStr, wxCoords, startHourNotif, 22).then(wx => {
-        const el = document.getElementById('notifWx_'+evIdx);
-        if(el && wx) el.textContent = wx;
-      });
-    }
-  });
-
-  // Pokus se také o systémovou notifikaci pokud je povolena
-  if ('Notification' in window && Notification.permission === 'granted'){
-    upcoming.forEach(ev => {
-      const evDay = new Date(ev.start);
-      evDay.setHours(0,0,0,0);
-      const diffDays = Math.round((evDay - today) / 86400000);
-      const daysText = diffDays === 1 ? 'zítra' : `za ${diffDays} dní`;
-      new Notification(`Už se těšíš?`, {
-        body: `${ev.title} — ${daysText} (${fmtDate(ev.start)})\n\nKokršneci na tebe ano.`,
-        icon: 'icon-192v2.png',
-      });
-    });
-  }
-}
 
 
 

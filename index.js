@@ -374,7 +374,7 @@ exports.sendEventReminders = onSchedule(
   async () => {
     const now = new Date();
     const todayStr = czDateStr(now);
-    const weekAheadStr = czDateStr(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+    const fiveDaysAheadStr = czDateStr(new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000));
 
     const snap = await db.collectionGroup('attendees').get();
 
@@ -398,7 +398,7 @@ exports.sendEventReminders = onSchedule(
 
       let title = null;
       if (evStr === todayStr) title = '🔔 Dnes máš akci';
-      else if (evStr === weekAheadStr) title = '📅 Za týden tě čeká akce';
+      else if (evStr === fiveDaysAheadStr) title = '📅 Za 5 dní tě čeká akce';
       if (!title) continue;
 
       const dateStr = formatEventDate(info.eventStart);
