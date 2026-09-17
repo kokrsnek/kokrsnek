@@ -109,6 +109,12 @@ async function sendToTokens(tokens, notification) {
     // eventId cestuje spolu s notifikací, aby klik na ni (sw.js -> notificationclick)
     // uměl appku otevřít rovnou na kartě té konkrétní akce. chatWith stejným
     // způsobem otevře rovnou dané vlákno v minichatu.
+    // webpush.headers.Urgency = 'high' — appka je nainstalovaná appka (PWA), takže
+    // tokeny jsou webové FCM tokeny z prohlížeče, ne nativní Android tokeny (proto
+    // tady nepomůže "android: {priority:'high'}", který platí jen pro nativní appky).
+    // Bez vysoké urgency Android v Doze/úsporném režimu s vypnutou obrazovkou push
+    // pozdrží a doručí Service Workeru až po rozsvícení displeje — přesně to, co se
+    // teď dělo. "high" řekne Androidu, ať doručí ihned, i s vypnutou obrazovkou.
     const resp = await messaging.sendEachForMulticast({
       tokens,
       data: {
@@ -116,6 +122,9 @@ async function sendToTokens(tokens, notification) {
         body: notification.body || '',
         eventId: notification.eventId || '',
         chatWith: notification.chatWith || '',
+      },
+      webpush: {
+        headers: { Urgency: 'high' },
       },
     });
     console.log(`[sendToTokens] odesláno ${resp.successCount}/${tokens.length}, chyby: ${resp.responses.filter(r => !r.success).map(r => r.error && r.error.code).join(', ') || 'žádné'}`);

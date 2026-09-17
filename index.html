@@ -3913,13 +3913,16 @@ async function openChatList(){
 }
 
 let activeChatUnsub = null;
+let activeChatSeenUnsub = null;
 function openChatThread(me, other){
   if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
+  if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
   const threadId = chatThreadId(me, other);
   const backdrop = document.createElement('div');
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
     if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
+    if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
     backdrop.remove();
     updateChatBadge();
   };
@@ -3945,18 +3948,44 @@ function openChatThread(me, other){
   if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
 
   const msgsEl = document.getElementById('chatMessages');
-  activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
-    msgsEl.innerHTML = snap.docs.map(d => {
+  let latestMsgDocs = [];
+  let otherLastSeenIso = null;
+
+  // Vykreslí zprávy znovu, kdykoliv přijdou nové zprávy NEBO se změní, kdy si
+  // druhá strana naposledy otevřela vlákno (viz posluchač na chats/{threadId}
+  // níže) — u vlastních zpráv tak "Přečteno" naskočí i živě, bez zavření chatu.
+  function renderChatMessages(){
+    msgsEl.innerHTML = latestMsgDocs.map(d => {
       const data = d.data();
       const mine = data.from === me;
       const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      const read = mine && data.at && otherLastSeenIso && new Date(data.at) <= new Date(otherLastSeenIso);
+      const status = mine ? `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>` : '';
       return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;">
         <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:8px 12px;border-radius:14px;font-size:13.5px;">${data.text}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;text-align:${mine?'right':'left'};">${time}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;text-align:${mine?'right':'left'};">${time}${status}</div>
       </div>`;
     }).join('') || '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné zprávy</div>';
     msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
+    latestMsgDocs = snap.docs;
+    renderChatMessages();
+    // Dokud mám vlákno otevřené, každá nově příchozí zpráva se rovnou počítá
+    // za přečtenou (posune moje lastSeen), ať se u odesílatele "Přečteno"
+    // objeví hned, ne až po zavření a novém otevření chatu.
+    db.collection('chats').doc(threadId).set({ ['lastSeen.' + me]: new Date().toISOString() }, { merge: true }).catch(()=>{});
   }, err => { console.error('Chyba při načítání zpráv:', err); });
+
+  // Vlastní dokument vlákna (chats/{threadId}) drží pole lastSeen s časem, kdy
+  // ho každý z dvojice naposledy otevřel — podle toho se u mých zpráv pozná,
+  // jestli je druhá strana už viděla.
+  activeChatSeenUnsub = db.collection('chats').doc(threadId).onSnapshot(snap => {
+    const data = snap.data();
+    otherLastSeenIso = data && data.lastSeen ? data.lastSeen[other] : null;
+    renderChatMessages();
+  }, err => { console.error('Chyba při sledování přečtení:', err); });
 
   const chatInputEl = document.getElementById('chatInput');
   // Textové pole se samo roztahuje do výšky podle napsaného textu (do max-height
