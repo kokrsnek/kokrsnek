@@ -3975,7 +3975,12 @@ function openChatThread(me, other){
     // Dokud mám vlákno otevřené, každá nově příchozí zpráva se rovnou počítá
     // za přečtenou (posune moje lastSeen), ať se u odesílatele "Přečteno"
     // objeví hned, ne až po zavření a novém otevření chatu.
-    db.collection('chats').doc(threadId).set({ ['lastSeen.' + me]: new Date().toISOString() }, { merge: true }).catch(()=>{});
+    // POZN.: musí to být vnořený objekt {lastSeen:{[me]:...}}, ne klíč s tečkou
+    // "lastSeen.me" — ten druhý zápis .set(...,{merge:true}) (na rozdíl od
+    // .update()) nerozparsuje na cestu do pole, ale uloží ho jako jeden
+    // doslovný název pole s tečkou v názvu, takže se čtení (data.lastSeen[jméno])
+    // nikdy netrefilo a "Přečteno" se nikdy nezobrazilo.
+    db.collection('chats').doc(threadId).set({ lastSeen: { [me]: new Date().toISOString() } }, { merge: true }).catch(()=>{});
   }, err => { console.error('Chyba při načítání zpráv:', err); });
 
   // Vlastní dokument vlákna (chats/{threadId}) drží pole lastSeen s časem, kdy
