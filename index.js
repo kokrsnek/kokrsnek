@@ -62,23 +62,37 @@ function formatEventDate(iso) {
   return `${DAYS_CZ[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
 }
 
+// České znaky s háčky/čárkami (Š, Ř...) lze v textu zapsat dvěma různými
+// způsoby Unicode zápisu, které vypadají na obrazovce úplně stejně, ale při
+// přesném porovnání řetězců (např. hledání tokenu podle jména) se liší.
+// normalize('NFC') je sjednotí, ať přišly odkudkoliv.
+function normName(s) {
+  return (s || '').normalize('NFC').trim();
+}
+
 /** Vrátí tokeny všech lidí KROMĚ zadaného jména (aby si nikdo nepingnul sám sebe). */
 async function getTokensExcept(excludeUser) {
+  const exclude = normName(excludeUser);
   const snap = await db.collection('pushTokens').get();
   const tokens = [];
   snap.forEach((doc) => {
     const data = doc.data();
-    if (data.token && data.user !== excludeUser) tokens.push(data.token);
+    if (data.token && normName(data.user) !== exclude) tokens.push(data.token);
   });
   return tokens;
 }
 
-/** Vrátí tokeny konkrétního jednoho člověka (může mít appku na víc zařízeních). */
+/** Vrátí tokeny konkrétního jednoho člověka (může mít appku na víc zařízeních).
+ * Porovnává se přes normalizované jméno (viz normName) místo přímého dotazu
+ * "where user == targetUser" — díky tomu najde token i u starších záznamů
+ * uložených s jinak zapsanou diakritikou, ne jen u nově zapsaných. */
 async function getTokensFor(targetUser) {
-  const snap = await db.collection('pushTokens').where('user', '==', targetUser).get();
+  const target = normName(targetUser);
+  const snap = await db.collection('pushTokens').get();
   const tokens = [];
   snap.forEach((doc) => {
-    if (doc.data().token) tokens.push(doc.data().token);
+    const data = doc.data();
+    if (data.token && normName(data.user) === target) tokens.push(data.token);
   });
   return tokens;
 }
@@ -199,7 +213,7 @@ exports.onCommentCreated = onDocumentCreated(
       try {
         const parentSnap = await event.data.ref.parent.doc(data.parentId).get();
         const parentAuthor = parentSnap.exists ? parentSnap.data().user : null;
-        if (parentAuthor && parentAuthor !== data.user) {
+        if (parentAuthor && normName(parentAuthor) !== normName(data.user)) {
           const replyTokens = await getTokensFor(parentAuthor);
           await sendToTokens(replyTokens, {
             title: '💬 Odpověď na tvůj komentář',
@@ -218,7 +232,7 @@ exports.onCommentCreated = onDocumentCreated(
     const generalTokens = [];
     snap.forEach((doc) => {
       const d = doc.data();
-      if (d.token && d.user !== data.user) generalTokens.push(d.token);
+      if (d.token && normName(d.user) !== normName(data.user)) generalTokens.push(d.token);
     });
 
     await sendToTokens(generalTokens, {
@@ -720,9 +734,10 @@ exports.onChatMessageCreated = onDocumentCreated(
       console.log('[chat] chybí data, from nebo text — končím', data);
       return;
     }
-    const participants = event.params.threadId.split('__');
-    const to = participants.find((p) => p !== data.from);
-    console.log(`[chat] threadId="${event.params.threadId}" participants=${JSON.stringify(participants)} from="${data.from}" to="${to}"`);
+    const from = normName(data.from);
+    const participants = event.params.threadId.split('__').map(normName);
+    const to = participants.find((p) => p !== from);
+    console.log(`[chat] threadId="${event.params.threadId}" participants=${JSON.stringify(participants)} from="${from}" to="${to}"`);
     if (!to) {
       console.log('[chat] nepodařilo se určit příjemce — končím');
       return;

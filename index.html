@@ -3654,7 +3654,7 @@ function showNamePromptIfNeeded(onDone){
 
   const finish = () => { backdrop.remove(); if(onDone) onDone(); };
   const submit = async () => {
-    const val = input.value.trim();
+    const val = normName(input.value);
     if(!val){ input.focus(); return; }
     localStorage.setItem('kokrsnekUser', val);
     localStorage.setItem('kokrsnekAvatar', selectedAvatar);
@@ -3677,15 +3677,24 @@ async function getAvatar(name){
   }catch(e){ return '👤'; }
 }
 
+// České znaky s háčky/čárkami (Š, Ř, ...) lze v textu uložit dvěma různými
+// způsoby zápisu Unicode, které vypadají na obrazovce identicky, ale pro
+// přesné porovnání textů (typicky "user" == "Šuraj" ve Firestore) jsou to dva
+// různé řetězce. Sjednocením přes normalize('NFC') se appka spolehne, že
+// stejná přezdívka bude vždycky reprezentovaná stejně, ať se napíše kdekoliv.
+function normName(s){
+  return (s || '').normalize('NFC').trim();
+}
+
 function getUserName(){
   let name = localStorage.getItem('kokrsnekUser');
   if(!name){
     name = prompt('Jak se jmenuješ? (přezdívka v komentářích a lajkách)');
     if(!name || !name.trim()) return null;
-    name = name.trim();
+    name = normName(name);
     localStorage.setItem('kokrsnekUser', name);
   }
-  return name;
+  return normName(name);
 }
 
 function getEventKey(ev){
@@ -3820,7 +3829,7 @@ async function sendPoke(name, btn){
   const user = getUserName();
   if(!user) return;
   try{
-    await db.collection('pokes').add({ from: user, to: name, type: 'poke', at: new Date().toISOString() });
+    await db.collection('pokes').add({ from: user, to: normName(name), type: 'poke', at: new Date().toISOString() });
     if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
   }catch(e){ console.error('Chyba při odesílání šťouchnutí:', e); }
 }
@@ -3831,7 +3840,7 @@ async function sendPrivateMessage(name, btn){
   const text = prompt(`Krátká zpráva pro ${name}:`);
   if(!text || !text.trim()) return;
   try{
-    await db.collection('pokes').add({ from: user, to: name, type: 'message', text: text.trim().slice(0,200), at: new Date().toISOString() });
+    await db.collection('pokes').add({ from: user, to: normName(name), type: 'message', text: text.trim().slice(0,200), at: new Date().toISOString() });
     if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
   }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
 }
@@ -3843,7 +3852,7 @@ async function sendPrivateMessage(name, btn){
 // rozparsuje zpátky na dvojici a pozná, komu poslat notifikaci).
 // =====================================================
 function chatThreadId(a, b){
-  return [a, b].sort().join('__');
+  return [normName(a), normName(b)].sort().join('__');
 }
 
 async function openChatList(){
@@ -4771,7 +4780,7 @@ async function withRetry(fn, attempts = 2){
 async function submitQuizScore(){
   const st = window.quizState;
   const input = document.getElementById('quizNameInput');
-  const name = (input?.value || '').trim();
+  const name = normName(input?.value || '');
   if(!name){ input?.focus(); return; }
   localStorage.setItem('kokrsnekUser', name);
   const content = document.getElementById('quizModalContent');

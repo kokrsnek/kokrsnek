@@ -25,7 +25,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body,
     icon: 'icon-192v2.png',
-    badge: 'icon-192v2.png',
+    badge: 'icon-badge.png',
     data: nested.title || nested.body ? nested : raw
   };
   event.waitUntil(self.registration.showNotification(title, options));
