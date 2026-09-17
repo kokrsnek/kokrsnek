@@ -3962,21 +3962,31 @@ function openChatThread(me, other){
   };
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) closeThread(); };
+  // POZOR: .ev-modal má sdílené CSS pravidlo "overflow-y:auto" na celém sheetu
+  // (používá ho spousta jiných modálů), takže na iOS se při rolování zpráv
+  // občas rolovací gesto "přeneslo" na celý sheet místo jen na #chatMessages
+  // a hlavička se jménem/hipnutím ujela mimo displej — na Androidu se
+  // klávesnice chová jinak a stejný chaining scrollu nenastával. Oprava:
+  // tady konkrétně sheet přepnutý na flex sloupec s vypnutým vlastním
+  // scrollem (overflow:hidden), a rolovat smí jen #chatMessages uprostřed
+  // (flex:1, min-height:0, overscroll-behavior:contain) — hlavička ani
+  // vstupní řádek se tak nikdy nemůžou odrolovat pryč.
   backdrop.innerHTML = `
-    <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+    <div class="ev-modal" style="display:flex;flex-direction:column;max-height:88vh;overflow:hidden;">
+      <div class="sheet-grabber-down" style="width:100%;height:30px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="chatThreadClose">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:16px;">
+      <div class="ev-modal-title" style="flex:0 0 auto;text-align:center;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:16px;">
         <span>${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other}`}</span>
         ${!isGroup ? `<button id="chatThreadPokeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
-      <div id="chatTypingIndicator" style="text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter',sans-serif;"></div>
-      <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
+      <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter',sans-serif;"></div>
+      <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
+      <div style="flex:0 0 auto;display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
         <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);font-size:18px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;line-height:1;">📷</button>
         <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
         <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
       </div>
-      <input type="file" id="chatImageInput" accept="image/*" style="display:none;">
+      <input type="file" id="chatImageInput" accept="image/*" style="display:none;flex:0 0 auto;">
     </div>`;
   document.body.appendChild(backdrop);
   document.getElementById('chatThreadClose').onclick = closeThread;
