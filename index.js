@@ -24,7 +24,8 @@
  *  13. sendBirthdayNamedayPush — denně v 8:00: narozeniny/svátek člena party, pošle
  *                            se CELÉ partě (ne jen tomu, kdo zrovna otevře appku)
  *  14. sendLowRsvpReminder — denně v 8:00: akce za 3 dny má skoro žádné odpovědi
- *  15. onChatMessageCreated — nová zpráva v minichatu (viz index.html -> openChatThread())
+ *  15. onChatMessageCreated — nová zpráva v minichatu, 1:1 i ve skupinovém
+ *                            vlákně "Celá parta" (viz index.html -> openChatThread())
  *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
  *                            appky přidělí custom claim partyMember, které vyžadují
  *                            pravidla Firestore databáze pro každé čtení/zápis
@@ -733,20 +734,43 @@ exports.sendLowRsvpReminder = onSchedule(
 // --- 15) Minichat --------------------------------------------------------------
 // Trigger: chats/{threadId}/messages/{msgId} — threadId jsou oba nicky seřazené
 // abecedně a spojené "__" (viz index.html -> chatThreadId()). Notifikace jde
-// tomu z dvojice, kdo zprávu NENAPSAL.
+// tomu z dvojice, kdo zprávu NENAPSAL. Skupinové vlákno "Celá parta" má
+// pevné ID (viz PARTY_THREAD_ID níže, musí sedět s PARTY_THREAD_ID v
+// index.html) a notifikaci dostanou úplně všichni kromě odesílatele.
+
+const PARTY_THREAD_ID = 'parta-vsichni';
 
 exports.onChatMessageCreated = onDocumentCreated(
   'chats/{threadId}/messages/{msgId}',
   async (event) => {
     const data = event.data.data();
-    if (!data || !data.from || !data.text) {
-      console.log('[chat] chybí data, from nebo text — končím', data);
+    if (!data || !data.from || (!data.text && !data.image)) {
+      console.log('[chat] chybí data, from, ani text ani fotka — končím', data);
       return;
     }
     const from = normName(data.from);
-    const participants = event.params.threadId.split('__').map(normName);
+    const body = data.text || '📷 Fotka';
+    const threadId = event.params.threadId;
+
+    if (threadId === PARTY_THREAD_ID) {
+      const tokens = await getTokensExcept(from);
+      console.log(`[chat] skupinová zpráva od "${from}", nalezeno tokenů: ${tokens.length}`);
+      if (!tokens.length) {
+        console.log('[chat] žádné tokeny pro skupinu — končím bez odeslání');
+        return;
+      }
+      await sendToTokens(tokens, {
+        title: `💬 ${data.from} (Celá parta)`,
+        body,
+        chatWith: PARTY_THREAD_ID,
+      });
+      console.log('[chat] skupinová notifikace odeslána');
+      return;
+    }
+
+    const participants = threadId.split('__').map(normName);
     const to = participants.find((p) => p !== from);
-    console.log(`[chat] threadId="${event.params.threadId}" participants=${JSON.stringify(participants)} from="${from}" to="${to}"`);
+    console.log(`[chat] threadId="${threadId}" participants=${JSON.stringify(participants)} from="${from}" to="${to}"`);
     if (!to) {
       console.log('[chat] nepodařilo se určit příjemce — končím');
       return;
@@ -759,7 +783,7 @@ exports.onChatMessageCreated = onDocumentCreated(
     }
     await sendToTokens(tokens, {
       title: `💬 ${data.from}`,
-      body: data.text,
+      body,
       chatWith: data.from,
     });
     console.log('[chat] notifikace odeslána');

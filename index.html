@@ -3235,7 +3235,9 @@ async function updateChatBadge(){
       const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
       if(!threadId) return;
       const participants = threadId.split('__');
-      if(!participants.includes(me)) return;
+      // Skupinové vlákno "Celá parta" nemá dvě jména oddělená "__" jako 1:1
+      // vlákna, takže patří všem — u něj se kontrola účastníků přeskakuje.
+      if(threadId !== PARTY_THREAD_ID && !participants.includes(me)) return;
       const data = d.data();
       if(data.from === me) return;
       const seenRaw = localStorage.getItem('kokrsnekChatSeen_' + threadId);
@@ -3535,7 +3537,7 @@ function showWelcome(){
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
     ['💬 Komentáře a reakce','V detailu události lze psát komentáře, odpovídat na ně a reagovat rychlými emoji (👍❤️😂😮😢).'],
     ['🖼️ Emoji avatar','Při prvním zadání přezdívky si vybereš ikonku ze čtyř kategorií (zvířata, sporty, doprava, ovoce a zelenina) — objeví se pak u tvého jména všude v appce.'],
-    ['💬 Minichat','Ikona bublinky dole vedle lupy — seznam přezdívek, klikni na jméno a napiš krátkou zprávu (do 160 znaků). Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
+    ['💬 Minichat','Ikona bublinky dole vedle lupy — seznam přezdívek (nahoře i "Celá parta" pro skupinovou zprávu všem), klikni a napiš zprávu (do 160 znaků) nebo přidej fotku 📷. Jde i reagovat emoji, smazat vlastní zprávu 🗑 a nahoře se ukáže, když druhá strana zrovna píše. Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -3837,6 +3839,12 @@ async function sendPoke(name, btn){
 // bez ohledu na to, kdo psal první (Cloud Function ho stejným způsobem
 // rozparsuje zpátky na dvojici a pozná, komu poslat notifikaci).
 // =====================================================
+// Vlákno "Celá parta" — skupinový chat, na rozdíl od 1:1 vláken má pevné,
+// nejména neproměnné ID (ne dvě spojená jména), aby ho poznaly i Cloud
+// Functions (viz functions/index.js -> onChatMessageCreated) a poslaly
+// puush notifikaci úplně všem kromě odesílatele, ne jen jednomu "druhému".
+const PARTY_THREAD_ID = 'parta-vsichni';
+
 function chatThreadId(a, b){
   return [normName(a), normName(b)].sort().join('__');
 }
@@ -3857,13 +3865,26 @@ async function openChatList(){
 
   const list = document.getElementById('chatUserList');
   try{
-    const [tokensSnap, profilesSnap, messagesSnap] = await Promise.all([
+    const [tokensSnap, profilesSnap, messagesSnap, partyMsgsSnap] = await Promise.all([
       db.collection('pushTokens').get(),
       db.collection('userProfiles').get(),
-      db.collectionGroup('messages').get()
+      db.collectionGroup('messages').get(),
+      db.collection('chats').doc(PARTY_THREAD_ID).collection('messages').get()
     ]);
     const avatarMap = {};
     profilesSnap.forEach(d => { if(d.data().avatar) avatarMap[d.id] = d.data().avatar; });
+
+    // Nepřečtené ve skupinovém vlákně "Celá parta" — spočítané zvlášť, protože
+    // nemá dva účastníky jako 1:1 vlákna.
+    let partyUnread = 0;
+    const partySeenRaw = localStorage.getItem('kokrsnekChatSeen_' + PARTY_THREAD_ID);
+    const partySeen = partySeenRaw ? new Date(partySeenRaw) : new Date(0);
+    partyMsgsSnap.forEach(d => {
+      const data = d.data();
+      if(data.from === me) return;
+      const at = data.at ? new Date(data.at) : new Date(0);
+      if(at > partySeen) partyUnread++;
+    });
 
     // Nepřečtené na osobu + zajištění, že v seznamu bude i ten, kdo mi psal,
     // i kdyby zrovna neměl (už) zapnuté notifikace.
@@ -3871,7 +3892,7 @@ async function openChatList(){
     const partnerSet = new Set();
     messagesSnap.forEach(d => {
       const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
-      if(!threadId) return;
+      if(!threadId || threadId === PARTY_THREAD_ID) return;
       const participants = threadId.split('__');
       if(!participants.includes(me)) return;
       const other = participants.find(p => p !== me);
@@ -3888,21 +3909,30 @@ async function openChatList(){
     partnerSet.delete(me);
 
     const names = [...partnerSet].sort((a,b) => a.localeCompare(b, 'cs'));
-    if(!names.length){
-      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
-      return;
-    }
-    list.innerHTML = names.map(n => {
-      const unread = unreadMap[n] || 0;
-      return `
-      <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-        <span>${avatarMap[n] || '👤'} ${n}</span>
+    const partyRow = `
+      <button class="chat-user-row" data-party="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
+        <span>👥 Celá parta</span>
         <span style="display:flex;align-items:center;gap:8px;">
-          ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
+          ${partyUnread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${partyUnread > 9 ? '9+' : partyUnread}</span>` : ''}
           <span style="color:var(--muted);font-size:16px;">›</span>
         </span>
       </button>`;
-    }).join('');
+    if(!names.length){
+      list.innerHTML = partyRow + '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
+    } else {
+      list.innerHTML = partyRow + names.map(n => {
+        const unread = unreadMap[n] || 0;
+        return `
+        <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
+          <span>${avatarMap[n] || '👤'} ${n}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
+            <span style="color:var(--muted);font-size:16px;">›</span>
+          </span>
+        </button>`;
+      }).join('');
+    }
+    list.querySelector('[data-party]').onclick = () => { backdrop.remove(); openChatThread(me, PARTY_THREAD_ID); };
     list.querySelectorAll('[data-name]').forEach(btn => {
       btn.onclick = () => { backdrop.remove(); openChatThread(me, btn.dataset.name); };
     });
@@ -3914,15 +3944,19 @@ async function openChatList(){
 
 let activeChatUnsub = null;
 let activeChatSeenUnsub = null;
+let activeChatTypingInterval = null;
 function openChatThread(me, other){
   if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
   if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
-  const threadId = chatThreadId(me, other);
+  if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
+  const isGroup = other === PARTY_THREAD_ID;
+  const threadId = isGroup ? PARTY_THREAD_ID : chatThreadId(me, other);
   const backdrop = document.createElement('div');
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
     if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
     if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
+    if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
     backdrop.remove();
     updateChatBadge();
   };
@@ -3931,43 +3965,87 @@ function openChatThread(me, other){
   backdrop.innerHTML = `
     <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="chatThreadClose">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:16px;">
-        <span><span id="chatThreadAvatar">👤</span> ${other}</span>
-        <button id="chatThreadPokeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:16px;">
+        <span>${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other}`}</span>
+        ${!isGroup ? `<button id="chatThreadPokeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
+      <div id="chatTypingIndicator" style="text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter',sans-serif;"></div>
       <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
+        <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);font-size:18px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;line-height:1;">📷</button>
         <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
         <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
       </div>
+      <input type="file" id="chatImageInput" accept="image/*" style="display:none;">
     </div>`;
   document.body.appendChild(backdrop);
   document.getElementById('chatThreadClose').onclick = closeThread;
-  getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
-  const chatPokeBtn = document.getElementById('chatThreadPokeBtn');
-  if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
+  if(!isGroup){
+    getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
+    const chatPokeBtn = document.getElementById('chatThreadPokeBtn');
+    if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
+  }
 
   const msgsEl = document.getElementById('chatMessages');
+  const QUICK_CHAT_EMOJIS = ['👍','❤️','😂','😮','😢'];
   let latestMsgDocs = [];
   let otherLastSeenIso = null;
+  let latestTypingMap = {};
 
   // Vykreslí zprávy znovu, kdykoliv přijdou nové zprávy NEBO se změní, kdy si
   // druhá strana naposledy otevřela vlákno (viz posluchač na chats/{threadId}
   // níže) — u vlastních zpráv tak "Přečteno" naskočí i živě, bez zavření chatu.
+  // U skupinového vlákna "Celá parta" se "Přečteno/Odesláno" nezobrazuje —
+  // u víc lidí najednou by to bylo matoucí (čí přečtení by se mělo počítat?),
+  // takže se tam ukazuje jen čas.
   function renderChatMessages(){
     msgsEl.innerHTML = latestMsgDocs.map(d => {
       const data = d.data();
       const mine = data.from === me;
       const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
-      const read = mine && data.at && otherLastSeenIso && new Date(data.at) <= new Date(otherLastSeenIso);
-      const status = mine ? `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>` : '';
+      const read = !isGroup && mine && data.at && otherLastSeenIso && new Date(data.at) <= new Date(otherLastSeenIso);
+      const status = (!isGroup && mine) ? `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>` : '';
+      const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
+      const imageHtml = data.image ? `<img src="${data.image}" style="max-width:100%;max-height:220px;border-radius:10px;display:block;${data.text?'margin-bottom:6px;':''}">` : '';
+      const reactions = data.reactions || {};
+      const reactionsRow = QUICK_CHAT_EMOJIS.map(em => {
+        const users = reactions[em] || [];
+        const active = users.includes(me);
+        return `<button onclick="toggleChatReaction('${threadId}','${d.id}','${em}')" style="
+          background:${active ? 'var(--accent-soft)' : 'transparent'};
+          border:1px solid ${active ? 'rgba(62,143,104,0.5)' : 'var(--line)'};
+          border-radius:100px; padding:2px 6px; font-size:11px; cursor:pointer;
+          display:inline-flex; align-items:center; gap:2px; color:var(--ink); line-height:1.3;
+        ">${em}${users.length > 0 ? `<span style="font-size:9.5px;color:var(--muted);font-family:'Inter',sans-serif;">${users.length}</span>` : ''}</button>`;
+      }).join('');
       return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;">
-        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:8px 12px;border-radius:14px;font-size:13.5px;">${data.text}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;text-align:${mine?'right':'left'};">${time}${status}</div>
+        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${data.image?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${data.text ? `<div>${data.text}</div>` : ''}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px;${mine?'justify-content:flex-end;':''}">
+          <span style="text-align:${mine?'right':'left'};">${time}${status}</span>
+          ${mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;line-height:1;">🗑</button>` : ''}
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>
       </div>`;
     }).join('') || '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné zprávy</div>';
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
+
+  // "Píše…" — zvadne samo po 3.5s bez nové zprávy o psaní (viz interval níže),
+  // takže nezůstane trvale svítit, kdyby si druhá strana zavřela appku
+  // uprostřed psaní.
+  function updateTypingIndicator(){
+    const el = document.getElementById('chatTypingIndicator');
+    if(!el) return;
+    const now = Date.now();
+    const typingNames = Object.keys(latestTypingMap).filter(n => {
+      if(n === me) return false;
+      const t = latestTypingMap[n];
+      if(!t) return false;
+      return (now - new Date(t).getTime()) < 3500;
+    });
+    el.textContent = typingNames.length ? `${typingNames.join(', ')} píše…` : '';
+  }
+  activeChatTypingInterval = setInterval(updateTypingIndicator, 1000);
 
   activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
     latestMsgDocs = snap.docs;
@@ -3983,13 +4061,15 @@ function openChatThread(me, other){
     db.collection('chats').doc(threadId).set({ lastSeen: { [me]: new Date().toISOString() } }, { merge: true }).catch(()=>{});
   }, err => { console.error('Chyba při načítání zpráv:', err); });
 
-  // Vlastní dokument vlákna (chats/{threadId}) drží pole lastSeen s časem, kdy
-  // ho každý z dvojice naposledy otevřel — podle toho se u mých zpráv pozná,
-  // jestli je druhá strana už viděla.
+  // Vlastní dokument vlákna (chats/{threadId}) drží pole lastSeen (kdy si kdo
+  // vlákno naposledy otevřel) a typing (kdy kdo naposledy něco napsal) —
+  // podle nich se u mých zpráv pozná přečtení a nahoře "píše…".
   activeChatSeenUnsub = db.collection('chats').doc(threadId).onSnapshot(snap => {
     const data = snap.data();
-    otherLastSeenIso = data && data.lastSeen ? data.lastSeen[other] : null;
+    otherLastSeenIso = (!isGroup && data && data.lastSeen) ? data.lastSeen[other] : null;
+    latestTypingMap = (data && data.typing) || {};
     renderChatMessages();
+    updateTypingIndicator();
   }, err => { console.error('Chyba při sledování přečtení:', err); });
 
   const chatInputEl = document.getElementById('chatInput');
@@ -3999,7 +4079,17 @@ function openChatThread(me, other){
     chatInputEl.style.height = 'auto';
     chatInputEl.style.height = chatInputEl.scrollHeight + 'px';
   };
-  chatInputEl.addEventListener('input', autoGrowChatInput);
+  let lastTypingWriteAt = 0;
+  chatInputEl.addEventListener('input', () => {
+    autoGrowChatInput();
+    // Zápis "píšu" je omezený max na jednou za 1.5s, ať se při psaní
+    // nezapisuje do Firestore na každé stisknuté písmenko.
+    const now = Date.now();
+    if(now - lastTypingWriteAt > 1500){
+      lastTypingWriteAt = now;
+      db.collection('chats').doc(threadId).set({ typing: { [me]: new Date().toISOString() } }, { merge: true }).catch(()=>{});
+    }
+  });
 
   const send = async () => {
     const input = document.getElementById('chatInput');
@@ -4013,6 +4103,64 @@ function openChatThread(me, other){
   };
   document.getElementById('chatSendBtn').onclick = send;
   chatInputEl.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+
+  // Fotka do zprávy — vybraný obrázek se zmenší a zkomprimuje (stejná funkce
+  // jako u přílohy ve zpětné vazbě), ať se do Firestore dokumentu vejde
+  // s rezervou, a odešle se rovnou i s tím, co bylo zrovna napsané v textu
+  // (jako popisek), pokud tam něco bylo.
+  const chatImageBtn = document.getElementById('chatImageBtn');
+  const chatImageInput = document.getElementById('chatImageInput');
+  chatImageBtn.onclick = () => chatImageInput.click();
+  chatImageInput.addEventListener('change', async () => {
+    const file = chatImageInput.files && chatImageInput.files[0];
+    if(!file) return;
+    chatImageBtn.disabled = true;
+    const origIcon = chatImageBtn.textContent;
+    chatImageBtn.textContent = '…';
+    try{
+      const dataUrl = await compressImageToBase64(file, 1000, 0.55);
+      const text = chatInputEl.value.trim().slice(0, 160);
+      chatInputEl.value = '';
+      autoGrowChatInput();
+      await db.collection('chats').doc(threadId).collection('messages').add({ from: me, text, image: dataUrl, at: new Date().toISOString() });
+    }catch(e){
+      console.error('Chyba při odesílání fotky:', e);
+      alert('Fotku se nepodařilo odeslat.');
+    }
+    chatImageBtn.disabled = false;
+    chatImageBtn.textContent = origIcon;
+    chatImageInput.value = '';
+  });
+}
+
+async function toggleChatReaction(threadId, msgId, emoji){
+  const user = getUserName();
+  if(!user) return;
+  try{
+    const ref = db.collection('chats').doc(threadId).collection('messages').doc(msgId);
+    const snap = await ref.get();
+    const data = snap.data() || {};
+    const reactions = data.reactions || {};
+    const hasReacted = (reactions[emoji] || []).includes(user);
+    // Jedna aktivní reakce na osobu — nejdřív ji všude odeber, pak případně přidej k vybranému emoji
+    const newReactions = {};
+    Object.keys(reactions).forEach(e => {
+      const filtered = (reactions[e] || []).filter(u => u !== user);
+      if(filtered.length) newReactions[e] = filtered;
+    });
+    if(!hasReacted){
+      newReactions[emoji] = [...(newReactions[emoji] || []), user];
+    }
+    await ref.update({ reactions: newReactions });
+    // Žádný ruční refresh — vlákno poslouchá živě přes onSnapshot výše.
+  }catch(e){ console.error('Chyba při ukládání reakce na zprávu:', e); }
+}
+
+async function deleteChatMessage(threadId, msgId){
+  if(!confirm('Smazat tuhle zprávu?')) return;
+  try{
+    await db.collection('chats').doc(threadId).collection('messages').doc(msgId).delete();
+  }catch(e){ console.error('Chyba při mazání zprávy:', e); }
 }
 
 function personLink(name){
