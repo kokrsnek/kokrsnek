@@ -4018,7 +4018,11 @@ function openChatThread(me, other){
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
       const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox('${data.image}')" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
       const reactions = data.reactions || {};
-      const reactionsRow = QUICK_CHAT_EMOJIS.map(em => {
+      // Řádek reakcí se ukazuje, jen když už na zprávě nějaká je (ťuknutím na
+      // ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji jde přes
+      // dlouhé podržení bubliny (viz wireChatLongPress níže), ne přes natrvalo
+      // vypsaných 5 ikon pod každou zprávou.
+      const reactionsRow = QUICK_CHAT_EMOJIS.filter(em => (reactions[em]||[]).length > 0).map(em => {
         const users = reactions[em] || [];
         const active = users.includes(me);
         return `<button onclick="toggleChatReaction('${threadId}','${d.id}','${em}')" style="
@@ -4026,18 +4030,48 @@ function openChatThread(me, other){
           border:1px solid ${active ? 'rgba(62,143,104,0.5)' : 'var(--line)'};
           border-radius:100px; padding:2px 6px; font-size:11px; cursor:pointer;
           display:inline-flex; align-items:center; gap:2px; color:var(--ink); line-height:1.3;
-        ">${em}${users.length > 0 ? `<span style="font-size:9.5px;color:var(--muted);font-family:'Inter',sans-serif;">${users.length}</span>` : ''}</button>`;
+        ">${em}<span style="font-size:9.5px;color:var(--muted);font-family:'Inter',sans-serif;">${users.length}</span></button>`;
       }).join('');
-      return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;">
+      return `<div data-msg-id="${d.id}" style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">
         <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${data.image?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${data.text ? `<div>${data.text}</div>` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px;${mine?'justify-content:flex-end;':''}">
           <span style="text-align:${mine?'right':'left'};">${time}${status}</span>
           ${mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;line-height:1;">🗑</button>` : ''}
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>
+        ${reactionsRow ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>` : ''}
       </div>`;
     }).join('') || '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné zprávy</div>';
     msgsEl.scrollTop = msgsEl.scrollHeight;
+    wireChatLongPress();
+  }
+
+  // Dlouhé podržení bubliny zprávy = otevři výběr emoji reakce (stejný vzor
+  // jako dlouhé podržení Dojdu/Nedojdu/lajku jinde v appce). Musí se volat
+  // znovu po každém překreslení, protože renderChatMessages() vždycky
+  // přepíše celé innerHTML a s ním zmizí i dřív přiřazené posluchače.
+  function wireChatLongPress(){
+    msgsEl.querySelectorAll('[data-msg-id]').forEach(el => {
+      const msgId = el.dataset.msgId;
+      let pressTimer, longPressed = false, startX = 0, startY = 0;
+      el.addEventListener('touchstart', e => {
+        longPressed = false;
+        const t = e.touches && e.touches[0];
+        startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+        pressTimer = setTimeout(() => {
+          longPressed = true;
+          if(navigator.vibrate) navigator.vibrate(15);
+          showChatEmojiPicker(threadId, msgId, el);
+        }, 450);
+      }, {passive:true});
+      el.addEventListener('touchend', () => clearTimeout(pressTimer));
+      el.addEventListener('touchmove', e => {
+        const t = e.touches && e.touches[0];
+        if(!t) return;
+        const dx = t.clientX - startX, dy = t.clientY - startY;
+        if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+      }, {passive:true});
+      el.addEventListener('contextmenu', e => e.preventDefault());
+    });
   }
 
   // "Píše…" — zvadne samo po 3.5s bez nové zprávy o psaní (viz interval níže),
@@ -4143,8 +4177,30 @@ function openChatThread(me, other){
   });
 }
 
-async function toggleChatReaction(threadId, msgId, emoji){
-  const user = getUserName();
+// Malá bublina s 5 emoji, co vyskočí po dlouhém podržení zprávy v chatu (viz
+// wireChatLongPress výš) — na rozdíl od komentářů, kde je těch 5 ikon vidět
+// pořád, tady zůstávají schované, dokud je člověk sám nevyvolá.
+function showChatEmojiPicker(threadId, msgId, anchorEl){
+  document.getElementById('chatEmojiPicker')?.remove();
+  const rect = anchorEl.getBoundingClientRect();
+  const picker = document.createElement('div');
+  picker.id = 'chatEmojiPicker';
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 210));
+  const top = Math.max(8, rect.top - 46);
+  picker.style.cssText = `position:fixed;z-index:95;left:${left}px;top:${top}px;background:var(--bg2);border:1px solid var(--line);border-radius:100px;padding:6px 8px;display:flex;gap:8px;box-shadow:var(--shadow-md);`;
+  picker.innerHTML = ['👍','❤️','😂','😮','😢'].map(em =>
+    `<button data-em="${em}" style="background:none;border:none;font-size:21px;cursor:pointer;padding:2px;line-height:1;">${em}</button>`
+  ).join('');
+  document.body.appendChild(picker);
+  picker.querySelectorAll('[data-em]').forEach(btn => {
+    btn.onclick = () => { toggleChatReaction(threadId, msgId, btn.dataset.em); picker.remove(); };
+  });
+  setTimeout(() => {
+    document.addEventListener('click', function c(e){ if(!picker.contains(e.target)){ picker.remove(); document.removeEventListener('click', c); } });
+  }, 50);
+}
+
+async function toggleChatReaction(threadId, msgId, emoji){  const user = getUserName();
   if(!user) return;
   try{
     const ref = db.collection('chats').doc(threadId).collection('messages').doc(msgId);
