@@ -800,39 +800,6 @@
   @media (prefers-reduced-motion: reduce){
     .hint .arrow{ animation:none; }
   }
-
-  /* --- LANDSCAPE (mobil naležato): karty vedle sebe, vodorovné rolování ---
-     Platí pro .app/.slot/.card obecně, takže se stejně propíše i do
-     "Historie této akce" (#eventGroupApp), která tytéž třídy sdílí.
-     Nic v pravidlech pro portrait se tu nemění, jde jen o doplněk navíc. */
-  @media (orientation: landscape){
-    .app{
-      display:flex;
-      flex-direction:row;
-      align-items:center;
-      overflow-x:auto;
-      overflow-y:hidden;
-      scroll-snap-type:x proximity;
-      padding:56px 16px;
-      scroll-padding-left:16px;
-      scroll-padding-right:16px;
-    }
-    .slot{
-      width:min(380px, 46vw);
-      flex:0 0 auto;
-      height:auto;
-      margin-bottom:0;
-      margin-right:20px;
-      padding:0 4px;
-      scroll-snap-align:start;
-      scroll-margin-left:16px;
-    }
-    .card{
-      max-width:100%;
-      max-height:calc(100vh - 112px);
-      overflow-y:auto;
-    }
-  }
 </style>
   <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -2347,7 +2314,7 @@ function openYearPicker(years, currentYear){
         return rawEvents[ia].start - rawEvents[ib].start;
       });
       const target = yearSlots[0];
-      scrollSlotIntoView(target, 'start');
+      target.scrollIntoView({block:'start'});
     };
     popup.appendChild(btn);
   });
@@ -2787,7 +2754,7 @@ function renderTimeline(instantScroll = true){
   });
 
   const nowSlot = document.querySelector('.slot.now');
-  if (nowSlot && instantScroll) scrollSlotIntoView(nowSlot, 'center');
+  if (nowSlot && instantScroll) nowSlot.scrollIntoView({block:"center"});
 }
 
 // Manuální fotoalba ke konkrétním událostem (podle názvu)
@@ -3051,13 +3018,8 @@ function renderResults(query){
         const app = document.getElementById('app');
         const target = document.querySelector(`.slot[data-idx="${i}"]`);
         if(target && app){
-          if(window.matchMedia('(orientation: landscape)').matches){
-            const offset = target.offsetLeft - (app.clientWidth/2) + (target.offsetWidth/2);
-            app.scrollTo({left: Math.max(0, offset)});
-          } else {
-            const offset = target.offsetTop - (app.clientHeight/2) + (target.offsetHeight/2);
-            app.scrollTo({top: Math.max(0, offset)});
-          }
+          const offset = target.offsetTop - (app.clientHeight/2) + (target.offsetHeight/2);
+          app.scrollTo({top: Math.max(0, offset)});
         }
       }, 50);
     });
@@ -3422,7 +3384,7 @@ function openEventGroupTimeline(rawTitle){
   groupApp.appendChild(spacerBottom);
 
   const nowSlot = groupApp.querySelector('.slot.now');
-  if(nowSlot) scrollSlotIntoView(nowSlot, 'center');
+  if(nowSlot) nowSlot.scrollIntoView({block:'center'});
 }
 
 function closeEventGroupTimeline(){
@@ -3735,19 +3697,6 @@ function getUserName(){
   return normName(name);
 }
 
-// V landscape appka kartami rolluje vodorovně místo svisle (viz CSS media
-// query "orientation: landscape" u .app/.slot) — scrollIntoView proto musí
-// mířit na "inline" osu (vodorovnou) místo "block" (svislou), jinak by
-// v landscape neudělal nic viditelného. Použito na všech místech, co
-// navigují po hlavní timeline (i po "Historii této akce", co stejné
-// .app/.slot třídy sdílí) — název zarovnání (start/center) zůstává stejný,
-// jen se přepočítá na správnou osu.
-function scrollSlotIntoView(el, align){
-  if(!el) return;
-  const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-  el.scrollIntoView(isLandscape ? {inline: align} : {block: align});
-}
-
 function getEventKey(ev){
   return (ev.raw && ev.raw.id) ? ev.raw.id : ev.title.replace(/[^a-zA-Z0-9]/g,'_') + '_' + ev.start.toISOString().slice(0,10);
 }
@@ -3765,7 +3714,7 @@ function openEventByKey(key){
   const idx = (rawEvents||[]).findIndex(ev => { try{ return getEventKey(ev) === key; }catch(e){ return false; } });
   if(idx === -1) return;
   const slot = document.querySelector(`.slot[data-idx="${idx}"]`);
-  if(slot) scrollSlotIntoView(slot, 'center');
+  if(slot) slot.scrollIntoView({block:'center'});
   showEventDetail(idx);
 }
 
