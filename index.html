@@ -3536,7 +3536,7 @@ function showWelcome(){
     ['💬 Komentáře a reakce','V detailu události lze psát komentáře, odpovídat na ně a reagovat rychlými emoji (👍❤️😂😮😢).'],
     ['🖼️ Emoji avatar','Při prvním zadání přezdívky si vybereš ikonku ze čtyř kategorií (zvířata, sporty, doprava, ovoce a zelenina) — objeví se pak u tvého jména všude v appce.'],
     ['💬 Minichat','Ikona bublinky dole vedle lupy — seznam přezdívek, klikni na jméno a napiš krátkou zprávu (do 160 znaků). Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
-    ['👊 Hipnutí a rychlá zpráva','V "historii aktivity osoby" (klikni na jakékoliv jméno) jsou u nadpisu dvě ikonky — 👊 pošle rovnou upozornění "do tebe hipl(a)", 💬 tě nechá napsat krátký vzkaz jako notifikaci.'],
+    ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
     ['🌧️ Efekt počasí','Pokud appka zjistí, že u tebe prší nebo sněží (jen s tvým souhlasem k poloze), zobrazí jemný déšť nebo sníh na pozadí.'],
@@ -3740,7 +3740,6 @@ async function showPersonActivity(name){
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:16px;">
-        ${name !== viewer ? `<button id="pokeMsgBtn" title="Poslat zprávu" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">💬</button>` : ''}
         <span id="personActivityAvatar">👤</span> <span>${name}</span>
         ${name !== viewer ? `<button id="pokeNudgeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
@@ -3748,10 +3747,8 @@ async function showPersonActivity(name){
     </div>`;
   document.body.appendChild(backdrop);
 
-  const msgBtn = document.getElementById('pokeMsgBtn');
   const nudgeBtn = document.getElementById('pokeNudgeBtn');
   if(nudgeBtn) nudgeBtn.onclick = () => sendPoke(name, nudgeBtn);
-  if(msgBtn) msgBtn.onclick = () => sendPrivateMessage(name, msgBtn);
   getAvatar(name).then(a => { const el = document.getElementById('personActivityAvatar'); if(el) el.textContent = a; });
 
   const list = document.getElementById('personActivityList');
@@ -3832,17 +3829,6 @@ async function sendPoke(name, btn){
     await db.collection('pokes').add({ from: user, to: normName(name), type: 'poke', at: new Date().toISOString() });
     if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
   }catch(e){ console.error('Chyba při odesílání šťouchnutí:', e); }
-}
-
-async function sendPrivateMessage(name, btn){
-  const user = getUserName();
-  if(!user) return;
-  const text = prompt(`Krátká zpráva pro ${name}:`);
-  if(!text || !text.trim()) return;
-  try{
-    await db.collection('pokes').add({ from: user, to: normName(name), type: 'message', text: text.trim().slice(0,200), at: new Date().toISOString() });
-    if(btn){ const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = orig; }, 1500); }
-  }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
 }
 
 // =====================================================
@@ -3942,7 +3928,10 @@ function openChatThread(me, other){
   backdrop.innerHTML = `
     <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="chatThreadClose">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;"><span id="chatThreadAvatar">👤</span> ${other}</div>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:16px;">
+        <span><span id="chatThreadAvatar">👤</span> ${other}</span>
+        <button id="chatThreadPokeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>
+      </div>
       <div id="chatMessages" style="max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
         <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
@@ -3952,6 +3941,8 @@ function openChatThread(me, other){
   document.body.appendChild(backdrop);
   document.getElementById('chatThreadClose').onclick = closeThread;
   getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
+  const chatPokeBtn = document.getElementById('chatThreadPokeBtn');
+  if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
 
   const msgsEl = document.getElementById('chatMessages');
   activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
