@@ -3955,43 +3955,11 @@ function openChatThread(me, other){
   // Na iOS Safari fixed-pozicované prvky nereagují na vyjetou klávesnici —
   // zůstávají "přišpendlené" k neviditelné, nezúžené vrstvě dokumentu, takže
   // se po kliknutí do textového pole horní část sheetu (hlavička se jménem)
-  // posune mimo viditelnou plochu nad klávesnicí. VisualViewport API umí
-  // zjistit, kolik místa je NAD klávesnicí opravdu vidět, a podle toho sheet
-  // přesně dorovnat — na Androidu, kde se klávesnice chová jinak, tahle
-  // funkce prakticky nic nemění.
-  const fitChatModalToViewport = () => {
-    const vv = window.visualViewport;
-    if(!vv) return;
-    backdrop.style.height = vv.height + 'px';
-    backdrop.style.top = vv.offsetTop + 'px';
-    backdrop.style.bottom = 'auto';
-    // Samotný sheet má v CSS pevný strop "max-height:88vh" počítaný z celé
-    // (nezúžené) výšky stránky — když se klávesnice vysune a dostupné místo
-    // se zmenší, tenhle strop by se sám nezmenšil a sheet by pořád zkoušel
-    // být vyšší, než kolik se ho teď vejde nad klávesnici. Přepočítá se tu
-    // ručně na 88 % skutečně viditelné výšky.
-    const modalEl = backdrop.querySelector('.ev-modal');
-    if(modalEl){
-      modalEl.style.maxHeight = Math.round(vv.height * 0.88) + 'px';
-      // Spodní padding sheetu (viz .ev-modal v CSS) počítá navíc s
-      // env(safe-area-inset-bottom) — rezerva pro spodní "domečkovou" lištu
-      // bez klávesnice. S vyjetou klávesnicí je tahle rezerva zbytečná (o tu
-      // oblast se stará klávesnice sama) a jen dělá díru mezi "Odeslat" a
-      // klávesnicí. Podle rozdílu layoutové a viditelné výšky se pozná, jestli
-      // je klávesnice vysunutá, a rezerva se podle toho zmenší/vrátí.
-      const keyboardOpen = (window.innerHeight - vv.height) > 100;
-      modalEl.style.paddingBottom = keyboardOpen ? '14px' : '';
-    }
-  };
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
     if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
     if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
     if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
-    if(window.visualViewport){
-      window.visualViewport.removeEventListener('resize', fitChatModalToViewport);
-      window.visualViewport.removeEventListener('scroll', fitChatModalToViewport);
-    }
     document.removeEventListener('visibilitychange', onVisibilityChange);
     backdrop.remove();
     updateChatBadge();
@@ -4025,11 +3993,6 @@ function openChatThread(me, other){
       <input type="file" id="chatImageInput" accept="image/*" style="display:none;flex:0 0 auto;">
     </div>`;
   document.body.appendChild(backdrop);
-  if(window.visualViewport){
-    fitChatModalToViewport();
-    window.visualViewport.addEventListener('resize', fitChatModalToViewport);
-    window.visualViewport.addEventListener('scroll', fitChatModalToViewport);
-  }
   document.getElementById('chatThreadClose').onclick = closeThread;
   if(!isGroup){
     getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
@@ -4174,6 +4137,16 @@ function openChatThread(me, other){
   }, err => { console.error('Chyba při sledování přečtení:', err); });
 
   const chatInputEl = document.getElementById('chatInput');
+  // Spolehlivější náhrada za dřívější pokus přes VisualViewport API (ten se
+  // v appce přidané na plochu na iOS nespouštěl tak, jak měl, a na Androidu
+  // zase nešlo z něj poznat, jestli je klávesnice vysunutá) — tady se vychází
+  // přímo z toho, jestli je textové pole opravdu ve fokusu, což funguje
+  // stejně spolehlivě na obou platformách. Dokud se píše, sheet dole ztratí
+  // rezervu pro domečkovou lištu (ta stejně mizí pod klávesnicí) a "Odeslat"
+  // tak zůstane těsně nad klávesnicí místo zbytečné mezery pod ním.
+  const modalEl = backdrop.querySelector('.ev-modal');
+  chatInputEl.addEventListener('focus', () => { if(modalEl) modalEl.style.paddingBottom = '14px'; });
+  chatInputEl.addEventListener('blur', () => { if(modalEl) modalEl.style.paddingBottom = ''; });
   // Textové pole se samo roztahuje do výšky podle napsaného textu (do max-height
   // v CSS výše), ať dlouhá zpráva nemizí do strany, ale řádkuje se a je celá vidět.
   const autoGrowChatInput = () => {
