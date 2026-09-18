@@ -4101,7 +4101,7 @@ function openChatThread(me, other){
       <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter',sans-serif;"></div>
       <div id="chatPinnedBanner" style="display:none;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 10px;margin-bottom:8px;cursor:pointer;"></div>
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
-        <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
+        <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
       <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="flex:0 0 auto;display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
@@ -4586,6 +4586,8 @@ async function wireExpenseBtn(idx, key, ev){
     pressTimer = setTimeout(async () => {
       longPressed = true;
       if(navigator.vibrate) navigator.vibrate(15);
+      const pwd = prompt('Zadej heslo pro úpravu nákladů akce:');
+      if(pwd !== '800629'){ if(pwd !== null) alert('Špatné heslo'); return; }
       // Znovu načte aktuální položky z Firestore, ať editor neotevře starou
       // (prázdnou) kopii z doby, kdy se karta poprvé vykreslila, kdyby mezi
       // tím uživatel náklady ve stejné relaci už jednou vytvořil/upravil.
@@ -4627,11 +4629,11 @@ function openExpenseEditor(key, ev, existingItems){
       <div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
       <div id="expenseItemsList" style="text-align:left;margin-bottom:10px;max-height:30vh;overflow-y:auto;"></div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input id="expItemName" placeholder="Položka" style="flex:2;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:13px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
-        <input id="expItemQty" placeholder="Množství" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:13px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemName" placeholder="Položka" style="flex:2;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemQty" placeholder="Množství" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
       </div>
       <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <input id="expItemPrice" type="number" inputmode="decimal" placeholder="Cena (Kč)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:13px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemPrice" type="number" inputmode="decimal" placeholder="Cena (Kč)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
         <button id="expAddItemBtn" style="flex:0 0 auto;background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 16px;border-radius:var(--radius-sm);cursor:pointer;">Přidat</button>
       </div>
       <button id="expCreateBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit PDF</button>
