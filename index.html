@@ -4864,8 +4864,8 @@ function showExpenseReceipt(key, ev, items, contributions){
   `).join('');
   const contribHtml = contributions.length ? contributions.map(c => `
     <div style="display:flex;justify-content:space-between;align-items:center;font-family:Inter,sans-serif;padding:4px 0;">
-      <span style="font-size:13.5px;color:var(--ink);">${c.name}</span>
-      <span style="font-size:13.5px;font-weight:600;color:var(--ink);">${c.amount} Kč</span>
+      <span style="font-size:13.5px;color:var(--accent);">${c.name}</span>
+      <span style="font-size:13.5px;font-weight:600;color:var(--accent);">${c.amount} Kč</span>
     </div>
   `).join('') : `<div style="font-size:12.5px;color:var(--muted);text-align:left;">zatím nikdo</div>`;
   const backdrop = document.createElement('div');
