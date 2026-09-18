@@ -4644,7 +4644,7 @@ async function wireExpenseBtn(idx, key, ev){
     clearTimeout(pressTimer);
     e.preventDefault();
     if(longPressed) return;
-    if(btn._expenseHasData) buildAndOpenExpensePdf(key, ev, btn._expenseItems);
+    if(btn._expenseHasData) buildAndOpenExpensePdf(key, ev, btn._expenseItems, window.open('', '_blank'));
   });
   btn.addEventListener('touchmove', e => {
     const t = e.touches && e.touches[0];
@@ -4655,7 +4655,7 @@ async function wireExpenseBtn(idx, key, ev){
   btn.addEventListener('contextmenu', e => e.preventDefault());
   // Fallback pro myš (desktop, kde touch eventy nechodí)
   btn.addEventListener('click', () => {
-    if(!('ontouchstart' in window) && hasData) buildAndOpenExpensePdf(key, ev, items);
+    if(!('ontouchstart' in window) && hasData) buildAndOpenExpensePdf(key, ev, items, window.open('', '_blank'));
   });
 }
 
@@ -4716,6 +4716,10 @@ function openExpenseEditor(key, ev, existingItems){
 
   document.getElementById('expCreateBtn').onclick = async () => {
     if(!items.length){ alert('Přidej aspoň jednu položku.'); return; }
+    // Okno se musí otevřít TADY, synchronně a hned v okamžiku kliku — ne až
+    // po uložení do Firestore a sestavení PDF (viz komentář u
+    // buildAndOpenExpensePdf), jinak by ho mobilní prohlížeč zablokoval.
+    const pdfWindow = window.open('', '_blank');
     const createBtn = document.getElementById('expCreateBtn');
     createBtn.disabled = true;
     createBtn.textContent = 'Vytvářím…';
@@ -4726,7 +4730,7 @@ function openExpenseEditor(key, ev, existingItems){
         items,
         updatedAt: new Date().toISOString(),
       });
-      await buildAndOpenExpensePdf(key, ev, items);
+      await buildAndOpenExpensePdf(key, ev, items, pdfWindow);
       backdrop.remove();
       // Znovu prověří stav tlačítka na kartě (teď už s daty -> přestane být
       // zašedlé) — přepíše se jen stav uložený na samotném tlačítku (viz
@@ -4745,6 +4749,7 @@ function openExpenseEditor(key, ev, existingItems){
     }catch(e){
       console.error('Chyba při ukládání nákladů akce:', e);
       alert('Nepodařilo se uložit náklady akce.');
+      if(pdfWindow && !pdfWindow.closed) pdfWindow.close();
       createBtn.disabled = false;
       createBtn.textContent = 'Vytvořit PDF';
     }
@@ -4753,9 +4758,17 @@ function openExpenseEditor(key, ev, existingItems){
 
 // Sestaví PDF přesně podle vzorového formátu (nadpis, datum, tabulka položek,
 // celkové náklady, řádek "přispěli"/"plus-mínus" a QR kód s platebními údaji
-// dole) a rovnou ho otevře v nové kartě. QR kód je stejný statický obrázek
-// jako u tlačítka "Příspěvek" (qr-platba.png), žádná další závislost navíc.
-async function buildAndOpenExpensePdf(key, ev, items){
+// dole) a otevře ho v nové kartě. QR kód je stejný statický obrázek jako
+// u tlačítka "Příspěvek" (qr-platba.png), žádná další závislost navíc.
+//
+// preOpenedWindow (nepovinné): kartu/okno je potřeba otevřít SYNCHRONNĚ, hned
+// v okamžiku doteku/kliku (viz volání v wireExpenseBtn a openExpenseEditor) —
+// tahle funkce sama má uvnitř "await" (čekání na načtení QR obrázku), a
+// window.open() zavolaný až PO takovém čekání mobilní prohlížeče potichu
+// zablokují jako vyskakovací okno, i když ho odstartoval reálný dotek.
+// Volající proto otevře prázdné okno hned a předá ho sem — tady se do něj
+// jen doplní výsledná adresa PDF, až je hotové.
+async function buildAndOpenExpensePdf(key, ev, items, preOpenedWindow){
   try{
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: [340, 520] });
@@ -4834,9 +4847,14 @@ async function buildAndOpenExpensePdf(key, ev, items){
     doc.text('Díky za příspěvek', W/2, y, { align:'center' });
 
     const blobUrl = doc.output('bloburl');
-    window.open(blobUrl, '_blank');
+    if(preOpenedWindow && !preOpenedWindow.closed){
+      preOpenedWindow.location.href = blobUrl;
+    } else {
+      window.open(blobUrl, '_blank');
+    }
   }catch(e){
     console.error('Chyba při vytváření PDF nákladů:', e);
+    if(preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
     alert('Nepodařilo se vytvořit PDF.');
   }
 }
