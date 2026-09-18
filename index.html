@@ -4563,8 +4563,9 @@ function showPayment(eventTitle){
 // vyvolá textovou klávesnici a nejde mu nastavit inputmode, takže by se
 // u čtyřmístného čísla furt otvírala celá abeceda. Zůstává to Promise, ať se
 // dá v dlouhém podržení počkat na výsledek přes await, stejně jako na prompt().
-function askExpensePassword(){
+function askExpensePassword(ev){
   return new Promise((resolve) => {
+    const year = ev && ev.start ? ev.start.getFullYear() : new Date().getFullYear();
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
     backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
@@ -4577,6 +4578,7 @@ function askExpensePassword(){
           <button id="expPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
           <button id="expPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
         </div>
+        <button id="expYearSummaryBtn" style="display:block;width:100%;margin-top:10px;padding:11px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">📅 Náklady za rok ${year}</button>
       </div>`;
     document.body.appendChild(backdrop);
     const input = document.getElementById('expPwdInput');
@@ -4585,6 +4587,13 @@ function askExpensePassword(){
     document.getElementById('expPwdCancel').onclick = () => finish(null);
     document.getElementById('expPwdOk').onclick = () => finish(input.value);
     input.addEventListener('keydown', e => { if(e.key==='Enter') finish(input.value); });
+    // Přehled za rok nepotřebuje heslo (jen čte a sčítá, nic needituje) — tenhle
+    // sheet se rovnou zavře a otevře se přehled, bez ohledu na to, co je v poli.
+    document.getElementById('expYearSummaryBtn').onclick = () => {
+      backdrop.remove();
+      resolve(null);
+      showYearlyExpenseSummary(year);
+    };
   });
 }
 
@@ -4629,7 +4638,7 @@ async function wireExpenseBtn(idx, key, ev){
     pressTimer = setTimeout(async () => {
       longPressed = true;
       if(navigator.vibrate) navigator.vibrate(15);
-      const pwd = await askExpensePassword();
+      const pwd = await askExpensePassword(ev);
       if(pwd !== '800629'){ if(pwd !== null) alert('Špatné heslo'); return; }
       // Znovu načte aktuální položky z Firestore, ať editor neotevře starou
       // (prázdnou) kopii z doby, kdy se karta poprvé vykreslila, kdyby mezi
@@ -4854,10 +4863,11 @@ function showExpenseReceipt(key, ev, items, contributions){
     </div>
   `).join('');
   const contribHtml = contributions.length ? contributions.map(c => `
-    <div style="display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:12.5px;color:var(--ink);padding:3px 0;">
-      <span>${c.name}</span><span>${c.amount} Kč</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-family:Inter,sans-serif;padding:4px 0;">
+      <span style="font-size:13.5px;color:var(--ink);">${c.name}</span>
+      <span style="font-size:13.5px;font-weight:600;color:var(--ink);">${c.amount} Kč</span>
     </div>
-  `).join('') : `<span style="font-size:12.5px;color:var(--muted);">zatím nikdo</span>`;
+  `).join('') : `<div style="font-size:12.5px;color:var(--muted);text-align:left;">zatím nikdo</div>`;
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
@@ -4875,9 +4885,9 @@ function showExpenseReceipt(key, ev, items, contributions){
         <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
         <span style="font-size:20px;font-weight:700;color:var(--ink);">${total} Kč</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;font-family:Inter,sans-serif;">
-        <span style="font-size:13px;color:var(--ink);">přispěli</span>
-        <div style="text-align:right;">${contribHtml}</div>
+      <div style="margin-top:10px;font-family:Inter,sans-serif;text-align:left;">
+        <div style="font-size:13px;color:var(--ink);margin-bottom:2px;">přispěli</div>
+        ${contribHtml}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:Inter,sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
@@ -4891,8 +4901,83 @@ function showExpenseReceipt(key, ev, items, contributions){
   document.body.appendChild(backdrop);
 }
 
-// Doplní ikonky do všech <span class="mini-avatar" data-name="..."> uvnitř zadaného
-// kontejneru — používá se v seznamech "Kdo lajkoval/dorazí/nedorazí" a v žebříčcích.
+// Přehled nákladů/příspěvků za celý kalendářní rok, akce za akcí, s celkovým
+// součtem dole — bez QR kódu a bez poděkování (na rozdíl od showExpenseReceipt
+// tohle není platební výzva k jedné konkrétní akci, jen čtecí souhrn). Bere
+// v potaz jen akce, co už nějaké náklady mají zadané (expensePdfs).
+async function showYearlyExpenseSummary(year){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:14px;">📅 Náklady za rok ${year}</div>
+      <div id="yearSummaryList" style="text-align:left;">
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('yearSummaryList');
+  try{
+    const snap = await db.collection('expensePdfs').get();
+    const rows = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if(!data.eventStart) return;
+      const dt = new Date(data.eventStart);
+      if(dt.getFullYear() !== year) return;
+      const cost = (data.items||[]).reduce((s,it) => s + (Number(it.price)||0), 0);
+      const contrib = (data.contributions||[]).reduce((s,c) => s + (Number(c.amount)||0), 0);
+      rows.push({ title: data.eventTitle || '(bez názvu)', dt, cost, contrib });
+    });
+    rows.sort((a,b) => a.dt - b.dt);
+
+    if(!rows.length){
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Za rok ${year} zatím nemá žádná akce zadané náklady.</div>`;
+      return;
+    }
+
+    const grandCost = rows.reduce((s,r) => s + r.cost, 0);
+    const grandContrib = rows.reduce((s,r) => s + r.contrib, 0);
+
+    const rowsHtml = rows.map(r => `
+      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;">
+        <div style="font-size:13.5px;font-weight:600;color:var(--ink);">${r.title}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${DAYS_FULL[r.dt.getDay()]} ${r.dt.getDate()}.${r.dt.getMonth()+1}.${r.dt.getFullYear()}</div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink);">
+          <span>náklady: ${r.cost} Kč</span>
+          <span>příspěvky: ${r.contrib} Kč</span>
+        </div>
+      </div>
+    `).join('');
+
+    listEl.innerHTML = `
+      ${rowsHtml}
+      <div style="margin-top:14px;font-family:Inter,sans-serif;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
+          <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandCost} Kč</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+          <span style="font-size:13px;color:var(--ink);">celkové příspěvky</span>
+          <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandContrib} Kč</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+          <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
+          <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandCost - grandContrib} Kč</span>
+        </div>
+      </div>
+    `;
+  }catch(e){
+    console.error('Chyba při načítání ročního přehledu nákladů:', e);
+    listEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Nepodařilo se načíst přehled.</div>`;
+  }
+}
+
+
 // Jeden dotaz na osobu, ale jen jednou pro každé jedinečné jméno v seznamu.
 async function fillAvatars(container){
   const spans = container.querySelectorAll('.mini-avatar');
