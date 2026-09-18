@@ -3964,13 +3964,24 @@ function openChatThread(me, other){
     if(!vv) return;
     backdrop.style.height = vv.height + 'px';
     backdrop.style.top = vv.offsetTop + 'px';
+    backdrop.style.bottom = 'auto';
     // Samotný sheet má v CSS pevný strop "max-height:88vh" počítaný z celé
     // (nezúžené) výšky stránky — když se klávesnice vysune a dostupné místo
     // se zmenší, tenhle strop by se sám nezmenšil a sheet by pořád zkoušel
     // být vyšší, než kolik se ho teď vejde nad klávesnici. Přepočítá se tu
     // ručně na 88 % skutečně viditelné výšky.
     const modalEl = backdrop.querySelector('.ev-modal');
-    if(modalEl) modalEl.style.maxHeight = Math.round(vv.height * 0.88) + 'px';
+    if(modalEl){
+      modalEl.style.maxHeight = Math.round(vv.height * 0.88) + 'px';
+      // Spodní padding sheetu (viz .ev-modal v CSS) počítá navíc s
+      // env(safe-area-inset-bottom) — rezerva pro spodní "domečkovou" lištu
+      // bez klávesnice. S vyjetou klávesnicí je tahle rezerva zbytečná (o tu
+      // oblast se stará klávesnice sama) a jen dělá díru mezi "Odeslat" a
+      // klávesnicí. Podle rozdílu layoutové a viditelné výšky se pozná, jestli
+      // je klávesnice vysunutá, a rezerva se podle toho zmenší/vrátí.
+      const keyboardOpen = (window.innerHeight - vv.height) > 100;
+      modalEl.style.paddingBottom = keyboardOpen ? '14px' : '';
+    }
   };
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
