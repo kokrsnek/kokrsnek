@@ -4562,6 +4562,35 @@ function showPayment(eventTitle){
 // pro danou akci existují nějaké položky nákladů. Bez položek je tlačítko
 // vizuálně zašedlé a klik na něj nic neudělá — vytvořit je jde jen dlouhým
 // podržením (viz wireExpenseBtn), stejně jako podle zadání.
+// Vlastní okénko na heslo místo nativního prompt() — prompt() vždycky
+// vyvolá textovou klávesnici a nejde mu nastavit inputmode, takže by se
+// u čtyřmístného čísla furt otvírala celá abeceda. Zůstává to Promise, ať se
+// dá v dlouhém podržení počkat na výsledek přes await, stejně jako na prompt().
+function askExpensePassword(){
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
+    backdrop.innerHTML = `
+      <div class="ev-modal" style="text-align:center;">
+        <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+        <div class="ev-modal-title" style="margin-bottom:14px;">🔒 Heslo pro úpravu nákladů</div>
+        <input id="expPwdInput" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Heslo" style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:20px;padding:12px;border-radius:var(--radius-sm);outline:none;margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+          <button id="expPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
+          <button id="expPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const input = document.getElementById('expPwdInput');
+    setTimeout(() => input.focus(), 60); // drobná prodleva, ať appka stihne sheet vykreslit dřív, než se pokusí zaostřit
+    const finish = (val) => { backdrop.remove(); resolve(val); };
+    document.getElementById('expPwdCancel').onclick = () => finish(null);
+    document.getElementById('expPwdOk').onclick = () => finish(input.value);
+    input.addEventListener('keydown', e => { if(e.key==='Enter') finish(input.value); });
+  });
+}
+
 async function wireExpenseBtn(idx, key, ev){
   const btn = document.getElementById('expenseBtn_'+idx);
   if(!btn) return;
@@ -4571,37 +4600,51 @@ async function wireExpenseBtn(idx, key, ev){
     if(snap.exists) items = snap.data().items || [];
   }catch(e){ console.error('Chyba při načítání nákladů akce:', e); }
 
-  const hasData = items.length > 0;
-  btn.style.opacity = hasData ? '1' : '0.45';
-  btn.style.cursor = hasData ? 'pointer' : 'default';
-  btn.onclick = hasData ? () => buildAndOpenExpensePdf(key, ev, items) : null;
+  // Aktuální stav se drží přímo na tlačítku (ne jen v uzávěru téhle funkce),
+  // ať ho jde po vytvoření/úpravě nákladů zvenku (viz openExpenseEditor)
+  // jednoduše přepsat, aniž by bylo potřeba znovu registrovat posluchače
+  // dotyku — to by totiž vedlo k jejich zdvojení a dlouhé podržení by pak
+  // zbytečně spouštělo akci dvakrát.
+  btn._expenseItems = items;
+  btn._expenseHasData = items.length > 0;
+  btn.style.opacity = btn._expenseHasData ? '1' : '0.45';
+  btn.style.cursor = btn._expenseHasData ? 'pointer' : 'default';
 
-  // Dlouhé podržení vždycky (ať položky existují, nebo ne) otevře editor —
-  // buď na vytvoření první verze, nebo na úpravu/doplnění té stávající.
+  // POZOR: normální onclick tady nestačí. Jakmile má tlačítko i vlastní
+  // touchstart/touchend logiku (kvůli dlouhému podržení), spolehlivější je
+  // krátký dotek řešit přímo v touchend (stejný vzor jako u Dojdu/Nedojdu
+  // výš) — jinak se na některých zařízeních prohlížeč zmate v tom, jestli
+  // ještě má/nemá vyvolat i normální klik, a tlačítko pak vypadá "mrtvé".
   let pressTimer, longPressed = false, startX = 0, startY = 0;
+  btn.style.userSelect = 'none';
+  btn.style.webkitUserSelect = 'none';
+  btn.style.webkitTouchCallout = 'none';
   btn.addEventListener('touchstart', e => {
+    e.preventDefault();
     longPressed = false;
     const t = e.touches && e.touches[0];
     startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
     pressTimer = setTimeout(async () => {
       longPressed = true;
       if(navigator.vibrate) navigator.vibrate(15);
-      const pwd = prompt('Zadej heslo pro úpravu nákladů akce:');
+      const pwd = await askExpensePassword();
       if(pwd !== '800629'){ if(pwd !== null) alert('Špatné heslo'); return; }
       // Znovu načte aktuální položky z Firestore, ať editor neotevře starou
       // (prázdnou) kopii z doby, kdy se karta poprvé vykreslila, kdyby mezi
       // tím uživatel náklady ve stejné relaci už jednou vytvořil/upravil.
-      let currentItems = items;
+      let currentItems = btn._expenseItems;
       try{
         const snap = await db.collection('expensePdfs').doc(key).get();
         if(snap.exists) currentItems = snap.data().items || [];
       }catch(e){}
       openExpenseEditor(key, ev, currentItems);
     }, 500);
-  }, {passive:true});
+  }, {passive:false});
   btn.addEventListener('touchend', e => {
     clearTimeout(pressTimer);
-    if(longPressed) e.preventDefault(); // potlač simulovaný click po dlouhém podržení
+    e.preventDefault();
+    if(longPressed) return;
+    if(btn._expenseHasData) buildAndOpenExpensePdf(key, ev, btn._expenseItems);
   });
   btn.addEventListener('touchmove', e => {
     const t = e.touches && e.touches[0];
@@ -4610,6 +4653,10 @@ async function wireExpenseBtn(idx, key, ev){
     if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
   }, {passive:true});
   btn.addEventListener('contextmenu', e => e.preventDefault());
+  // Fallback pro myš (desktop, kde touch eventy nechodí)
+  btn.addEventListener('click', () => {
+    if(!('ontouchstart' in window) && hasData) buildAndOpenExpensePdf(key, ev, items);
+  });
 }
 
 // Editor položek — jednoduchý sheet s tabulkou "položka / množství / cena",
@@ -4682,14 +4729,17 @@ function openExpenseEditor(key, ev, existingItems){
       await buildAndOpenExpensePdf(key, ev, items);
       backdrop.remove();
       // Znovu prověří stav tlačítka na kartě (teď už s daty -> přestane být
-      // zašedlé) — jen vizuál a klik, žádné nové posluchače dlouhého podržení
-      // (ty se přidávají jen jednou při vykreslení karty, viz wireExpenseBtn).
+      // zašedlé) — přepíše se jen stav uložený na samotném tlačítku (viz
+      // wireExpenseBtn), žádné nové posluchače dotyku se nepřidávají (ty se
+      // věší jen jednou při vykreslení karty, zdvojení by dlouhé podržení
+      // spouštělo víckrát najednou).
       document.querySelectorAll('[id^="expenseBtn_"]').forEach(b => {
         const idx = b.id.replace('expenseBtn_','');
         if(window['evKey_'+idx] === key){
+          b._expenseItems = items;
+          b._expenseHasData = true;
           b.style.opacity = '1';
           b.style.cursor = 'pointer';
-          b.onclick = () => buildAndOpenExpensePdf(key, ev, items);
         }
       });
     }catch(e){
