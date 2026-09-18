@@ -3952,11 +3952,36 @@ function openChatThread(me, other){
   const isGroup = other === PARTY_THREAD_ID;
   const threadId = isGroup ? PARTY_THREAD_ID : chatThreadId(me, other);
   const backdrop = document.createElement('div');
+  // Na iOS Safari fixed-pozicované prvky nereagují na vyjetou klávesnici —
+  // zůstávají "přišpendlené" k neviditelné, nezúžené vrstvě dokumentu, takže
+  // se po kliknutí do textového pole horní část sheetu (hlavička se jménem)
+  // posune mimo viditelnou plochu nad klávesnicí. VisualViewport API umí
+  // zjistit, kolik místa je NAD klávesnicí opravdu vidět, a podle toho sheet
+  // přesně dorovnat — na Androidu, kde se klávesnice chová jinak, tahle
+  // funkce prakticky nic nemění.
+  const fitChatModalToViewport = () => {
+    const vv = window.visualViewport;
+    if(!vv) return;
+    backdrop.style.height = vv.height + 'px';
+    backdrop.style.top = vv.offsetTop + 'px';
+    // Samotný sheet má v CSS pevný strop "max-height:88vh" počítaný z celé
+    // (nezúžené) výšky stránky — když se klávesnice vysune a dostupné místo
+    // se zmenší, tenhle strop by se sám nezmenšil a sheet by pořád zkoušel
+    // být vyšší, než kolik se ho teď vejde nad klávesnici. Přepočítá se tu
+    // ručně na 88 % skutečně viditelné výšky.
+    const modalEl = backdrop.querySelector('.ev-modal');
+    if(modalEl) modalEl.style.maxHeight = Math.round(vv.height * 0.88) + 'px';
+  };
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
     if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
     if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
     if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
+    if(window.visualViewport){
+      window.visualViewport.removeEventListener('resize', fitChatModalToViewport);
+      window.visualViewport.removeEventListener('scroll', fitChatModalToViewport);
+    }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     backdrop.remove();
     updateChatBadge();
   };
@@ -3989,6 +4014,11 @@ function openChatThread(me, other){
       <input type="file" id="chatImageInput" accept="image/*" style="display:none;flex:0 0 auto;">
     </div>`;
   document.body.appendChild(backdrop);
+  if(window.visualViewport){
+    fitChatModalToViewport();
+    window.visualViewport.addEventListener('resize', fitChatModalToViewport);
+    window.visualViewport.addEventListener('scroll', fitChatModalToViewport);
+  }
   document.getElementById('chatThreadClose').onclick = closeThread;
   if(!isGroup){
     getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
@@ -4091,19 +4121,35 @@ function openChatThread(me, other){
   }
   activeChatTypingInterval = setInterval(updateTypingIndicator, 1000);
 
+  // Pomocná funkce, co zapíše "viděl(a) jsem až sem" — volá se jen když je
+  // appka opravdu vidět na obrazovce (viz podmínka níže), ne kdykoliv si
+  // appka jen běží na pozadí se zamčeným displejem.
+  const markSeenNow = () => {
+    db.collection('chats').doc(threadId).set({ lastSeen: { [me]: new Date().toISOString() } }, { merge: true }).catch(()=>{});
+  };
+
   activeChatUnsub = db.collection('chats').doc(threadId).collection('messages').orderBy('at').onSnapshot(snap => {
     latestMsgDocs = snap.docs;
     renderChatMessages();
-    // Dokud mám vlákno otevřené, každá nově příchozí zpráva se rovnou počítá
-    // za přečtenou (posune moje lastSeen), ať se u odesílatele "Přečteno"
-    // objeví hned, ne až po zavření a novém otevření chatu.
+    // Dokud mám vlákno otevřené A appka je opravdu na obrazovce (ne jen
+    // "technicky pořád běží" na pozadí se zamčeným telefonem — přesně tenhle
+    // rozdíl dřív způsoboval, že se zprávy tvářily jako přečtené, i když je
+    // nikdo neviděl), každá nově příchozí zpráva se rovnou počítá za
+    // přečtenou, ať se u odesílatele "Přečteno" objeví hned, ne až po
+    // zavření a novém otevření chatu.
     // POZN.: musí to být vnořený objekt {lastSeen:{[me]:...}}, ne klíč s tečkou
     // "lastSeen.me" — ten druhý zápis .set(...,{merge:true}) (na rozdíl od
     // .update()) nerozparsuje na cestu do pole, ale uloží ho jako jeden
     // doslovný název pole s tečkou v názvu, takže se čtení (data.lastSeen[jméno])
     // nikdy netrefilo a "Přečteno" se nikdy nezobrazilo.
-    db.collection('chats').doc(threadId).set({ lastSeen: { [me]: new Date().toISOString() } }, { merge: true }).catch(()=>{});
+    if(!document.hidden) markSeenNow();
   }, err => { console.error('Chyba při načítání zpráv:', err); });
+
+  // Když se appka vrátí do popředí (odemčení telefonu, přepnutí zpět ze
+  // záložky) a vlákno pořád běží na pozadí otevřené, doženou se tak i
+  // zprávy, co mezitím přišly se zamčenou/skrytou appkou.
+  const onVisibilityChange = () => { if(!document.hidden) markSeenNow(); };
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // Vlastní dokument vlákna (chats/{threadId}) drží pole lastSeen (kdy si kdo
   // vlákno naposledy otevřel) a typing (kdy kdo naposledy něco napsal) —
