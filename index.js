@@ -73,6 +73,14 @@ function normName(s) {
 }
 
 /** Vrátí tokeny všech lidí KROMĚ zadaného jména (aby si nikdo nepingnul sám sebe). */
+/** Vrátí Set normalizovaných jmen těch, kdo mají dané vlákno ztlumené (viz
+ * index.html -> chatMuteBtn, pole "muted" v dokumentu chats/{threadId}). */
+async function getMutedSet(threadId) {
+  const threadDoc = await db.collection('chats').doc(threadId).get();
+  const muted = (threadDoc.exists && threadDoc.data().muted) || {};
+  return new Set(Object.keys(muted).filter((n) => muted[n]).map(normName));
+}
+
 async function getTokensExcept(excludeUser) {
   const exclude = normName(excludeUser);
   const snap = await db.collection('pushTokens').get();
@@ -754,13 +762,23 @@ exports.onChatMessageCreated = onDocumentCreated(
     const threadId = event.params.threadId;
 
     if (threadId === PARTY_THREAD_ID) {
-      const tokens = await getTokensExcept(from);
-      console.log(`[chat] skupinová zpráva od "${from}", nalezeno tokenů: ${tokens.length}`);
-      if (!tokens.length) {
+      const mutedSet = await getMutedSet(threadId);
+      const tokensSnap = await db.collection('pushTokens').get();
+      const allowedTokens = [];
+      tokensSnap.forEach((doc) => {
+        const d = doc.data();
+        if (!d.token) return;
+        const n = normName(d.user);
+        if (n === from) return;
+        if (mutedSet.has(n)) return;
+        allowedTokens.push(d.token);
+      });
+      console.log(`[chat] skupinová zpráva od "${from}", nalezeno tokenů: ${allowedTokens.length} (ztlumeno: ${mutedSet.size})`);
+      if (!allowedTokens.length) {
         console.log('[chat] žádné tokeny pro skupinu — končím bez odeslání');
         return;
       }
-      await sendToTokens(tokens, {
+      await sendToTokens(allowedTokens, {
         title: `💬 ${data.from} (Celá parta)`,
         body,
         chatWith: PARTY_THREAD_ID,
@@ -774,6 +792,11 @@ exports.onChatMessageCreated = onDocumentCreated(
     console.log(`[chat] threadId="${threadId}" participants=${JSON.stringify(participants)} from="${from}" to="${to}"`);
     if (!to) {
       console.log('[chat] nepodařilo se určit příjemce — končím');
+      return;
+    }
+    const mutedSet = await getMutedSet(threadId);
+    if (mutedSet.has(to)) {
+      console.log(`[chat] "${to}" má vlákno ztlumené — notifikaci nepošlu`);
       return;
     }
     const tokens = await getTokensFor(to);
@@ -817,6 +840,8 @@ exports.onChatReaction = onDocumentUpdated(
     if (!added.length) return;
 
     const threadId = event.params.threadId;
+    const mutedSet = await getMutedSet(threadId);
+    if (mutedSet.has(normName(after.from))) return; // autor zprávy má tohle vlákno ztlumené
     const snippet = after.text ? after.text.slice(0, 100) : (after.image ? '📷 fotka' : '');
     const tokens = await getTokensFor(after.from);
     if (!tokens.length) return;
