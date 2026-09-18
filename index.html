@@ -2908,17 +2908,22 @@ let calendarLoaded = false;
 fetchGoogleCalendarEvents().then(() => {
   calendarLoaded = true;
   // Otevřeno z push notifikace? V URL je buď ?event=KEY (otevři kartu akce),
-  // nebo ?chat=JMÉNO (otevři rovnou dané vlákno v minichatu).
+  // ?chat=JMÉNO (otevři rovnou dané vlákno v minichatu), nebo ?poll=ID
+  // (otevři rovnou danou anketu).
   try{
     const params = new URLSearchParams(location.search);
     const evKey = params.get('event');
     const chatWith = params.get('chat');
+    const pollId = params.get('poll');
     if(evKey){
       setTimeout(() => openEventByKey(evKey), 100);
       history.replaceState(null, '', location.pathname);
     } else if(chatWith){
       const me = localStorage.getItem('kokrsnekUser');
       if(me) setTimeout(() => openChatThread(me, chatWith), 100);
+      history.replaceState(null, '', location.pathname);
+    } else if(pollId){
+      setTimeout(() => openPollDetail(pollId), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
@@ -3609,6 +3614,7 @@ function showWelcome(){
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — dlouhé podržení (heslo) otevře zadání položek (název/množství/cena), tlačítko "Vytvořit" pak spočítá součet a zobrazí náhled nákladů na akci. Klik na už zadanou položku ji nahraje k úpravě. Napsat do Položky "přispěl(a) JMÉNO" a do Ceny částku ji zapíše mezi příspěvky, ne mezi náklady — odečte se pak od plus/mínus. Dokud nic není zadané, je tlačítko zašedlé; jakmile existuje, obyčejný klik náhled znovu otevře.'],
+    ['📊 Ankety','V "💬 Zprávy" hned pod "Celá parta" — "+ Nová anketa" založí otázku s libovolným počtem možností a pošle notifikaci celé partě. Klik na možnost = tvůj hlas (jde přehlasovat), pod každou je vidět kdo pro ni hlasoval. Ten, kdo anketu založil, ji může tlačítkem uzavřít — pak už nejde hlasovat a je vidět vítězná možnost.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
     ['🌧️ Efekt počasí','Pokud appka zjistí, že u tebe prší nebo sněží (jen s tvým souhlasem k poloze), zobrazí jemný déšť nebo sníh na pozadí.'],
     ['🔔 Notifikace — co všechno appka posílá','Nový lajk, Dojdu/Nedojdu, komentář (i odpověď a emoji reakce na tvůj komentář), nové album fotek nebo seznam nákladů u akce, úplně nová akce v kalendáři, změna data či místa u akce (pokud jsi na ni odpověděl/a), připomínka akce v den konání i týden předem, akce za 3 dny bez odezvy, narozeniny a svátek člena party, sesazení z 1. místa v kvízu, a šťouchnutí/zpráva/minichat od ostatních. Zapíná se zvonečkem nahoře.'],
@@ -3797,6 +3803,8 @@ if(navigator.serviceWorker){
     } else if(event.data && event.data.type === 'open-chat' && event.data.chatWith){
       const me = localStorage.getItem('kokrsnekUser');
       if(me) openChatThread(me, event.data.chatWith);
+    } else if(event.data && event.data.type === 'open-poll' && event.data.pollId){
+      openPollDetail(event.data.pollId);
     }
   });
 }
@@ -3986,10 +3994,15 @@ async function openChatList(){
           <span style="color:var(--muted);font-size:16px;">›</span>
         </span>
       </button>`;
+    const pollRow = `
+      <button class="chat-user-row" data-polls="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
+        <span>📊 Ankety</span>
+        <span style="color:var(--muted);font-size:16px;">›</span>
+      </button>`;
     if(!names.length){
-      list.innerHTML = partyRow + '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
+      list.innerHTML = partyRow + pollRow + '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím nikdo jiný nemá zapnuté notifikace</div>';
     } else {
-      list.innerHTML = partyRow + names.map(n => {
+      list.innerHTML = partyRow + pollRow + names.map(n => {
         const unread = unreadMap[n] || 0;
         return `
         <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
@@ -4002,6 +4015,7 @@ async function openChatList(){
       }).join('');
     }
     list.querySelector('[data-party]').onclick = () => { backdrop.remove(); openChatThread(me, PARTY_THREAD_ID); };
+    list.querySelector('[data-polls]').onclick = () => { backdrop.remove(); openPollList(); };
     list.querySelectorAll('[data-name]').forEach(btn => {
       btn.onclick = () => { backdrop.remove(); openChatThread(me, btn.dataset.name); };
     });
@@ -4009,6 +4023,209 @@ async function openChatList(){
     console.error('Chyba při načítání seznamu:', e);
     list.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
   }
+}
+
+// =====================================================
+// ANKETY — hlasovací kolekce "polls", nezávislá na konkrétní akci (na rozdíl
+// od Dojdu/Nedojdu). Jeden aktivní hlas na osobu na anketu (jde přehlasovat),
+// uložený jako votes: { normalizovanéJméno: indexMožnosti }. Otevírá se
+// z "💬 Zprávy" (viz openChatList výš), stejné místo jako "Celá parta".
+// =====================================================
+
+function pollIconSVG(){
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-6"/></svg>`;
+}
+
+async function openPollList(){
+  const me = getUserName();
+  if(!me) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">📊 Ankety</div>
+      <button id="newPollBtn" style="display:block;width:100%;margin-bottom:12px;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ Nová anketa</button>
+      <div id="pollList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.getElementById('newPollBtn').onclick = () => { backdrop.remove(); openPollEditor(); };
+
+  const listEl = document.getElementById('pollList');
+  try{
+    const snap = await db.collection('polls').orderBy('createdAt', 'desc').get();
+    if(snap.empty){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádná anketa — založ první!</div>';
+      return;
+    }
+    listEl.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      const votes = data.votes || {};
+      const voteCount = Object.keys(votes).length;
+      const myVoteIdx = votes[me];
+      const options = data.options || [];
+      let leaderLine = '';
+      if(data.closed && options.length){
+        const counts = options.map((_, i) => Object.values(votes).filter(v => v === i).length);
+        const maxCount = Math.max(...counts, 0);
+        const winners = options.filter((_, i) => counts[i] === maxCount && maxCount > 0);
+        leaderLine = winners.length ? `Vyhrálo: ${winners.join(', ')}` : 'Nikdo nehlasoval';
+      }
+      return `
+        <button data-poll-id="${d.id}" style="display:block;width:100%;text-align:left;background:none;border:none;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-family:'Inter',sans-serif;opacity:${data.closed ? '0.55' : '1'};">
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${data.closed ? '🔒 ' : ''}${data.question}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${data.closed ? leaderLine : `${voteCount} hlas(ů)`}${myVoteIdx !== undefined ? ' · hlasoval(a) jsi' : ''}</div>
+        </button>`;
+    }).join('');
+    listEl.querySelectorAll('[data-poll-id]').forEach(btn => {
+      btn.onclick = () => { backdrop.remove(); openPollDetail(btn.dataset.pollId); };
+    });
+  }catch(e){
+    console.error('Chyba při načítání anket:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst ankety</div>';
+  }
+}
+
+function openPollEditor(){
+  const me = getUserName();
+  if(!me) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:14px;">📊 Nová anketa</div>
+      <input id="pollQuestion" placeholder="Otázka (např. Kam příště?)" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:10px;">
+      <div id="pollOptionsList" style="margin-bottom:8px;"></div>
+      <button id="addOptionBtn" style="display:block;width:100%;padding:9px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:14px;">+ Přidat možnost</button>
+      <button id="createPollBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const optionsList = document.getElementById('pollOptionsList');
+  const addOptionRow = (placeholder) => {
+    const row = document.createElement('input');
+    row.className = 'poll-option-input';
+    row.placeholder = placeholder;
+    row.style.cssText = 'width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:8px;';
+    optionsList.appendChild(row);
+  };
+  addOptionRow('Možnost 1');
+  addOptionRow('Možnost 2');
+  document.getElementById('addOptionBtn').onclick = () => addOptionRow(`Možnost ${optionsList.children.length + 1}`);
+
+  document.getElementById('createPollBtn').onclick = async () => {
+    const question = document.getElementById('pollQuestion').value.trim();
+    const options = [...optionsList.querySelectorAll('.poll-option-input')]
+      .map(inp => inp.value.trim())
+      .filter(v => v);
+    if(!question){ alert('Napiš otázku.'); return; }
+    if(options.length < 2){ alert('Zadej aspoň dvě možnosti.'); return; }
+    const createBtn = document.getElementById('createPollBtn');
+    createBtn.disabled = true;
+    createBtn.textContent = 'Vytvářím…';
+    try{
+      const ref = await db.collection('polls').add({
+        question,
+        options,
+        votes: {},
+        createdBy: me,
+        createdAt: new Date().toISOString(),
+        closed: false,
+      });
+      backdrop.remove();
+      openPollDetail(ref.id);
+    }catch(e){
+      console.error('Chyba při vytváření ankety:', e);
+      alert('Nepodařilo se vytvořit anketu.');
+      createBtn.disabled = false;
+      createBtn.textContent = 'Vytvořit';
+    }
+  };
+}
+
+let activePollUnsub = null;
+
+async function openPollDetail(pollId){
+  const me = getUserName();
+  if(!me) return;
+  if(activePollUnsub){ activePollUnsub(); activePollUnsub = null; }
+  const backdrop = document.createElement('div');
+  const close = () => { if(activePollUnsub){ activePollUnsub(); activePollUnsub = null; } backdrop.remove(); };
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) close(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" id="pollDetailClose">×</button>
+      <div id="pollDetailBody" style="text-align:left;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.getElementById('pollDetailClose').onclick = close;
+  backdrop.querySelector('.sheet-grabber-down').onclick = close;
+
+  const bodyEl = document.getElementById('pollDetailBody');
+  activePollUnsub = db.collection('polls').doc(pollId).onSnapshot(snap => {
+    if(!snap.exists){ bodyEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Anketa už neexistuje.</div>'; return; }
+    const data = snap.data();
+    const votes = data.votes || {};
+    const options = data.options || [];
+    const total = Object.keys(votes).length;
+    const myVoteIdx = votes[me];
+    const isCreator = normName(data.createdBy) === normName(me);
+
+    const optionsHtml = options.map((opt, i) => {
+      const voters = Object.keys(votes).filter(u => votes[u] === i);
+      const pct = total ? Math.round(voters.length / total * 100) : 0;
+      const mine = myVoteIdx === i;
+      return `
+        <button onclick="${data.closed ? '' : `voteInPoll('${pollId}', ${i})`}" style="
+          display:block; width:100%; text-align:left; position:relative; overflow:hidden;
+          background:var(--surface); border:1px solid ${mine ? 'var(--accent)' : 'var(--line)'};
+          border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px;
+          cursor:${data.closed ? 'default' : 'pointer'}; font-family:'Inter',sans-serif;
+        ">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:var(--accent-soft);z-index:0;"></div>
+          <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13.5px;color:var(--ink);font-weight:${mine?'700':'500'};">${mine ? '✓ ' : ''}${opt}</span>
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap;margin-left:8px;">${voters.length} · ${pct}%</span>
+          </div>
+          ${voters.length ? `<div style="position:relative;z-index:1;font-size:10.5px;color:var(--muted);margin-top:3px;">${voters.join(', ')}</div>` : ''}
+        </button>`;
+    }).join('');
+
+    bodyEl.innerHTML = `
+      <div class="ev-modal-title" style="margin-bottom:2px;">📊 ${data.question}</div>
+      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:var(--muted);margin-bottom:14px;text-align:center;">
+        založil(a) ${data.createdBy}${data.closed ? ' · uzavřeno' : ''}
+      </div>
+      ${optionsHtml}
+      ${isCreator && !data.closed ? `<button id="closePollBtn" style="display:block;width:100%;margin-top:10px;padding:10px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;">Uzavřít anketu</button>` : ''}
+    `;
+    const closeBtn = document.getElementById('closePollBtn');
+    if(closeBtn) closeBtn.onclick = () => closePoll(pollId);
+  }, err => { console.error('Chyba při načítání ankety:', err); });
+}
+
+async function voteInPoll(pollId, optionIndex){
+  const me = getUserName();
+  if(!me) return;
+  try{
+    await db.collection('polls').doc(pollId).update({ ['votes.' + me]: optionIndex });
+  }catch(e){
+    // update() selže, pokud dokument neexistuje (nemělo by nastat) — pro
+    // jistotu záložní zápis přes set/merge.
+    try{ await db.collection('polls').doc(pollId).set({ votes: { [me]: optionIndex } }, { merge: true }); }
+    catch(e2){ console.error('Chyba při hlasování:', e2); }
+  }
+}
+
+async function closePoll(pollId){
+  if(!confirm('Uzavřít anketu? Po uzavření už nepůjde hlasovat.')) return;
+  try{
+    await db.collection('polls').doc(pollId).update({ closed: true });
+  }catch(e){ console.error('Chyba při uzavírání ankety:', e); }
 }
 
 let activeChatUnsub = null;

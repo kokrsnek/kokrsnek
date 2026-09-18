@@ -24,9 +24,14 @@
  *  13. sendBirthdayNamedayPush — denně v 8:00: narozeniny/svátek člena party, pošle
  *                            se CELÉ partě (ne jen tomu, kdo zrovna otevře appku)
  *  14. sendLowRsvpReminder — denně v 8:00: akce za 3 dny má skoro žádné odpovědi
+ *  14b. sendPostEventThankYou — denně v 8:00: den po skončení akce — lidem s "Dojdu"
+ *                            poděkování za účast, všem ostatním jen pozvánka na
+ *                            další akci; jediný trigger, co sahá přímo na Google
+ *                            Calendar API (potřebuje znát "další akci")
  *  15. onChatMessageCreated — nová zpráva v minichatu, 1:1 i ve skupinovém
  *                            vlákně "Celá parta" (viz index.html -> openChatThread())
  *  15b. onChatReaction     — emoji reakce na zprávu v chatu, notifikace jen autorovi zprávy
+ *  15c. onPollCreated      — nová anketa (viz index.html -> openPollEditor()), notifikace všem kromě autora
  *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
  *                            appky přidělí custom claim partyMember, které vyžadují
  *                            pravidla Firestore databáze pro každé čtení/zápis
@@ -118,7 +123,7 @@ async function sendToTokens(tokens, notification) {
     // vždy jen náš vlastní kód, přesně jednou.
     // eventId cestuje spolu s notifikací, aby klik na ni (sw.js -> notificationclick)
     // uměl appku otevřít rovnou na kartě té konkrétní akce. chatWith stejným
-    // způsobem otevře rovnou dané vlákno v minichatu.
+    // způsobem otevře rovnou dané vlákno v minichatu, pollId rovnou danou anketu.
     // webpush.headers.Urgency = 'high' — appka je nainstalovaná appka (PWA), takže
     // tokeny jsou webové FCM tokeny z prohlížeče, ne nativní Android tokeny (proto
     // tady nepomůže "android: {priority:'high'}", který platí jen pro nativní appky).
@@ -132,6 +137,7 @@ async function sendToTokens(tokens, notification) {
         body: notification.body || '',
         eventId: notification.eventId || '',
         chatWith: notification.chatWith || '',
+        pollId: notification.pollId || '',
       },
       webpush: {
         headers: { Urgency: 'high' },
@@ -740,6 +746,109 @@ exports.sendLowRsvpReminder = onSchedule(
   }
 );
 
+// --- 14b) Poděkování den po skončení akce ------------------------------------
+// Denně v 8:00: najde akce, co skončily VČERA, a pro ně:
+//   - lidem s "Dojdu" pošle poděkování za účast + pozvánku na další akci
+//   - úplně všem ostatním (kdo dostal poděkování výš, ty vynechá) pošle jen
+//     tu pozvánku na další akci
+// Na rozdíl od ostatních triggerů tenhle SAHÁ přímo na Google Calendar API
+// (stejný klíč jako appka/widget, jen bez omezení na weby — Cloud Function
+// neběží v prohlížeči, takže by s webovým klíčem narazila na stejné 403 jako
+// dřív Scriptable) — ostatní triggery si vystačí s daty, co do Firestore
+// zapisuje sama appka, ale "další akce v kalendáři" tam nikde uložená není.
+const GOOGLE_CALENDAR_API_KEY = 'AIzaSyBpgUzhWDC3YMQh4wX818DSaLIvWNQl_oA';
+const GOOGLE_CALENDAR_ID = 'kokrsnek@gmail.com';
+
+async function fetchCalendarEventsWindow(daysBack, daysForward) {
+  const timeMin = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+  const timeMax = new Date(Date.now() + daysForward * 24 * 60 * 60 * 1000).toISOString();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
+    + `?key=${GOOGLE_CALENDAR_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=2500`
+    + `&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    console.error('[postEventFollowup] Google Calendar API chyba:', (data.error && data.error.message) || res.status);
+    return [];
+  }
+  // Stejné parsování jako appka (index.html -> fetchGoogleCalendarEvents) —
+  // včetně toho, že u vícedenních celodenních akcí je "end.date" od Googlu
+  // o den POSUNUTÝ (den PO poslední dnu akce), appka to takhle bere taky.
+  return (data.items || [])
+    .filter((it) => it.start && (it.start.dateTime || it.start.date))
+    .map((it) => {
+      const start = new Date(it.start.dateTime || it.start.date + 'T00:00:00');
+      let end = new Date((it.end && (it.end.dateTime || it.end.date)) ? (it.end.dateTime || it.end.date + 'T00:00:00') : start);
+      if (isNaN(end.getTime())) end = new Date(start);
+      return { id: it.id, title: (it.summary || '(bez názvu)').trim(), start, end };
+    })
+    .filter((ev) => !isNaN(ev.start.getTime()));
+}
+
+exports.sendPostEventThankYou = onSchedule(
+  { schedule: '0 8 * * *', timeZone: 'Europe/Prague' },
+  async () => {
+    const now = new Date();
+    const yesterdayStr = czDateStr(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+
+    // 10 dní zpátky (ať se najde i akce, co skončila včera) a 120 dní dopředu
+    // (ať je z čeho vybrat tu další nadcházející).
+    const events = await fetchCalendarEventsWindow(10, 120);
+    if (!events.length) return;
+
+    const endedYesterday = events.filter((ev) => czDateStr(ev.end) === yesterdayStr);
+    if (!endedYesterday.length) return; // včera nic neskončilo, dnes se nic neposílá
+
+    const nextEvent = events
+      .filter((ev) => ev.start.getTime() >= now.getTime())
+      .sort((a, b) => a.start - b.start)[0];
+    if (!nextEvent) return; // není na co odkázat příští akcí — radši nic neposílat
+
+    const tokensSnap = await db.collection('pushTokens').get();
+    const tokensByUser = {}; // normalizované jméno -> pole tokenů
+    tokensSnap.forEach((doc) => {
+      const d = doc.data();
+      if (!d.token || !d.user) return;
+      const n = normName(d.user);
+      (tokensByUser[n] = tokensByUser[n] || []).push(d.token);
+    });
+
+    const thankedUsers = new Set();
+
+    for (const ev of endedYesterday) {
+      const attendSnap = await db.collection('events').doc(ev.id).collection('attendees').get();
+      const tokens = [];
+      attendSnap.forEach((doc) => {
+        const user = doc.data().user;
+        if (!user) return;
+        const n = normName(user);
+        thankedUsers.add(n);
+        if (tokensByUser[n]) tokens.push(...tokensByUser[n]);
+      });
+      if (!tokens.length) continue;
+      await sendToTokens(tokens, {
+        title: '🙌 Díky za účast',
+        body: `Díky za účast na „${ev.title}“. Těšíme se na vás na příští akci „${nextEvent.title}“.`,
+        eventId: ev.id,
+      });
+    }
+
+    // Všichni ostatní z party (kdo nedostal poděkování výš) — jedna společná
+    // zpráva, i kdyby včera skončilo víc akcí najednou.
+    const otherTokens = [];
+    Object.keys(tokensByUser).forEach((n) => {
+      if (!thankedUsers.has(n)) otherTokens.push(...tokensByUser[n]);
+    });
+    if (otherTokens.length) {
+      await sendToTokens(otherTokens, {
+        title: '👋 Těšíme se na vás',
+        body: `Těšíme se na vás příště na akci „${nextEvent.title}“.`,
+        eventId: nextEvent.id,
+      });
+    }
+  }
+);
+
 // --- 15) Minichat --------------------------------------------------------------
 // Trigger: chats/{threadId}/messages/{msgId} — threadId jsou oba nicky seřazené
 // abecedně a spojené "__" (viz index.html -> chatThreadId()). Notifikace jde
@@ -854,6 +963,26 @@ exports.onChatReaction = onDocumentUpdated(
         chatWith: threadId === PARTY_THREAD_ID ? PARTY_THREAD_ID : user,
       });
     }
+  }
+);
+
+// --- 15c) Nová anketa -------------------------------------------------------
+// Trigger: nový dokument v kolekci polls (viz index.html -> openPollEditor()).
+// Notifikaci dostanou úplně všichni kromě toho, kdo anketu založil.
+exports.onPollCreated = onDocumentCreated(
+  'polls/{pollId}',
+  async (event) => {
+    const data = event.data.data();
+    if (!data || !data.question || !data.createdBy) return;
+    const tokens = await getTokensExcept(data.createdBy);
+    console.log(`[poll] nová anketa od "${data.createdBy}", nalezeno tokenů: ${tokens.length}`);
+    if (!tokens.length) return;
+    await sendToTokens(tokens, {
+      title: `📊 Nová anketa od ${data.createdBy}`,
+      body: data.question,
+      pollId: event.params.pollId,
+    });
+    console.log('[poll] notifikace odeslána');
   }
 );
 
