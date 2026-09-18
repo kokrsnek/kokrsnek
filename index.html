@@ -3156,6 +3156,39 @@ async function toggleNotifications(){
 
 updateNotifBtnUI(localStorage.getItem('pushEnabled') === '1');
 
+// Jednou zapnutý FCM token se dosud nikdy sám neobnovoval. Chrome na Androidu
+// ho ale v pozadí občas (po týdnech provozu, aktualizaci prohlížeče, vyčištění
+// úložiště appky apod.) potichu zneplatní a vygeneruje nový, aniž by o tom
+// appka věděla — uložený token ve Firestore pak zůstal starý a mrtvý, takže na
+// tom konkrétním zařízení notifikace přestaly chodit, dokud si toho někdo
+// nevšiml a ručně nevypnul/nezapnul zvoneček. Tohle to při každém otevření
+// appky potichu samo ověří a v případě potřeby opraví, bez zásahu uživatele.
+async function refreshPushTokenIfNeeded(){
+  if(localStorage.getItem('pushEnabled') !== '1') return;
+  const user = getUserName();
+  if(!user || !messaging) return;
+  try{
+    if(Notification.permission !== 'granted') return;
+    if(!swRegistration) swRegistration = await navigator.serviceWorker.register('sw.js');
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
+    if(!token) return;
+    const storedToken = localStorage.getItem('pushToken');
+    if(token === storedToken){
+      // Beze změny tokenu se aspoň "osvěží" časové razítko záznamu, ať jde
+      // v případě potřeby poznat, kdy appka naposledy potvrdila platnost.
+      await db.collection('pushTokens').doc(token).set({ user, token, at: new Date().toISOString() }, { merge: true }).catch(()=>{});
+      return;
+    }
+    // Token se mezitím změnil — smaž starý (mrtvý) záznam a ulož nový.
+    if(storedToken){
+      try{ await db.collection('pushTokens').doc(storedToken).delete(); }catch(e){}
+    }
+    await db.collection('pushTokens').doc(token).set({ user, token, at: new Date().toISOString() });
+    localStorage.setItem('pushToken', token);
+  }catch(e){ console.error('Chyba při obnově push tokenu:', e); }
+}
+refreshPushTokenIfNeeded();
+
 
 
 
