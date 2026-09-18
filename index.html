@@ -4017,6 +4017,14 @@ function openChatThread(me, other){
       const keyboardOpen = (chatModalBaselineHeight - vv.height) > 80;
       modalEl.style.paddingBottom = keyboardOpen ? '14px' : '';
     }
+    // Kdykoliv se takhle sheet přepočítá (typicky těsně po odeslání zprávy,
+    // když se textové pole zase zmenší na jeden řádek), seznam zpráv dole
+    // zůstane scrollnutý na starou pozici i přes to, že se mu mezitím
+    // zmenšil/zvětšil dostupný prostor — poslední zpráva pak zůstávala
+    // částečně schovaná. Dotáhne se proto vždycky znovu úplně dolů i tady,
+    // ne jen při příchodu nové zprávy.
+    const msgsEl2 = document.getElementById('chatMessages');
+    if(msgsEl2) msgsEl2.scrollTop = msgsEl2.scrollHeight;
   };
   const closeThread = () => {
     localStorage.setItem('kokrsnekChatSeen_' + threadId, new Date().toISOString());
