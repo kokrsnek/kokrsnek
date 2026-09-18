@@ -26,6 +26,7 @@
  *  14. sendLowRsvpReminder — denně v 8:00: akce za 3 dny má skoro žádné odpovědi
  *  15. onChatMessageCreated — nová zpráva v minichatu, 1:1 i ve skupinovém
  *                            vlákně "Celá parta" (viz index.html -> openChatThread())
+ *  15b. onChatReaction     — emoji reakce na zprávu v chatu, notifikace jen autorovi zprávy
  *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
  *                            appky přidělí custom claim partyMember, které vyžadují
  *                            pravidla Firestore databáze pro každé čtení/zápis
@@ -787,6 +788,47 @@ exports.onChatMessageCreated = onDocumentCreated(
       chatWith: data.from,
     });
     console.log('[chat] notifikace odeslána');
+  }
+);
+
+// --- 15b) Emoji reakce na zprávu v chatu -----------------------------------
+// Trigger: chats/{threadId}/messages/{msgId} update (viz index.html ->
+// toggleChatReaction()). Stejný vzor jako onCommentReaction výš — porovná
+// pole reactions před/po a pošle notifikaci jen autorovi zprávy, jen za nově
+// přidané reakce (ne za odebrané), a nikdy sám sobě.
+exports.onChatReaction = onDocumentUpdated(
+  'chats/{threadId}/messages/{msgId}',
+  async (event) => {
+    const before = event.data.before.data() || {};
+    const after = event.data.after.data() || {};
+    if (!after.from) return;
+
+    const beforeReactions = before.reactions || {};
+    const afterReactions = after.reactions || {};
+
+    const added = [];
+    Object.keys(afterReactions).forEach((emoji) => {
+      const beforeUsers = beforeReactions[emoji] || [];
+      const afterUsers = afterReactions[emoji] || [];
+      afterUsers.forEach((u) => {
+        if (!beforeUsers.includes(u)) added.push({ user: u, emoji });
+      });
+    });
+    if (!added.length) return;
+
+    const threadId = event.params.threadId;
+    const snippet = after.text ? after.text.slice(0, 100) : (after.image ? '📷 fotka' : '');
+    const tokens = await getTokensFor(after.from);
+    if (!tokens.length) return;
+
+    for (const { user, emoji } of added) {
+      if (normName(user) === normName(after.from)) continue; // reakce na vlastní zprávu se neposílá
+      await sendToTokens(tokens, {
+        title: `${emoji} Reakce na tvou zprávu`,
+        body: `${user}${snippet ? `\n${snippet}` : ''}`,
+        chatWith: threadId === PARTY_THREAD_ID ? PARTY_THREAD_ID : user,
+      });
+    }
   }
 );
 

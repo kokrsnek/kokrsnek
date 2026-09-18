@@ -4064,7 +4064,7 @@ function openChatThread(me, other){
   // vstupní řádek se tak nikdy nemůžou odrolovat pryč.
   backdrop.innerHTML = `
     <div class="ev-modal" style="display:flex;flex-direction:column;max-height:88vh;overflow:hidden;">
-      <div class="sheet-grabber-down" style="width:100%;height:30px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <div class="sheet-grabber-down" onclick="document.getElementById('chatThreadClose').click()" style="width:100%;height:30px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="chatThreadClose">×</button>
       <div class="ev-modal-title" style="flex:0 0 auto;text-align:center;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:16px;">
         <span>${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other}`}</span>
@@ -4369,9 +4369,12 @@ async function czechIBAN(account, bank){
 
 function showPayment(eventTitle){
   try{
-    const iban = czechIBAN('1518140045', '3030');
-    const spd = 'SPD*1.0*ACC:' + iban + '*MSG:prispevek Kokrsnekum za ' + (eventTitle||'akci') + '*';
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(spd) + '&format=png&margin=10';
+    // Dřív se QR kód generoval za běhu přes cizí službu (api.qrserver.com) —
+    // když byla nedostupná/blokovaná, QR se appce nepovedlo zobrazit vůbec.
+    // Teď se místo toho používá jednou nahraný, napevno vlastní QR kód
+    // (qr-platba.png, vygenerovaný přímo bankou), který nezávisí na žádné
+    // externí službě za běhu appky.
+    const qrUrl = 'qr-platba.png';
     const copyText = 'Účet: 1518140045/3030\nZpráva: příspěvek Kokršnekům za ' + (eventTitle||'akci');
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
