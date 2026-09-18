@@ -3608,7 +3608,7 @@ function showWelcome(){
     ['💬 Minichat','Ikona bublinky dole vedle lupy — seznam přezdívek (nahoře i "Celá parta" pro skupinovou zprávu všem), klikni a napiš zprávu (do 160 znaků) nebo přidej fotku. Jde i reagovat emoji (dlouze podrž zprávu), upravit/smazat vlastní zprávu, připnout důležitou zprávu nahoru, hledat ve zprávách a ztlumit notifikace jen z tohohle vlákna. Nahoře se ukáže, když druhá strana zrovna píše. Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
-    ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — dlouhé podržení (heslo) otevře zadání položek (název/množství/cena), tlačítko "Vytvořit" pak spočítá součet a zobrazí náhled nákladů na akci. Dokud nic není zadané, je tlačítko zašedlé; jakmile existuje, obyčejný klik náhled znovu otevře.'],
+    ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — dlouhé podržení (heslo) otevře zadání položek (název/množství/cena), tlačítko "Vytvořit" pak spočítá součet a zobrazí náhled nákladů na akci. Klik na už zadanou položku ji nahraje k úpravě. Napsat do Položky "přispěl(a) JMÉNO" a do Ceny částku ji zapíše mezi příspěvky, ne mezi náklady — odečte se pak od plus/mínus. Dokud nic není zadané, je tlačítko zašedlé; jakmile existuje, obyčejný klik náhled znovu otevře.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
     ['🌧️ Efekt počasí','Pokud appka zjistí, že u tebe prší nebo sněží (jen s tvým souhlasem k poloze), zobrazí jemný déšť nebo sníh na pozadí.'],
     ['🔔 Notifikace — co všechno appka posílá','Nový lajk, Dojdu/Nedojdu, komentář (i odpověď a emoji reakce na tvůj komentář), nové album fotek nebo seznam nákladů u akce, úplně nová akce v kalendáři, změna data či místa u akce (pokud jsi na ni odpověděl/a), připomínka akce v den konání i týden předem, akce za 3 dny bez odezvy, narozeniny a svátek člena party, sesazení z 1. místa v kvízu, a šťouchnutí/zpráva/minichat od ostatních. Zapíná se zvonečkem nahoře.'],
@@ -4592,9 +4592,13 @@ async function wireExpenseBtn(idx, key, ev){
   const btn = document.getElementById('expenseBtn_'+idx);
   if(!btn) return;
   let items = [];
+  let contributions = [];
   try{
     const snap = await db.collection('expensePdfs').doc(key).get();
-    if(snap.exists) items = snap.data().items || [];
+    if(snap.exists){
+      items = snap.data().items || [];
+      contributions = snap.data().contributions || [];
+    }
   }catch(e){ console.error('Chyba při načítání nákladů akce:', e); }
 
   // Aktuální stav se drží přímo na tlačítku (ne jen v uzávěru téhle funkce),
@@ -4603,6 +4607,7 @@ async function wireExpenseBtn(idx, key, ev){
   // dotyku — to by totiž vedlo k jejich zdvojení a dlouhé podržení by pak
   // zbytečně spouštělo akci dvakrát.
   btn._expenseItems = items;
+  btn._expenseContributions = contributions;
   btn._expenseHasData = items.length > 0;
   btn.style.opacity = btn._expenseHasData ? '1' : '0.45';
   btn.style.cursor = btn._expenseHasData ? 'pointer' : 'default';
@@ -4630,18 +4635,22 @@ async function wireExpenseBtn(idx, key, ev){
       // (prázdnou) kopii z doby, kdy se karta poprvé vykreslila, kdyby mezi
       // tím uživatel náklady ve stejné relaci už jednou vytvořil/upravil.
       let currentItems = btn._expenseItems;
+      let currentContributions = btn._expenseContributions;
       try{
         const snap = await db.collection('expensePdfs').doc(key).get();
-        if(snap.exists) currentItems = snap.data().items || [];
+        if(snap.exists){
+          currentItems = snap.data().items || [];
+          currentContributions = snap.data().contributions || [];
+        }
       }catch(e){}
-      openExpenseEditor(key, ev, currentItems);
+      openExpenseEditor(key, ev, currentItems, currentContributions);
     }, 500);
   }, {passive:false});
   btn.addEventListener('touchend', e => {
     clearTimeout(pressTimer);
     e.preventDefault();
     if(longPressed) return;
-    if(btn._expenseHasData) showExpenseReceipt(key, ev, btn._expenseItems);
+    if(btn._expenseHasData) showExpenseReceipt(key, ev, btn._expenseItems, btn._expenseContributions);
   });
   btn.addEventListener('touchmove', e => {
     const t = e.touches && e.touches[0];
@@ -4652,16 +4661,25 @@ async function wireExpenseBtn(idx, key, ev){
   btn.addEventListener('contextmenu', e => e.preventDefault());
   // Fallback pro myš (desktop, kde touch eventy nechodí)
   btn.addEventListener('click', () => {
-    if(!('ontouchstart' in window) && hasData) showExpenseReceipt(key, ev, items);
+    if(!('ontouchstart' in window) && btn._expenseHasData) showExpenseReceipt(key, ev, btn._expenseItems, btn._expenseContributions);
   });
 }
 
 // Editor položek — jednoduchý sheet s tabulkou "položka / množství / cena",
-// tlačítkem "Přidat položku" a "Vytvořit" dole. Pracuje jen s lokálním
-// polem v paměti, dokud se nezmáčkne "Vytvořit" — teprve pak se uloží
-// do Firestore a zobrazí se náhled nákladů.
-function openExpenseEditor(key, ev, existingItems){
-  const items = existingItems.map(i => ({...i})); // kopie, ať needituju uloženou verzi rovnou
+// tlačítkem "Přidat" a "Vytvořit" dole. Pracuje jen s lokálním polem
+// v paměti, dokud se nezmáčkne "Vytvořit" — teprve pak se uloží do Firestore
+// a zobrazí se náhled nákladů.
+//
+// Zvláštní zápis do pole "Položka": "přispěl(a) JMÉNO" (do Cena částka) se
+// nepřidá mezi náklady, ale do seznamu "kdo přispěl" — ten se pak odečítá od
+// celkových nákladů v řádku plus/mínus (viz showExpenseReceipt).
+//
+// Klik na už zadanou položku/příspěvek (ne na její ×) ji nahraje zpátky do
+// polí k úpravě — tlačítko "Přidat" se přitom přepne na "Uložit".
+function openExpenseEditor(key, ev, existingItems, existingContributions){
+  const items = (existingItems || []).map(i => ({...i})); // kopie, ať needituju uloženou verzi rovnou
+  const contributions = (existingContributions || []).map(c => ({...c}));
+  let editing = null; // { type: 'item'|'contrib', index: number } nebo null
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
@@ -4671,7 +4689,8 @@ function openExpenseEditor(key, ev, existingItems){
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="margin-bottom:2px;">🧾 Náklady akce</div>
       <div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
-      <div id="expenseItemsList" style="text-align:left;margin-bottom:10px;max-height:30vh;overflow-y:auto;"></div>
+      <div id="expenseItemsList" style="text-align:left;margin-bottom:10px;max-height:26vh;overflow-y:auto;"></div>
+      <div style="font-family:Inter,sans-serif;font-size:10.5px;color:var(--muted);margin:0 0 8px;text-align:left;">Tip: napiš do Položky "přispěl/a JMÉNO" a do Ceny částku, ať se to počítá jako příspěvek, ne náklad.</div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
         <input id="expItemName" placeholder="Položka" style="flex:2;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
         <input id="expItemQty" placeholder="Množství" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
@@ -4684,35 +4703,97 @@ function openExpenseEditor(key, ev, existingItems){
     </div>`;
   document.body.appendChild(backdrop);
 
+  const nameInput = document.getElementById('expItemName');
+  const qtyInput = document.getElementById('expItemQty');
+  const priceInput = document.getElementById('expItemPrice');
+  const addBtn = document.getElementById('expAddItemBtn');
   const listEl = document.getElementById('expenseItemsList');
+
+  function resetEditing(){
+    editing = null;
+    addBtn.textContent = 'Přidat';
+  }
+
   function renderItemsList(){
-    listEl.innerHTML = items.length ? items.map((it, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;font-size:13px;">
+    const itemRows = items.map((it, i) => `
+      <div data-type="item" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;font-size:13px;cursor:pointer;">
         <span style="flex:1;color:var(--ink);">${it.name}</span>
         <span style="color:var(--muted);font-size:12px;">${it.qty||'—'}</span>
         <span style="color:var(--ink);font-weight:600;min-width:60px;text-align:right;">${it.price} Kč</span>
-        <button onclick="this.closest('.ev-modal-backdrop').__removeExpItem(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;">×</button>
+        <button data-remove="item" data-idx="${i}" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;">×</button>
       </div>
-    `).join('') : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">Zatím žádné položky</div>`;
+    `).join('');
+    const contribRows = contributions.map((c, i) => `
+      <div data-type="contrib" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;font-size:13px;cursor:pointer;">
+        <span style="flex:1;color:var(--accent);">💸 přispěl(a) ${c.name}</span>
+        <span style="color:var(--accent);font-weight:600;min-width:60px;text-align:right;">${c.amount} Kč</span>
+        <button data-remove="contrib" data-idx="${i}" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;">×</button>
+      </div>
+    `).join('');
+    listEl.innerHTML = (itemRows + contribRows) || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">Zatím žádné položky</div>`;
+
+    listEl.querySelectorAll('[data-remove]').forEach(delBtn => {
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        const i = Number(delBtn.dataset.idx);
+        if(delBtn.dataset.remove === 'item') items.splice(i,1); else contributions.splice(i,1);
+        if(editing && editing.type === (delBtn.dataset.remove === 'item' ? 'item' : 'contrib') && editing.index === i) resetEditing();
+        renderItemsList();
+      };
+    });
+    listEl.querySelectorAll('[data-type]').forEach(row => {
+      row.onclick = () => {
+        const i = Number(row.dataset.idx);
+        const type = row.dataset.type;
+        editing = { type, index: i };
+        if(type === 'item'){
+          const it = items[i];
+          nameInput.value = it.name;
+          qtyInput.value = it.qty || '';
+          priceInput.value = it.price;
+        } else {
+          const c = contributions[i];
+          nameInput.value = 'přispěl(a) ' + c.name;
+          qtyInput.value = '';
+          priceInput.value = c.amount;
+        }
+        addBtn.textContent = 'Uložit';
+        nameInput.focus();
+      };
+    });
   }
-  backdrop.__removeExpItem = (i) => { items.splice(i,1); renderItemsList(); };
   renderItemsList();
 
-  document.getElementById('expAddItemBtn').onclick = () => {
-    const name = document.getElementById('expItemName').value.trim();
-    const qty = document.getElementById('expItemQty').value.trim();
-    const price = parseFloat(document.getElementById('expItemPrice').value.replace(',','.'));
-    if(!name || isNaN(price)){ alert('Vyplň aspoň položku a cenu.'); return; }
-    items.push({ name, qty, price: Math.round(price) });
-    document.getElementById('expItemName').value = '';
-    document.getElementById('expItemQty').value = '';
-    document.getElementById('expItemPrice').value = '';
-    document.getElementById('expItemName').focus();
+  addBtn.onclick = () => {
+    const rawName = nameInput.value.trim();
+    const price = parseFloat(priceInput.value.replace(',','.'));
+    if(!rawName || isNaN(price)){ alert('Vyplň aspoň položku a cenu.'); return; }
+
+    // "přispěl(a) JMÉNO" — diakriticky netečné porovnání (normalizeCz), ať to
+    // pozná i bez háčků/čárek; jméno se ale uloží tak, jak ho člověk napsal.
+    const normalized = normalizeCz(rawName);
+    const prefixMatch = normalized.match(/^prispel[a]?\s*/);
+    if(prefixMatch){
+      const contributorName = rawName.slice(prefixMatch[0].length).replace(/^[:\-\s]+/, '').trim();
+      if(!contributorName){ alert('Chybí jméno za "přispěl(a)".'); return; }
+      const entry = { name: contributorName, amount: Math.round(price) };
+      if(editing && editing.type === 'contrib') contributions[editing.index] = entry;
+      else contributions.push(entry);
+    } else {
+      const qty = qtyInput.value.trim();
+      const entry = { name: rawName, qty, price: Math.round(price) };
+      if(editing && editing.type === 'item') items[editing.index] = entry;
+      else items.push(entry);
+    }
+
+    nameInput.value = ''; qtyInput.value = ''; priceInput.value = '';
+    resetEditing();
+    nameInput.focus();
     renderItemsList();
   };
 
   document.getElementById('expCreateBtn').onclick = async () => {
-    if(!items.length){ alert('Přidej aspoň jednu položku.'); return; }
+    if(!items.length && !contributions.length){ alert('Přidej aspoň jednu položku.'); return; }
     const createBtn = document.getElementById('expCreateBtn');
     createBtn.disabled = true;
     createBtn.textContent = 'Ukládám…';
@@ -4721,10 +4802,11 @@ function openExpenseEditor(key, ev, existingItems){
         eventTitle: ev.title || '',
         eventStart: ev.start ? ev.start.toISOString() : '',
         items,
+        contributions,
         updatedAt: new Date().toISOString(),
       });
       backdrop.remove();
-      showExpenseReceipt(key, ev, items);
+      showExpenseReceipt(key, ev, items, contributions);
       // Znovu prověří stav tlačítka na kartě (teď už s daty -> přestane být
       // zašedlé) — přepíše se jen stav uložený na samotném tlačítku (viz
       // wireExpenseBtn), žádné nové posluchače dotyku se nepřidávají (ty se
@@ -4734,6 +4816,7 @@ function openExpenseEditor(key, ev, existingItems){
         const idx = b.id.replace('expenseBtn_','');
         if(window['evKey_'+idx] === key){
           b._expenseItems = items;
+          b._expenseContributions = contributions;
           b._expenseHasData = true;
           b.style.opacity = '1';
           b.style.cursor = 'pointer';
@@ -4754,8 +4837,14 @@ function openExpenseEditor(key, ev, existingItems){
 // HTML, ne PDF. Zkoušelo se to dřív přes knihovnu jsPDF, ta ale neumí česká
 // písmenka (diakritika mizela/rozjížděla se) a appka žádné PDF soubor
 // stejně nepotřebovala — stačí náhled, ne něco k odeslání/vytištění mimo appku.
-function showExpenseReceipt(key, ev, items){
+//
+// plus/mínus = celkové náklady mínus součet příspěvků (může vyjít i záporně,
+// když se vybere víc, než kolik akce stála — zobrazí se to prostě se znaménkem).
+function showExpenseReceipt(key, ev, items, contributions){
+  contributions = contributions || [];
   const total = items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+  const totalContrib = contributions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const balance = total - totalContrib;
   const dateStr = ev.start ? `${DAYS_FULL[ev.start.getDay()]} ${ev.start.getDate()}.${ev.start.getMonth()+1}.${ev.start.getFullYear()}` : '';
   const rowsHtml = items.map(it => `
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;">
@@ -4764,6 +4853,11 @@ function showExpenseReceipt(key, ev, items){
       <span style="font-size:13.5px;font-weight:600;color:var(--ink);min-width:64px;text-align:right;">${it.price} Kč</span>
     </div>
   `).join('');
+  const contribHtml = contributions.length ? contributions.map(c => `
+    <div style="display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:12.5px;color:var(--ink);padding:3px 0;">
+      <span>${c.name}</span><span>${c.amount} Kč</span>
+    </div>
+  `).join('') : `<span style="font-size:12.5px;color:var(--muted);">zatím nikdo</span>`;
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
@@ -4781,13 +4875,13 @@ function showExpenseReceipt(key, ev, items){
         <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
         <span style="font-size:20px;font-weight:700;color:var(--ink);">${total} Kč</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-family:Inter,sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;font-family:Inter,sans-serif;">
         <span style="font-size:13px;color:var(--ink);">přispěli</span>
-        <span style="font-size:12.5px;color:var(--muted);">zatím nikdo</span>
+        <div style="text-align:right;">${contribHtml}</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:Inter,sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
-        <span style="font-size:20px;font-weight:700;color:var(--ink);">${total} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:var(--ink);">${balance} Kč</span>
       </div>
       <img src="qr-platba.png" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;">
       <div style="font-family:Inter,sans-serif;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.7;">
