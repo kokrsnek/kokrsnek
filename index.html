@@ -4812,6 +4812,10 @@ let activeBringUnsub = null;
 function openBringList(key, ev){
   const me = getUserName();
   if(!me) return;
+  // Když se tohle okno otevře nad ještě zaostřeným polem odjinud (typicky
+  // "Napiš komentář…" pod ním), zůstával viditelný/blikající kurzor toho
+  // starého pole, i když psaní šlo správně do nového okna — jen to matlo.
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; }
   const backdrop = document.createElement('div');
   const close = () => { if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; } backdrop.remove(); };
@@ -5664,6 +5668,59 @@ async function toggleCommentReaction(evIdx, key, commentId, emoji){
   }
 }
 
+// Dlouhé podržení textu komentáře = otevři výběr emoji reakce (stejný vzor
+// jako u zpráv v chatu, viz wireChatLongPress). Volá se znovu po každém
+// překreslení seznamu komentářů, protože refreshComments() vždycky přepíše
+// celé innerHTML a s ním zmizí i dřív přiřazené posluchače.
+function wireCommentLongPress(list, evIdx, key){
+  list.querySelectorAll('[data-comment-id]').forEach(el => {
+    const commentId = el.dataset.commentId;
+    const textEl = el.querySelector('.comment-text');
+    if(!textEl) return;
+    let pressTimer, longPressed = false, startX = 0, startY = 0;
+    textEl.addEventListener('touchstart', e => {
+      longPressed = false;
+      const t = e.touches && e.touches[0];
+      startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        if(navigator.vibrate) navigator.vibrate(15);
+        showCommentEmojiPicker(evIdx, key, commentId, textEl);
+      }, 450);
+    }, {passive:true});
+    textEl.addEventListener('touchend', () => clearTimeout(pressTimer));
+    textEl.addEventListener('touchmove', e => {
+      const t = e.touches && e.touches[0];
+      if(!t) return;
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+    }, {passive:true});
+    textEl.addEventListener('contextmenu', e => e.preventDefault());
+  });
+}
+
+// Malá bublina s 5 emoji, stejná jako v chatu (viz showChatEmojiPicker) —
+// jen místo zprávy reaguje na komentář.
+function showCommentEmojiPicker(evIdx, key, commentId, anchorEl){
+  document.getElementById('chatEmojiPicker')?.remove();
+  const rect = anchorEl.getBoundingClientRect();
+  const picker = document.createElement('div');
+  picker.id = 'chatEmojiPicker';
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 210));
+  const top = Math.max(8, rect.top - 46);
+  picker.style.cssText = `position:fixed;z-index:95;left:${left}px;top:${top}px;background:var(--bg2);border:1px solid var(--line);border-radius:100px;padding:6px 8px;display:flex;gap:8px;box-shadow:var(--shadow-md);`;
+  picker.innerHTML = ['👍','❤️','😂','😮','😢'].map(em =>
+    `<button data-em="${em}" style="background:none;border:none;font-size:21px;cursor:pointer;padding:2px;line-height:1;">${em}</button>`
+  ).join('');
+  document.body.appendChild(picker);
+  picker.querySelectorAll('[data-em]').forEach(btn => {
+    btn.onclick = () => { toggleCommentReaction(evIdx, key, commentId, btn.dataset.em); picker.remove(); };
+  });
+  setTimeout(() => {
+    document.addEventListener('click', function c(e){ if(!picker.contains(e.target)){ picker.remove(); document.removeEventListener('click', c); } });
+  }, 50);
+}
+
 async function refreshComments(evIdx, key){
   const list = document.getElementById('commentList_'+evIdx);
   if(!list) return;
@@ -5679,7 +5736,12 @@ async function refreshComments(evIdx, key){
       const childReplies = docs.filter(r => r.data().parentId === d.id)
         .sort((a,b) => (a.data().at||'') < (b.data().at||'') ? -1 : 1);
       const reactions = data.reactions || {};
-      const reactionsRow = QUICK_COMMENT_EMOJIS.map(em => {
+      // Řádek reakcí se ukazuje jen když už na komentáři nějaká reakce je
+      // (ťuknutím na ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji
+      // jde přes dlouhé podržení textu komentáře (viz wireCommentLongPress
+      // níže), stejně jako u zpráv v chatu. Natrvalo vypsaných 5 ikon pod
+      // každým komentářem totiž na delší diskuzi zbytečně rušilo.
+      const reactionsRow = QUICK_COMMENT_EMOJIS.filter(em => (reactions[em]||[]).length > 0).map(em => {
         const users = reactions[em] || [];
         const active = users.includes(currentUser);
         return `<button onclick="toggleCommentReaction(${evIdx},'${key}','${d.id}','${em}')" style="
@@ -5687,17 +5749,17 @@ async function refreshComments(evIdx, key){
           border:1px solid ${active ? 'rgba(62,143,104,0.5)' : 'var(--line)'};
           border-radius:100px; padding:3px 8px; font-size:12.5px; cursor:pointer;
           display:inline-flex; align-items:center; gap:3px; color:var(--ink); line-height:1.3;
-        ">${em}${users.length > 0 ? `<span style="font-size:10.5px;color:var(--muted);font-family:'Inter', sans-serif;">${users.length}</span>` : ''}</button>`;
+        ">${em}<span style="font-size:10.5px;color:var(--muted);font-family:'Inter', sans-serif;">${users.length}</span></button>`;
       }).join('');
-      return `<div style="padding:8px 0 4px;${depth > 0 ? `margin-left:${indent}px;border-left:2px solid var(--line);padding-left:10px;` : 'border-bottom:1px solid var(--line);'}">
+      return `<div data-comment-id="${d.id}" style="padding:8px 0 4px;${depth > 0 ? `margin-left:${indent}px;border-left:2px solid var(--line);padding-left:10px;` : 'border-bottom:1px solid var(--line);'}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span ${personLink(data.user)} style="font-size:12px;font-weight:700;color:var(--accent);font-family:'Inter', sans-serif;${PERSON_LINK_STYLE}">${data.user}</span>
           <span style="font-size:11.5px;color:var(--muted);font-family:'Inter', sans-serif;">${time}</span>
           <button onclick="openCommentEditor(${evIdx},window['evKey_'+${evIdx}],'${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;padding:0;font-family:'Inter', sans-serif;font-weight:500;display:inline-flex;align-items:center;gap:4px;">${replyIconSVG()}odpovědět</button>
           <button onclick="deleteComment(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;margin-left:auto;display:inline-flex;align-items:center;">${trashIconSVG()}</button>
         </div>
-        <div style="font-size:14px;color:var(--ink);margin-top:3px;font-family:'Inter', sans-serif;">${data.text}</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;">${reactionsRow}</div>
+        <div class="comment-text" style="font-size:14px;color:var(--ink);margin-top:3px;font-family:'Inter', sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">${data.text}</div>
+        ${reactionsRow ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;">${reactionsRow}</div>` : ''}
         ${childReplies.map(r => renderComment(r, depth + 1)).join('')}
       </div>`;
     };
@@ -5707,6 +5769,7 @@ async function refreshComments(evIdx, key){
     list.innerHTML = roots.length === 0
       ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;font-family:Inter,sans-serif;">Zatím žádné komentáře</div>'
       : roots.map(d => renderComment(d, 0)).join('');
+    wireCommentLongPress(list, evIdx, key);
   }catch(e){
     const list2 = document.getElementById('commentList_'+evIdx);
     if(list2) list2.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:8px;font-family:Inter,sans-serif;">'+e.message+'</div>';
