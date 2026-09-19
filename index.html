@@ -5707,19 +5707,146 @@ async function refreshAttendance(evIdx, key, isFuture){
       const row = document.getElementById('attendedRow_'+evIdx);
       if(row){
         const parts = [];
-        if(!attendSnap.empty){
-          const names = attendSnap.docs.map(d => d.id).join(', ');
-          parts.push(`<div class="ev-modal-label">Zúčastnili se</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showAttendees(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`);
-        }
+        const attendNames = attendSnap.docs.map(d => d.id);
+        parts.push(`<div class="ev-modal-label">Zúčastnili se</div><div id="attendedNamesVal_${evIdx}" class="ev-modal-value" style="cursor:pointer;">${attendNames.length ? attendNames.join(', ') : '—'}</div>`);
         if(!declineSnap.empty){
           const names = declineSnap.docs.map(d => d.id).join(', ');
           parts.push(`<div class="ev-modal-label">Nedorazili</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showDecliners(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`);
         }
-        row.style.display = parts.length ? 'block' : 'none';
+        // "Zúčastnili se" se u minulých akcí zobrazuje VŽDYCKY (i prázdné,
+        // jako "—") — na rozdíl od dřívějška, kdy se celý řádek schoval,
+        // když nikdo nedal Dojdu. Potřebuje totiž mít vždycky kam dlouze
+        // podržet kvůli skryté opravě docházky (viz wireAttendedEdit níže).
+        row.style.display = 'block';
         row.innerHTML = parts.join('');
+        wireAttendedEdit(evIdx, key);
       }
     }
   }catch(e){ console.error('attendance refresh error',e); }
+}
+
+// Skryté podržení na "Zúčastnili se" u minulé/probíhající akce — krátký
+// stisk pořád jen otevírá běžný přehled (showAttendees), dlouhé podržení po
+// zadání hesla otevře editor pro dodatečnou opravu docházky (typicky: někdo
+// neřekl Dojdu předem, ale nakonec na akci dorazil). Stejný osvědčený vzor
+// dotykových událostí jako u bringBtn/expenseBtn výš.
+function wireAttendedEdit(evIdx, key){
+  const el = document.getElementById('attendedNamesVal_'+evIdx);
+  if(!el) return;
+  let pressTimer, longPressed = false, startX = 0, startY = 0;
+  el.style.userSelect = 'none'; el.style.webkitUserSelect = 'none'; el.style.webkitTouchCallout = 'none';
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+    pressTimer = setTimeout(async () => {
+      longPressed = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      const pwd = await askAttendeesEditPassword();
+      if(pwd === null) return;
+      if(pwd !== '9640'){ alert('Špatné heslo.'); return; }
+      openAttendeesEditor(evIdx, key);
+    }, 550);
+  }, {passive:false});
+  el.addEventListener('touchend', e => {
+    clearTimeout(pressTimer);
+    e.preventDefault();
+    if(longPressed) return;
+    showAttendees(evIdx, key);
+  });
+  el.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+  }, {passive:true});
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('click', () => { if(!('ontouchstart' in window)) showAttendees(evIdx, key); });
+}
+
+function askAttendeesEditPassword(){
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
+    backdrop.innerHTML = `
+      <div class="ev-modal" style="text-align:center;">
+        <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+        <div class="ev-modal-title" style="margin-bottom:14px;">🔒 Heslo pro opravu docházky</div>
+        <input id="attendPwdInput" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Heslo" style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:20px;padding:12px;border-radius:var(--radius-sm);outline:none;margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+          <button id="attendPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
+          <button id="attendPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const input = document.getElementById('attendPwdInput');
+    setTimeout(() => input.focus(), 60);
+    const finish = (val) => { backdrop.remove(); resolve(val); };
+    document.getElementById('attendPwdCancel').onclick = () => finish(null);
+    document.getElementById('attendPwdOk').onclick = () => finish(input.value);
+    input.addEventListener('keydown', e => { if(e.key==='Enter') finish(input.value); });
+  });
+}
+
+async function openAttendeesEditor(evIdx, key){
+  const ev = rawEvents[evIdx];
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">Kdo se opravdu zúčastnil</div>
+      <div id="attendEditorList" style="text-align:left;max-height:50vh;overflow-y:auto;margin-bottom:14px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <button id="attendEditorSave" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Uložit</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('attendEditorList');
+  try{
+    const [profilesSnap, attendSnap] = await Promise.all([
+      db.collection('userProfiles').get(),
+      db.collection('events').doc(key).collection('attendees').get()
+    ]);
+    const attending = new Set(attendSnap.docs.map(d => d.id));
+    const names = profilesSnap.docs.map(d => d.id).sort((a,b) => a.localeCompare(b, 'cs'));
+    listEl.innerHTML = names.map(n => `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);cursor:pointer;">
+        <input type="checkbox" data-name="${n}" ${attending.has(n) ? 'checked' : ''} style="width:18px;height:18px;flex:0 0 auto;">
+        ${n}
+      </label>`).join('');
+  }catch(e){
+    console.error('Chyba při načítání seznamu party:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+    return;
+  }
+
+  document.getElementById('attendEditorSave').onclick = async () => {
+    const saveBtn = document.getElementById('attendEditorSave');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Ukládám…';
+    try{
+      const checks = [...listEl.querySelectorAll('[data-name]')];
+      await Promise.all(checks.map(chk => {
+        const name = chk.dataset.name;
+        const ref = db.collection('events').doc(key).collection('attendees').doc(name);
+        if(chk.checked){
+          return ref.set({ user: name, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : '' });
+        }
+        return ref.delete().catch(() => {});
+      }));
+      backdrop.remove();
+      refreshAttendance(evIdx, key, false);
+    }catch(e){
+      console.error('Chyba při ukládání docházky:', e);
+      alert('Nepodařilo se uložit.');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Uložit';
+    }
+  };
 }
 
 async function showDecliners(evIdx, key){
