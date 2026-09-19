@@ -4848,7 +4848,14 @@ async function wireBringBtn(idx, key, ev){
 
   let pressTimer, longPressed = false, startX = 0, startY = 0;
   btn.style.userSelect = 'none'; btn.style.webkitUserSelect = 'none'; btn.style.webkitTouchCallout = 'none';
+  // POZOR: touchstart musí volat preventDefault() (a poslouchat s
+  // {passive:false}), jinak si Android/Chrome po touchend ještě navíc
+  // připraví svůj vlastní syntetický "click" — ten pak dokázal rovnou
+  // zavřít okno, co jsme sami v touchend otevřeli, a tlačítko vypadalo
+  // "mrtvé" (fungovalo jen dlouhé podržení, protože to jede čistě přes
+  // setTimeout). Stejný vzor jako u expenseBtn výš.
   btn.addEventListener('touchstart', e => {
+    e.preventDefault();
     longPressed = false;
     const t = e.touches && e.touches[0];
     startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
@@ -4857,10 +4864,11 @@ async function wireBringBtn(idx, key, ev){
       if(navigator.vibrate) navigator.vibrate(15);
       broadcastBringList(key, ev);
     }, 550);
-  }, {passive:true});
+  }, {passive:false});
   btn.addEventListener('touchend', e => {
     clearTimeout(pressTimer);
-    if(longPressed){ e.preventDefault(); return; }
+    e.preventDefault();
+    if(longPressed) return;
     openBringList(key, ev);
   });
   btn.addEventListener('touchmove', e => {
