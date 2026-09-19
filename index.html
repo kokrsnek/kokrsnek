@@ -1963,6 +1963,14 @@ function showEventDetail(idx){
           opacity:0.45;
         "><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>Náklady akce</button>
       </div>` : ''}
+      ${!isFuture ? `<div style="margin-top:8px;">
+        <button id="broughtBtn_${idx}" style="
+          width:100%;background:var(--surface);border:1px solid var(--line);
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+          opacity:0.45;
+        ">${bringIconSVG()}Přinesl(a) na akci</button>
+      </div>` : ''}
       ${!isFuture ? `<div id="attendedRow_${idx}" style="margin-top:10px;display:none;"></div>` : ''}
       <div style="margin-top:14px;">
         <div class="ev-modal-label" style="font-size:20px;text-transform:none;letter-spacing:0;">Komentáře</div>
@@ -2067,6 +2075,7 @@ function showEventDetail(idx){
   refreshComments(idx, fbKey);
   refreshAttendance(idx, fbKey, isFuture);
   if(!isFuture) wireExpenseBtn(idx, fbKey, ev);
+  if(!isFuture) wireBroughtBtn(idx, fbKey, ev);
   if(isFuture) wireBringBtn(idx, fbKey, ev);
 
   // Long press na like button = zobraz kdo lajkoval
@@ -3637,6 +3646,7 @@ function showWelcome(){
     ['Fotoalba','Tlačítko fotek — přepínej mezi řazením "Dle data" (podle roku) a "Dle akce" (unikátní názvy, číslovky se ignorují). Nová alba mají značku "NOVÉ", tlačítko fotek ukazuje počet.'],
     ['👍 Dojdu / 👎 Nedojdu','V detailu události i přímo na kartě v timeline — označ, jestli dorazíš nebo ne (vzájemně se vylučují). Appka ukazuje počty na obou stranách, klikem na jména uvidíš celé seznamy.'],
     ['🎒 Kdo co přinese','U nadcházejících událostí, hned pod Dojdu/Nedojdu — navrhni položku (pivo, led, reproduktor...) a buď ji rovnou vezmi, nebo nech volnou pro kohokoliv jiného. Klik na "Beru" tě k položce přihlásí, "Pustit" zase odhlásí. Žádné heslo — je to otevřené pro celou partu.'],
+    ['📋 Přinesl(a) na akci','U probíhajících/minulých událostí, hned vedle Nákladů akce — jen ke čtení, ukáže se tu ten samý seznam z "Kdo co přinese", jak vypadal před začátkem akce (kdo co nakonec skutečně přinesl, případně že to nedonesl nikdo). Tlačítko je zašedlé, dokud u akce nikdy žádná položka nebyla.'],
     ['Sdílení','V detailu události ikona sdílení (šipka nahoru) — pošle název, datum, mapu místa, počasí a album fotek přes systémové sdílení nebo do schránky.'],
     ['Do kalendáře','U budoucích událostí ikona kalendáře — stáhne .ics soubor pro přidání do vlastního kalendáře.'],
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
@@ -4943,6 +4953,59 @@ async function wireBringBtn(idx, key, ev){
 
 // Skryté heslo pro rozeslání "Co kdo donese?" celé partě (dlouhé podržení
 // tlačítka). Jiné heslo než u Nákladů akce, samostatný modál.
+// U proběhlé/probíhající akce — jen ke ČTENÍ, žádné "Beru"/"Pustit" tlačítka.
+// Zdroj dat je stejná kolekce jako u "Kdo co přinese" (appka ji nijak
+// nekopíruje ani neuzamyká po startu akce — je to prostě týž seznam, jen se
+// mu tady dívá jinou "optikou", zpětně).
+async function wireBroughtBtn(idx, key, ev){
+  const btn = document.getElementById('broughtBtn_'+idx);
+  if(!btn) return;
+  let hasItems = false;
+  try{
+    const snap = await db.collection('bringLists').doc(key).collection('items').limit(1).get();
+    hasItems = !snap.empty;
+  }catch(e){ console.error('Chyba při načítání seznamu věcí:', e); }
+  btn.style.opacity = hasItems ? '1' : '0.45';
+  btn.style.cursor = hasItems ? 'pointer' : 'default';
+  btn.onclick = () => { if(hasItems) openBroughtList(key, ev); };
+}
+
+async function openBroughtList(key, ev){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:2px;">${bringIconSVG()} Přinesl(a) na akci</div>
+      <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
+      <div id="broughtItemsList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('broughtItemsList');
+  try{
+    const snap = await db.collection('bringLists').doc(key).collection('items').orderBy('at').get();
+    if(snap.empty){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Žádné položky.</div>';
+      return;
+    }
+    listEl.innerHTML = snap.docs.map(d => {
+      const it = d.data();
+      const free = !it.takenBy;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+          <div style="font-size:13.5px;color:var(--ink);font-weight:600;">${it.name}</div>
+          <div style="font-size:12px;font-weight:600;color:${free?'var(--muted)':'var(--accent)'};">${free?'nikdo nedonesl':it.takenBy}</div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    console.error('Chyba při načítání seznamu věcí:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+}
+
 function askBringBroadcastPassword(){
   return new Promise((resolve) => {
     const backdrop = document.createElement('div');
