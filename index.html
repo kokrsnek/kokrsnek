@@ -2253,6 +2253,24 @@ function compressImageToBase64(file, maxDim, quality){
   });
 }
 
+// Pojistka nad compressImageToBase64 pro fotky, co jdou jako base64 přímo do
+// Firestore dokumentu zprávy (1000px/55% je jen jeden pokus, bez záruky —
+// hodně detailní/členité fotky z něj občas vylezou větší). Firestore má
+// tvrdý strop 1 MB na CELÝ dokument, ne jen na obrázek, takže si necháváme
+// rezervu na ostatní pole (from/text/at/reactions…) i na to, že base64 zápis
+// je o cca třetinu větší než skutečná binární velikost dat, která zabírá.
+// Když ani nejmenší pokus nestačí, pošle se aspoň ten — furt lepší než nic.
+async function compressImageSafely(file){
+  const MAX_CHARS = 700 * 1024;
+  const attempts = [[1000, 0.55], [800, 0.45], [640, 0.35], [480, 0.3]];
+  let result = null;
+  for(const [dim, quality] of attempts){
+    result = await compressImageToBase64(file, dim, quality);
+    if(result.length <= MAX_CHARS) return result;
+  }
+  return result;
+}
+
 async function submitFeedback(btn){
   const msg = document.getElementById('feedbackText').value.trim();
   if(!msg){ document.getElementById('feedbackText').focus(); return; }
@@ -3624,7 +3642,7 @@ function showWelcome(){
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
     ['💬 Komentáře a reakce','V detailu události lze psát komentáře, odpovídat na ně a reagovat rychlými emoji (👍❤️😂😮😢).'],
     ['🖼️ Emoji avatar','Při prvním zadání přezdívky si můžeš vybrat ikonku ze čtyř kategorií (zvířata, sporty, doprava, ovoce a zelenina) — objeví se pak u tvého jména všude v appce. Není to povinné: pokud si žádnou nevybereš, appka nikde nedoplňuje žádnou náhradní ikonku, jen zůstane jméno samotné.'],
-    ['💬 Zprávy','Ikona bublinky dole vedle lupy — seznam přezdívek (nahoře "Celá parta" pro skupinovou zprávu všem a "Ankety") a minichat s jednotlivci: napiš zprávu (do 160 znaků), přidej fotku, dlouze podrž zprávu pro emoji reakci, uprav/smaž vlastní zprávu, připni důležitou zprávu nahoru nebo hledej ve zprávách. U vlastních odeslaných zpráv se ukazuje "Odesláno"/"Přečteno" a nahoře se objeví, když druhá strana zrovna píše. Zvoneček v hlavičce ztlumí notifikace jen z tohohle vlákna. Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
+    ['💬 Zprávy','Ikona bublinky dole vedle lupy — seznam přezdívek (nahoře "Celá parta" pro skupinovou zprávu všem a "Ankety") a minichat s jednotlivci: napiš zprávu (do 160 znaků), přidej fotku (jde vybrat i víc najednou), dlouze podrž zprávu pro emoji reakci, uprav/smaž vlastní zprávu, připni důležitou zprávu nahoru nebo hledej ve zprávách. Klik na fotku ji otevře na celou obrazovku, listovat mezi všemi fotkami z vlákna jde tažením prstem nebo šipkami. U vlastních odeslaných zpráv se ukazuje "Odesláno"/"Přečteno" a nahoře se objeví, když druhá strana zrovna píše. Zvoneček v hlavičce ztlumí notifikace jen z tohohle vlákna. Nepřečtené zprávy se ukazují jako červený odznak na ikoně i v seznamu.'],
     ['📊 Ankety','V "💬 Zprávy" hned pod "Celá parta" — "+ Nová anketa" založí otázku s libovolným počtem možností a pošle notifikaci celé partě. Klik na možnost = tvůj hlas (jde přehlasovat), pod každou je vidět kdo pro ni hlasoval. Ten, kdo anketu založil, ji může tlačítkem uzavřít — pak už nejde hlasovat a je vidět vítězná možnost.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
@@ -4356,7 +4374,7 @@ function openChatThread(me, other){
         <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
         <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
       </div>
-      <input type="file" id="chatImageInput" accept="image/*" style="display:none;flex:0 0 auto;">
+      <input type="file" id="chatImageInput" accept="image/*" multiple style="display:none;flex:0 0 auto;">
     </div>`;
   document.body.appendChild(backdrop);
   if(window.visualViewport){
@@ -4397,7 +4415,7 @@ function openChatThread(me, other){
       const status = (!isGroup && mine) ? `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>` : '';
       const editedLabel = data.edited ? ' · upraveno' : '';
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
-      const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox('${data.image}')" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
+      const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox(this.src, getChatGalleryImages())" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
       const reactions = data.reactions || {};
       // Řádek reakcí se ukazuje, jen když už na zprávě nějaká je (ťuknutím na
       // ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji jde přes
@@ -4618,28 +4636,33 @@ function openChatThread(me, other){
   document.getElementById('chatSendBtn').onclick = send;
   chatInputEl.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
 
-  // Fotka do zprávy — vybraný obrázek se zmenší a zkomprimuje (stejná funkce
-  // jako u přílohy ve zpětné vazbě), ať se do Firestore dokumentu vejde
-  // s rezervou, a odešle se rovnou i s tím, co bylo zrovna napsané v textu
-  // (jako popisek), pokud tam něco bylo.
+  // Fotka do zprávy — vybrané obrázky se zmenší a zkomprimují (stejná funkce
+  // jako u přílohy ve zpětné vazbě) a pošlou se jako víc zpráv za sebou (jde
+  // vybrat i víc fotek najednou); napsaný text v poli jde jako popisek jen
+  // k té první fotce, zbytek jde bez textu.
   const chatImageBtn = document.getElementById('chatImageBtn');
   const chatImageInput = document.getElementById('chatImageInput');
   chatImageBtn.onclick = () => chatImageInput.click();
   chatImageInput.addEventListener('change', async () => {
-    const file = chatImageInput.files && chatImageInput.files[0];
-    if(!file) return;
+    const files = chatImageInput.files ? [...chatImageInput.files] : [];
+    if(!files.length) return;
     chatImageBtn.disabled = true;
     const origIcon = chatImageBtn.innerHTML;
-    chatImageBtn.textContent = '…';
-    try{
-      const dataUrl = await compressImageToBase64(file, 1000, 0.55);
-      const text = chatInputEl.value.trim().slice(0, 160);
-      chatInputEl.value = '';
-      autoGrowChatInput();
-      await db.collection('chats').doc(threadId).collection('messages').add({ from: me, text, image: dataUrl, at: new Date().toISOString() });
-    }catch(e){
-      console.error('Chyba při odesílání fotky:', e);
-      alert('Fotku se nepodařilo odeslat.');
+    let text = chatInputEl.value.trim().slice(0, 160);
+    chatInputEl.value = '';
+    autoGrowChatInput();
+    for(let i = 0; i < files.length; i++){
+      chatImageBtn.textContent = files.length > 1 ? `${i+1}/${files.length}` : '…';
+      try{
+        const dataUrl = await compressImageSafely(files[i]);
+        await db.collection('chats').doc(threadId).collection('messages').add({
+          from: me, text, image: dataUrl, at: new Date().toISOString()
+        });
+        text = ''; // popisek se přiřadí jen první odeslané fotce
+      }catch(e){
+        console.error('Chyba při odesílání fotky:', e);
+        alert('Nepodařilo se odeslat jednu z fotek.');
+      }
     }
     chatImageBtn.disabled = false;
     chatImageBtn.innerHTML = origIcon;
@@ -4737,12 +4760,47 @@ async function toggleChatPin(threadId, msgId){
 // přímo v dokumentu (ne v Storage), takže by ho window.open() u některých
 // prohlížečů odmítl otevřít jako samostatnou stránku; zobrazení přes vlastní
 // overlay uvnitř appky tenhle problém nemá.
-function openImageLightbox(src){
+function openImageLightbox(src, gallery){
+  gallery = (gallery && gallery.length) ? gallery : [src];
+  let idx = gallery.indexOf(src);
+  if(idx < 0) idx = 0;
   const backdrop = document.createElement('div');
-  backdrop.style.cssText = 'position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;cursor:zoom-out;';
-  backdrop.onclick = () => backdrop.remove();
-  backdrop.innerHTML = `<img src="${src}" style="max-width:100%;max-height:100%;border-radius:12px;object-fit:contain;">`;
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  backdrop.innerHTML = `
+    <img id="lightboxImg" src="${gallery[idx]}" style="max-width:100%;max-height:100%;border-radius:12px;object-fit:contain;cursor:zoom-out;">
+    ${gallery.length > 1 ? `
+      <button id="lightboxPrev" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.14);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:20px;cursor:pointer;">‹</button>
+      <button id="lightboxNext" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.14);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:20px;cursor:pointer;">›</button>
+      <div id="lightboxCounter" style="position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.7);font-family:'Inter',sans-serif;font-size:12.5px;">${idx+1} / ${gallery.length}</div>
+    ` : ''}`;
   document.body.appendChild(backdrop);
+  backdrop.onclick = () => backdrop.remove();
+  const imgEl = document.getElementById('lightboxImg');
+  imgEl.onclick = e => e.stopPropagation();
+  const show = (newIdx) => {
+    idx = (newIdx + gallery.length) % gallery.length;
+    imgEl.src = gallery[idx];
+    const counter = document.getElementById('lightboxCounter');
+    if(counter) counter.textContent = `${idx+1} / ${gallery.length}`;
+  };
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  if(prevBtn) prevBtn.onclick = e => { e.stopPropagation(); show(idx-1); };
+  if(nextBtn) nextBtn.onclick = e => { e.stopPropagation(); show(idx+1); };
+  // Listování prstem doleva/doprava mezi fotkami, ne jen šipkami.
+  let touchStartX = 0;
+  backdrop.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, {passive:true});
+  backdrop.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if(gallery.length > 1 && Math.abs(dx) > 50){ if(dx < 0) show(idx+1); else show(idx-1); }
+  }, {passive:true});
+}
+
+// Sesbírá URL všech fotek aktuálně vykreslených v otevřeném chatovém vlákně,
+// v pořadí, jak jdou za sebou — díky tomu jde v lightboxu listovat i mezi
+// fotkami z jiných zpráv, ne jen tu jednu, na kterou se kliklo.
+function getChatGalleryImages(){
+  return [...document.querySelectorAll('#chatMessages img')].map(img => img.src);
 }
 
 function personLink(name){
@@ -5016,6 +5074,7 @@ function openBringList(key, ev){
         name,
         takenBy: takeNow ? me : null,
         addedBy: me,
+        eventTitle: ev.title || '',
         at: new Date().toISOString(),
       });
       nameInput.value = '';
