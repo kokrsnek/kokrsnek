@@ -80,7 +80,7 @@
     margin:0; padding:0; height:100%;
     background-color:var(--bg);
     color:var(--ink);
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Inter', sans-serif;
     overscroll-behavior-y: none;
   }
   .app{
@@ -455,14 +455,14 @@
     margin:0 0 2px;
   }
   .time-row{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Inter', sans-serif;
     font-size:12px;
     color:var(--muted);
     margin-bottom:8px;
     letter-spacing:0.02em;
   }
   .title-row{
-    font-family:'Inter', sans-serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:26px;
     font-weight:800;
     letter-spacing:-0.015em;
@@ -499,7 +499,7 @@
   .slot.now .badge{
     display:inline-block;
     margin-top:10px;
-    font-family:'Inter', sans-serif;
+    font-family:'JetBrains Mono', monospace;
     font-size:11px;
     font-weight:700;
     letter-spacing:0.01em;
@@ -590,18 +590,18 @@
     display:none;
   }
   .ev-modal-label{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:11px; letter-spacing:0.04em; text-transform:uppercase;
     color:var(--muted); font-weight:600; margin-bottom:4px; margin-top:16px;
   }
   .ev-modal-label:first-child{ margin-top:0; }
   .ev-modal-value{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:15px; font-weight:500; color:var(--ink); line-height:1.5;
     word-break:break-word;
   }
   .ev-modal-title{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:22px; font-weight:800; color:var(--ink);
     letter-spacing:-0.01em;
     margin-bottom:16px; line-height:1.25; padding-right:0;
@@ -609,7 +609,7 @@
   .ev-modal-link{
     display:inline-flex; align-items:center; gap:6px;
     color:var(--ink); font-size:13px; font-weight:600;
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     text-decoration:none;
     background:var(--accent-soft);
     border:1px solid rgba(62,143,104,0.3);
@@ -631,10 +631,10 @@
   .album-tile-icon svg{ width:20px; height:20px; stroke:var(--accent); fill:none; stroke-width:2; }
   .album-tile-text{ text-align:center; }
   .album-tile-title{
-    font-family:'Inter',sans-serif; font-size:14.5px; font-weight:700; color:var(--ink);
+    font-family:'Inter', sans-serif; font-size:14.5px; font-weight:700; color:var(--ink);
   }
   .album-tile-sub{
-    font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); margin-top:2px;
+    font-family:'Inter', sans-serif; font-size:12px; color:var(--muted); margin-top:2px;
   }
   .album-tile-arrow{ flex-shrink:0; color:var(--muted); font-size:18px; }
   .title-clickable{
@@ -720,7 +720,7 @@
     margin-right:2px;
   }
   .album-new-tag{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:10px; font-weight:800; letter-spacing:0.02em;
     color:var(--coral);
     background:var(--coral-soft);
@@ -730,12 +730,12 @@
   }
   .album-info{ flex:1; min-width:0; text-align:left; }
   .album-date{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:12px; color:var(--muted); font-weight:500;
     margin-bottom:3px;
   }
   .album-title{
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:15.5px; font-weight:700;
     color:var(--ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -745,7 +745,7 @@
   }
   .albums-empty{
     text-align:center;
-    font-family:'Inter',sans-serif;
+    font-family:'Inter', sans-serif;
     font-size:14px; color:var(--muted);
     margin-top:40px;
   }
@@ -831,7 +831,7 @@
   <span id="albumsBadge" style="
     display:none; position:absolute; top:-4px; right:-4px; z-index:2;
     min-width:17px; height:17px; padding:0 3px; border-radius:100px;
-    background:var(--coral); color:#fff; font-family:'Inter',sans-serif;
+    background:var(--coral); color:#fff; font-family:'Inter', sans-serif;
     font-size:10px; font-weight:700; line-height:17px; text-align:center;
     box-shadow:0 0 0 2px var(--bg);
   "></span>
@@ -851,7 +851,7 @@
   <span id="chatBadge" style="
     display:none; position:absolute; top:-4px; right:-4px; z-index:2;
     min-width:17px; height:17px; padding:0 3px; border-radius:100px;
-    background:var(--coral); color:#fff; font-family:'Inter',sans-serif;
+    background:var(--coral); color:#fff; font-family:'Inter', sans-serif;
     font-size:10px; font-weight:700; line-height:17px; text-align:center;
     box-shadow:0 0 0 2px var(--bg);
   "></span>
@@ -875,11 +875,11 @@
 
 <div class="search-overlay" id="searchOverlay">
   <div style="margin-bottom:10px;padding-top:4px;text-align:center;">
-    <span style="font-family:'Inter',sans-serif;font-size:21.75px;font-weight:700;color:var(--ink);">Hledej šmudlo</span>
+    <span style="font-family:'Inter', sans-serif;font-size:21.75px;font-weight:700;color:var(--ink);">Hledej šmudlo</span>
   </div>
   <input type="text" id="searchInput" placeholder="Hledat podle názvu nebo místa…" autocomplete="off" style="
     background:var(--surface);border:1px solid var(--line);
-    color:var(--ink);font-family:'Inter',sans-serif;
+    color:var(--ink);font-family:'Inter', sans-serif;
     font-size:16px;padding:12px 16px;border-radius:100px;outline:none;
     margin-bottom:10px;width:100%;box-sizing:border-box;
   ">
@@ -927,12 +927,12 @@ const partyFunctions = firebase.app().functions('us-central1');
   gate.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--bg,#F6F4EF);display:flex;align-items:center;justify-content:center;padding:24px;';
   gate.innerHTML = `
     <div style="width:100%;max-width:340px;text-align:center;">
-      <div style="font-family:'Inter',sans-serif;font-weight:800;font-size:20px;color:var(--ink,#242229);margin-bottom:8px;">🔒 KoKrŠNeK</div>
-      <div id="partyGateMsg" style="font-family:'Inter',sans-serif;font-size:13.5px;color:var(--muted,#837E8A);margin-bottom:16px;">Ověřuji přístup…</div>
+      <div style="font-family:'Inter', sans-serif;font-weight:800;font-size:20px;color:var(--ink,#242229);margin-bottom:8px;">🔒 KoKrŠNeK</div>
+      <div id="partyGateMsg" style="font-family:'Inter', sans-serif;font-size:13.5px;color:var(--muted,#837E8A);margin-bottom:16px;">Ověřuji přístup…</div>
       <div id="partyGateForm" style="display:none;">
-        <input id="partyGatePwd" type="password" placeholder="Heslo party" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid var(--line,#ddd);background:var(--surface,#fff);color:var(--ink,#242229);font-family:'Inter',sans-serif;font-size:16px;outline:none;margin-bottom:10px;">
-        <button id="partyGateBtn" style="display:block;width:100%;background:var(--accent,#2F7A56);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;">Vstoupit</button>
-        <div id="partyGateError" style="color:#C24B34;font-family:'Inter',sans-serif;font-size:12.5px;margin-top:10px;min-height:16px;"></div>
+        <input id="partyGatePwd" type="password" placeholder="Heslo party" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid var(--line,#ddd);background:var(--surface,#fff);color:var(--ink,#242229);font-family:'Inter', sans-serif;font-size:16px;outline:none;margin-bottom:10px;">
+        <button id="partyGateBtn" style="display:block;width:100%;background:var(--accent,#2F7A56);border:none;color:#fff;font-family:'Inter', sans-serif;font-size:14px;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;">Vstoupit</button>
+        <div id="partyGateError" style="color:#C24B34;font-family:'Inter', sans-serif;font-size:12.5px;margin-top:10px;min-height:16px;"></div>
       </div>
     </div>`;
   document.body.appendChild(gate);
@@ -1201,7 +1201,7 @@ function checkAnniversaries(){
         <button onclick="this.closest('.ev-modal-backdrop').remove()" style="
           display:block;width:100%;margin-top:16px;
           background:var(--accent);border:none;color:#000;
-          font-family:'JetBrains Mono',monospace;font-size:13px;
+          font-family:'Inter', sans-serif;font-size:13px;
           padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">OK</button>
       </div>`;
     document.body.appendChild(backdrop);
@@ -1249,7 +1249,7 @@ function showBirthdayDialog(title, text, onClose){
       <button style="
         display:block;width:100%;margin-top:16px;
         background:var(--accent);border:none;color:#000;
-        font-family:'JetBrains Mono',monospace;font-size:13px;
+        font-family:'Inter', sans-serif;font-size:13px;
         padding:10px;border-radius:6px;cursor:pointer;font-weight:700;">OK</button>
     </div>`;
   backdrop.querySelector('button').onclick = close;
@@ -1609,8 +1609,8 @@ function showVersionDialog(){
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="margin-bottom:6px;">Verze appky</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--accent);margin-bottom:14px;">v${APP_VERSION}</div>
-      <button style="display:block;width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;" onclick="this.closest('.ev-modal-backdrop').remove()">Zavřít</button>
+      <div style="font-family:'Inter', sans-serif;font-size:22px;font-weight:700;color:var(--accent);margin-bottom:14px;">v${APP_VERSION}</div>
+      <button style="display:block;width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;" onclick="this.closest('.ev-modal-backdrop').remove()">Zavřít</button>
     </div>`;
   document.body.appendChild(backdrop);
 }
@@ -1897,7 +1897,7 @@ function showEventDetail(idx){
             style="width:100%;display:block;"
             loading="lazy"
             onerror="this.parentElement.style.display='none';"
-          >` : `<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;"><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>Otevřít v Mapách</div>`}
+          >` : `<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;"><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>Otevřít v Mapách</div>`}
         </a>
       ` : `
         <div class="ev-modal-label">${r.label}</div>
@@ -1923,35 +1923,35 @@ function showEventDetail(idx){
       ${isFuture ? `<div style="display:flex;gap:8px;margin-top:16px;">
         <button id="attendBtn_${idx}" onclick="toggleAttend(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
         <button id="declineBtn_${idx}" onclick="toggleDecline(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
       </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:${isFuture ? '8px' : '16px'};">
         <button id="likeBtn_${idx}" onclick="toggleLike(${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;">🤍 0</button>
         ${!isFuture ? `<button onclick="showPayment(window._payTitle_${idx})" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zM3 14h7v7H3v-7zm2 2v3h3v-3H5zM14 3h7v7h-7V3zm2 2v3h3V5h-3zM14 14h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v4h-2v-4zm-3 3h2v1h-2v-1z"/></svg>Příspěvek</button>` : ''}
         <button id="shareEvBtn" onclick="shareEvent(rawEvents[${idx}])" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
         ${isFuture ? `<button onclick="exportICS(rawEvents[${idx}])" style="
           flex:1;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>` : ''}
       </div>
       ${!isFuture ? `<div style="margin-top:8px;">
         <button id="expenseBtn_${idx}" style="
           width:100%;background:var(--surface);border:1px solid var(--line);
-          color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
           opacity:0.45;
         "><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>Náklady akce</button>
@@ -1959,13 +1959,13 @@ function showEventDetail(idx){
       ${!isFuture ? `<div id="attendedRow_${idx}" style="margin-top:10px;display:none;"></div>` : ''}
       <div style="margin-top:14px;">
         <div class="ev-modal-label" style="font-size:20px;text-transform:none;letter-spacing:0;">Komentáře</div>
-        <div id="commentList_${idx}" style="max-height:180px;overflow-y:auto;margin:8px 0;font-family:'Inter',sans-serif;">
+        <div id="commentList_${idx}" style="max-height:180px;overflow-y:auto;margin:8px 0;font-family:'Inter', sans-serif;">
           <div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">Načítám…</div>
         </div>
         <button onclick="openCommentEditor(${idx}, window['evKey_'+${idx}])" style="
           display:block;width:100%;
           background:var(--surface);border:1px solid var(--line);
-          color:var(--muted);font-family:'Inter',sans-serif;font-weight:500;font-size:13.5px;
+          color:var(--muted);font-family:'Inter', sans-serif;font-weight:500;font-size:13.5px;
           padding:10px;border-radius:6px;cursor:pointer;text-align:center;">
           Napiš komentář…
         </button>
@@ -2182,7 +2182,7 @@ function showFeedback(){
       <textarea id="feedbackText" placeholder="Sem napiš svou zprávu…" style="
         width:100%; box-sizing:border-box; min-height:120px;
         background:var(--surface); border:1px solid var(--line);
-        color:var(--ink); font-family:'Inter',sans-serif;
+        color:var(--ink); font-family:'Inter', sans-serif;
         font-size:16px; padding:12px 14px; border-radius:var(--radius-sm);
         outline:none; resize:vertical; margin-bottom:12px;
       "></textarea>
@@ -2206,16 +2206,16 @@ function showFeedback(){
       <button onclick="document.getElementById('feedbackImage').click()" id="feedbackImageLabel" style="
         display:block; width:100%; margin-bottom:8px;
         background:var(--surface); border:1px solid var(--line);
-        color:var(--muted); font-family:'Inter',sans-serif; font-weight:500; font-size:13.5px;
+        color:var(--muted); font-family:'Inter', sans-serif; font-weight:500; font-size:13.5px;
         padding:11px; border-radius:var(--radius-sm); cursor:pointer; text-align:center;
       ">📷 Přiložit screenshot / fotku</button>
       <img id="feedbackImagePreview" style="display:none;max-width:100%;border-radius:var(--radius-sm);margin-bottom:12px;border:1px solid var(--line);">
-      <div id="feedbackRecipientHint" style="display:none;font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;">S přílohou appka otevře sdílecí okno — vyber Mail a příjemce vyplň ručně: <span style="color:var(--accent);">kokrsnek@gmail.com</span></div>
+      <div id="feedbackRecipientHint" style="display:none;font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;">S přílohou appka otevře sdílecí okno — vyber Mail a příjemce vyplň ručně: <span style="color:var(--accent);">kokrsnek@gmail.com</span></div>
 
       <button onclick="submitFeedback(this)" style="
         display:block; width:100%;
         background:var(--accent); border:none; color:#12261C;
-        font-family:'Inter',sans-serif; font-size:14px;
+        font-family:'Inter', sans-serif; font-size:14px;
         padding:12px; border-radius:var(--radius-sm); cursor:pointer; font-weight:700;
       ">Odeslat</button>
     </div>`;
@@ -2283,7 +2283,7 @@ function openYearPicker(years, currentYear){
     box-shadow:var(--shadow-md);`;
 
   const title = document.createElement('div');
-  title.style.cssText = 'font-family:"Inter",sans-serif;font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--muted);text-align:center;margin-bottom:10px;';
+  title.style.cssText = 'font-family:Inter,sans-serif;font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--muted);text-align:center;margin-bottom:10px;';
   title.textContent = 'Přejít na rok';
   popup.appendChild(title);
 
@@ -2300,7 +2300,7 @@ function openYearPicker(years, currentYear){
       background:${y===currentYear?'var(--accent-soft)':'transparent'};
       border:none;border-radius:var(--radius-sm);
       color:${y===currentYear?'var(--accent)':hasEvents?'var(--ink)':'var(--muted)'};
-      font-family:"Inter",sans-serif;
+      font-family:Inter,sans-serif;
       font-size:${hasEvents?'17px':'13px'};
       font-weight:${hasEvents?'700':'500'};
       opacity:${hasEvents?'1':'0.4'};
@@ -2399,10 +2399,10 @@ async function fetchCardStats(ev, uid, row, evIdx){
     const declineColor = declineNew ? '#E2664F' : mutedColor;
 
     row.innerHTML = `
-      <span onclick="event.stopPropagation();openQuickComments(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${commentColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">${commentIconSVG()}${commentCount}</span>
-      <span onclick="event.stopPropagation();openQuickLikes(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${likeColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">${heartIconSVGSmall()}${likeCount}</span>
-      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${attendColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">👍${attendCount}</span>
-      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${declineColor};font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;">👎${declineCount}</span>
+      <span onclick="event.stopPropagation();openQuickComments(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${commentColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">${commentIconSVG()}${commentCount}</span>
+      <span onclick="event.stopPropagation();openQuickLikes(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${likeColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">${heartIconSVGSmall()}${likeCount}</span>
+      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${attendColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">👍${attendCount}</span>
+      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${declineColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">👎${declineCount}</span>
     `;
   }catch(e){
     console.error('Chyba při načítání statistik karty:', e);
@@ -2415,7 +2415,7 @@ function personRow(d, icon){
   const time = data.at
     ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
     : '';
-  return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+  return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
     <span ${personLink(d.id)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">${icon} ${d.id}</span>
     <span style="font-size:11.5px;color:var(--muted);">${time}</span>
   </div>`;
@@ -2462,7 +2462,7 @@ async function openQuickLikes(evIdx){
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${ev.title}</div>
-      <button id="quickLikeBtn_${evIdx}" onclick="quickToggleLike(${evIdx})" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:14px;">🤍 Lajkovat</button>
+      <button id="quickLikeBtn_${evIdx}" onclick="quickToggleLike(${evIdx})" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:14px;">🤍 Lajkovat</button>
       <div id="quickLikersList_${evIdx}"></div>
     </div>`;
   document.body.appendChild(backdrop);
@@ -2505,8 +2505,8 @@ async function openQuickAttend(evIdx){
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${ev.title}</div>
       ${isFuture ? `<div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button id="quickAttendBtn_${evIdx}" onclick="quickToggleAttend(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
-        <button id="quickDeclineBtn_${evIdx}" onclick="quickToggleDecline(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
+        <button id="quickAttendBtn_${evIdx}" onclick="quickToggleAttend(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👍 Dojdu</button>
+        <button id="quickDeclineBtn_${evIdx}" onclick="quickToggleDecline(${evIdx})" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
       </div>` : ''}
       <div class="ev-modal-label" style="text-align:center;">Zúčastní se</div>
       <div id="quickAttendList_${evIdx}"></div>
@@ -2599,8 +2599,8 @@ async function openQuickComments(evIdx){
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${ev.title}</div>
       <div id="commentList_${evIdx}" style="max-height:45vh;overflow-y:auto;margin-bottom:12px;text-align:left;"></div>
       <div style="display:flex;gap:8px;">
-        <input id="commentInput_${evIdx}" placeholder="Napiš komentář…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;" />
-        <button onclick="quickPostComment(${evIdx})" style="background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;">Odeslat</button>
+        <input id="commentInput_${evIdx}" placeholder="Napiš komentář…" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;" />
+        <button onclick="quickPostComment(${evIdx})" style="background:var(--accent);border:none;color:#12261C;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;">Odeslat</button>
       </div>
     </div>`;
   document.body.appendChild(backdrop);
@@ -2637,13 +2637,13 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
   slot.className = `slot ${kind}`;
   slot.innerHTML = `
     <div class="card" onclick="showEventDetail(${i})" style="cursor:pointer;">
-      ${isNow ? `<div onclick="event.stopPropagation();openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'Inter',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.03em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
+      ${isNow ? `<div onclick="event.stopPropagation();openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'Inter', sans-serif;font-weight:700;font-size:15px;letter-spacing:0.03em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
       <div class="eyebrow">${isNow ? '' : `<span class="pip" style="background:${color};"></span>`}${eyebrowText}${countdown}</div>
       <div class="date-row">${fmtDateRange(ev)}</div>
       <div class="time-row">${fmtTimeRow(ev)}</div>
       <div class="title-row" id="titleRow_${uid}">${ev.title}</div>
       ${ev.place ? `<div class="place-row">${shortenPlace(ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place)}</div>` : ``}
-      ${ev.place ? `<div id="slotWx_${uid}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
+      ${ev.place ? `<div id="slotWx_${uid}" style="font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
       ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
       ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();event.stopPropagation();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       <div id="statsRow_${uid}" style="display:flex;justify-content:center;gap:16px;margin-top:8px;min-height:20px;"></div>
@@ -2743,7 +2743,7 @@ function renderTimeline(instantScroll = true){
     if(evYear !== lastYear){
       const yd = document.createElement('div');
       yd.id = `yr_${evYear}`;
-      yd.style.cssText = 'text-align:center;font-family:"JetBrains Mono",monospace;color:var(--muted);padding:14px 0 8px;cursor:pointer;user-select:none;';
+      yd.style.cssText = 'text-align:center;font-family:\'JetBrains Mono\',monospace;color:var(--muted);padding:14px 0 8px;cursor:pointer;user-select:none;';
       if(lastYear !== null){
         yd.innerHTML = `
           <div style="font-size:18px;letter-spacing:0.15em;">${lastYear}</div>
@@ -3266,7 +3266,7 @@ function showYearPicker(allYears, currentYear){
       background:${year==currentYear?'rgba(62,143,104,0.15)':'transparent'};
       border:none; border-radius:6px;
       color:${year==currentYear?'var(--accent)':'var(--ink)'};
-      font-family:'JetBrains Mono',monospace;
+      font-family:'Inter', sans-serif;
       font-size:18px; font-weight:700;
       padding:8px; cursor:pointer; margin-bottom:4px;
       letter-spacing:0.05em;
@@ -3360,7 +3360,7 @@ function showAlbums(){
     // Kalendář ještě načítá — počkej a zkus znovu
     const loading = document.createElement('div');
     loading.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-    loading.innerHTML = '<div style="font-family:JetBrains Mono,monospace;color:var(--accent);font-size:13px;">Načítám data…</div>';
+    loading.innerHTML = '<div style="font-family:\'Inter\', sans-serif;color:var(--accent);font-size:13px;">Načítám data…</div>';
     document.body.appendChild(loading);
     const wait = setInterval(() => {
       if(calendarLoaded){ clearInterval(wait); loading.remove(); _showAlbumsModal(); }
@@ -3390,7 +3390,7 @@ function _showAlbumsModal(){
         <button id="albumsModeBtn" onclick="toggleAlbumsMode()" style="
           display:block;width:50%;margin:0 auto;
           background:var(--accent);border:none;color:#12261C;
-          font-family:'Inter',sans-serif;font-weight:700;font-size:15px;
+          font-family:'Inter', sans-serif;font-weight:700;font-size:15px;
           padding:14px;border-radius:var(--radius-md);cursor:pointer;">Dle akce</button>
       </div>
     </div>`;
@@ -3440,7 +3440,7 @@ function openEventGroupTimeline(rawTitle){
     <div class="app" id="eventGroupApp" style="flex:1;"></div>
     <div style="flex-shrink:0;background:var(--bg2);position:relative;padding:8px 20px max(14px, env(safe-area-inset-bottom)) 20px;display:flex;flex-direction:column;align-items:center;border-top:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow-md);">
       <div onclick="closeEventGroupTimeline()" style="width:44px;height:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
-      <div style="width:100%;text-align:center;font-family:'Inter',sans-serif;font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;">Historie této akce</div>
+      <div style="width:100%;text-align:center;font-family:'Inter', sans-serif;font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;">Historie této akce</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -3488,7 +3488,7 @@ function renderAlbumsContent(mode){
     let rows = '';
     if(withAlbums.length){
       years.forEach((year, yi) => {
-        rows += `<div id="albumYear_${year}" style="text-align:center;font-family:'Inter',sans-serif;font-weight:800;font-size:15px;letter-spacing:-0.01em;color:var(--ink);padding:16px 0 8px;${yi>0?'border-top:1px solid var(--line);':''}cursor:pointer;user-select:none;" onclick="showYearPicker('${allYears}','${year}')">${year} ▾</div>`;
+        rows += `<div id="albumYear_${year}" style="text-align:center;font-family:'Inter', sans-serif;font-weight:800;font-size:15px;letter-spacing:-0.01em;color:var(--ink);padding:16px 0 8px;${yi>0?'border-top:1px solid var(--line);':''}cursor:pointer;user-select:none;" onclick="showYearPicker('${allYears}','${year}')">${year} ▾</div>`;
         byYear[year].forEach(ev => {
           const isNew = window._newAlbumKeys && window._newAlbumKeys.has(getEventKey(ev));
           rows += `
@@ -3627,8 +3627,8 @@ function showWelcome(){
   var rows = '';
   for(var i=0;i<features.length;i++){
     rows += '<div style="margin-bottom:14px;">'
-      + '<div style="font-family:Inter,sans-serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px;">' + features[i][0] + '</div>'
-      + '<div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);line-height:1.55;">' + features[i][1] + '</div>'
+      + '<div style="font-family:\'Inter\', sans-serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px;">' + features[i][0] + '</div>'
+      + '<div style="font-family:\'Inter\', sans-serif;font-size:12.5px;color:var(--muted);line-height:1.55;">' + features[i][1] + '</div>'
       + '</div>';
   }
   var backdrop = document.createElement('div');
@@ -3639,9 +3639,9 @@ function showWelcome(){
   backdrop.innerHTML = '<div class="ev-modal" style="max-height:85vh;"><div class="sheet-grabber-down" onclick="this.closest(&quot;.ev-modal-backdrop&quot;).remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>'
     + '<button class="ev-modal-close" onclick="this.closest(\'#welcomeOverlay\').remove()">×</button>'
     + '<div class="ev-modal-title" style="text-align:center;margin-bottom:4px;">Vítej u KoKrŠNeKů!</div>'
-    + '<div style="text-align:center;font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:16px;">Přehled funkcí aplikace</div>'
+    + '<div style="text-align:center;font-family:\'Inter\', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:16px;">Přehled funkcí aplikace</div>'
     + rows
-    + '<button style="display:block;width:100%;margin-top:8px;background:var(--accent);border:none;color:#12261C;font-family:Inter,sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;" onclick="this.closest(\'#welcomeOverlay\').remove()">Rozumím</button>'
+    + '<button style="display:block;width:100%;margin-top:8px;background:var(--accent);border:none;color:#12261C;font-family:\'Inter\', sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;" onclick="this.closest(\'#welcomeOverlay\').remove()">Rozumím</button>'
     + '</div>';
   document.body.appendChild(backdrop);
 }
@@ -3695,24 +3695,24 @@ function showNamePromptIfNeeded(onDone){
     if(onDone) onDone();
     return;
   }
-  let selectedAvatar = AVATAR_OPTIONS[0];
+  let selectedAvatar = null;
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.innerHTML = `
     <div class="ev-modal" style="text-align:center;">
       <button class="ev-modal-close" id="nameSkipBtn">×</button>
       <div class="ev-modal-title" style="margin-bottom:6px;">👋 Vítej u KoKrŠNeKů!</div>
-      <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
-      <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;margin-bottom:12px;" />
-      <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;">Vyber si ikonku</div>
+      <div style="font-family:'Inter', sans-serif;font-size:14px;color:var(--muted);margin-bottom:14px;">Jak se jmenuješ? Přezdívku uvidí ostatní u lajků, komentářů a účasti.</div>
+      <input id="nameInputField" type="text" placeholder="Tvoje přezdívka" maxlength="30" style="width:100%;box-sizing:border-box;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;margin-bottom:12px;" />
+      <div style="font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;">Vyber si ikonku</div>
       <div id="avatarPicker" style="text-align:left;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:14px;">
         ${Object.entries(AVATAR_CATEGORIES).map(([cat, emojis]) => `
-          <div style="font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px;">${cat}</div>
+          <div style="font-family:'Inter', sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px;">${cat}</div>
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:4px;">
             ${emojis.map(a => `<button class="avatar-opt" data-avatar="${a}" style="font-size:19px;padding:6px 0;border-radius:var(--radius-sm);border:1px solid ${a===selectedAvatar?'var(--accent)':'var(--line)'};background:${a===selectedAvatar?'var(--accent-soft)':'var(--surface)'};cursor:pointer;">${a}</button>`).join('')}
           </div>`).join('')}
       </div>
-      <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
+      <button id="nameSubmitBtn" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter', sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;">Pokračovat</button>
     </div>`;
   document.body.appendChild(backdrop);
 
@@ -3734,9 +3734,15 @@ function showNamePromptIfNeeded(onDone){
     const val = normName(input.value);
     if(!val){ input.focus(); return; }
     localStorage.setItem('kokrsnekUser', val);
-    localStorage.setItem('kokrsnekAvatar', selectedAvatar);
-    try{ await db.collection('userProfiles').doc(val).set({ avatar: selectedAvatar }, { merge: true }); }
-    catch(e){ console.error('Chyba při ukládání avataru:', e); }
+    if(selectedAvatar){
+      localStorage.setItem('kokrsnekAvatar', selectedAvatar);
+      try{ await db.collection('userProfiles').doc(val).set({ avatar: selectedAvatar }, { merge: true }); }
+      catch(e){ console.error('Chyba při ukládání avataru:', e); }
+    } else {
+      // Nikdo nic nevybral — appka teď nedoplňuje žádnou výchozí ikonku,
+      // takže se ani neukládá nic (ani do localStorage, ani do Firestore).
+      localStorage.removeItem('kokrsnekAvatar');
+    }
     finish();
   };
   backdrop.querySelector('#nameSubmitBtn').onclick = submit;
@@ -3750,8 +3756,8 @@ function showNamePromptIfNeeded(onDone){
 async function getAvatar(name){
   try{
     const doc = await db.collection('userProfiles').doc(name).get();
-    return (doc.exists && doc.data().avatar) ? doc.data().avatar : '👤';
-  }catch(e){ return '👤'; }
+    return (doc.exists && doc.data().avatar) ? doc.data().avatar : '';
+  }catch(e){ return ''; }
 }
 
 // České znaky s háčky/čárkami (Š, Ř, ...) lze v textu uložit dvěma různými
@@ -3987,7 +3993,7 @@ async function openChatList(){
 
     const names = [...partnerSet].sort((a,b) => a.localeCompare(b, 'cs'));
     const partyRow = `
-      <button class="chat-user-row" data-party="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
+      <button class="chat-user-row" data-party="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
         <span>👥 Celá parta</span>
         <span style="display:flex;align-items:center;gap:8px;">
           ${partyUnread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${partyUnread > 9 ? '9+' : partyUnread}</span>` : ''}
@@ -3995,7 +4001,7 @@ async function openChatList(){
         </span>
       </button>`;
     const pollRow = `
-      <button class="chat-user-row" data-polls="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
+      <button class="chat-user-row" data-polls="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
         <span>📊 Ankety</span>
         <span style="color:var(--muted);font-size:16px;">›</span>
       </button>`;
@@ -4005,8 +4011,8 @@ async function openChatList(){
       list.innerHTML = partyRow + pollRow + names.map(n => {
         const unread = unreadMap[n] || 0;
         return `
-        <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-          <span>${avatarMap[n] || '👤'} ${n}</span>
+        <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
+          <span>${avatarMap[n] || ''} ${n}</span>
           <span style="display:flex;align-items:center;gap:8px;">
             ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
             <span style="color:var(--muted);font-size:16px;">›</span>
@@ -4046,7 +4052,7 @@ async function openPollList(){
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">📊 Ankety</div>
-      <button id="newPollBtn" style="display:block;width:100%;margin-bottom:12px;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ Nová anketa</button>
+      <button id="newPollBtn" style="display:block;width:100%;margin-bottom:12px;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;cursor:pointer;">+ Nová anketa</button>
       <div id="pollList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
     </div>`;
   document.body.appendChild(backdrop);
@@ -4073,7 +4079,7 @@ async function openPollList(){
         leaderLine = winners.length ? `Vyhrálo: ${winners.join(', ')}` : 'Nikdo nehlasoval';
       }
       return `
-        <button data-poll-id="${d.id}" style="display:block;width:100%;text-align:left;background:none;border:none;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-family:'Inter',sans-serif;opacity:${data.closed ? '0.55' : '1'};">
+        <button data-poll-id="${d.id}" style="display:block;width:100%;text-align:left;background:none;border:none;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-family:'Inter', sans-serif;opacity:${data.closed ? '0.55' : '1'};">
           <div style="font-size:14px;font-weight:700;color:var(--ink);">${data.closed ? '🔒 ' : ''}${data.question}</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${data.closed ? leaderLine : `${voteCount} hlas(ů)`}${myVoteIdx !== undefined ? ' · hlasoval(a) jsi' : ''}</div>
         </button>`;
@@ -4097,10 +4103,10 @@ function openPollEditor(){
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:14px;">📊 Nová anketa</div>
-      <input id="pollQuestion" placeholder="Otázka (např. Kam příště?)" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:10px;">
+      <input id="pollQuestion" placeholder="Otázka (např. Kam příště?)" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:10px;">
       <div id="pollOptionsList" style="margin-bottom:8px;"></div>
-      <button id="addOptionBtn" style="display:block;width:100%;padding:9px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:14px;">+ Přidat možnost</button>
-      <button id="createPollBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit</button>
+      <button id="addOptionBtn" style="display:block;width:100%;padding:9px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:14px;">+ Přidat možnost</button>
+      <button id="createPollBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit</button>
     </div>`;
   document.body.appendChild(backdrop);
 
@@ -4109,7 +4115,7 @@ function openPollEditor(){
     const row = document.createElement('input');
     row.className = 'poll-option-input';
     row.placeholder = placeholder;
-    row.style.cssText = 'width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:8px;';
+    row.style.cssText = 'width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:\'Inter\', sans-serif;font-size:16px;padding:9px 12px;border-radius:var(--radius-sm);outline:none;margin-bottom:8px;';
     optionsList.appendChild(row);
   };
   addOptionRow('Možnost 1');
@@ -4184,7 +4190,7 @@ async function openPollDetail(pollId){
           display:block; width:100%; text-align:left; position:relative; overflow:hidden;
           background:var(--surface); border:1px solid ${mine ? 'var(--accent)' : 'var(--line)'};
           border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px;
-          cursor:${data.closed ? 'default' : 'pointer'}; font-family:'Inter',sans-serif;
+          cursor:${data.closed ? 'default' : 'pointer'}; font-family:'Inter', sans-serif;
         ">
           <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:var(--accent-soft);z-index:0;"></div>
           <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;">
@@ -4197,11 +4203,11 @@ async function openPollDetail(pollId){
 
     bodyEl.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:2px;">📊 ${data.question}</div>
-      <div style="font-family:'Inter',sans-serif;font-size:11.5px;color:var(--muted);margin-bottom:14px;text-align:center;">
+      <div style="font-family:'Inter', sans-serif;font-size:11.5px;color:var(--muted);margin-bottom:14px;text-align:center;">
         založil(a) ${data.createdBy}${data.closed ? ' · uzavřeno' : ''}
       </div>
       ${optionsHtml}
-      ${isCreator && !data.closed ? `<button id="closePollBtn" style="display:block;width:100%;margin-top:10px;padding:10px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;">Uzavřít anketu</button>` : ''}
+      ${isCreator && !data.closed ? `<button id="closePollBtn" style="display:block;width:100%;margin-top:10px;padding:10px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:'Inter', sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;">Uzavřít anketu</button>` : ''}
     `;
     const closeBtn = document.getElementById('closePollBtn');
     if(closeBtn) closeBtn.onclick = () => closePoll(pollId);
@@ -4313,15 +4319,15 @@ function openChatThread(me, other){
         <button id="chatMuteBtn" title="Ztlumit notifikace z tohoto vlákna" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:inline-flex;align-items:center;">${bellIconSVG(false)}</button>
         ${!isGroup ? `<button id="chatThreadPokeBtn" title="Hipnout" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
-      <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter',sans-serif;"></div>
+      <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter', sans-serif;"></div>
       <div id="chatPinnedBanner" style="display:none;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 10px;margin-bottom:8px;cursor:pointer;"></div>
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
-        <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
+        <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
       <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="flex:0 0 auto;display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
         <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
-        <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
+        <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
         <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
       </div>
       <input type="file" id="chatImageInput" accept="image/*" style="display:none;flex:0 0 auto;">
@@ -4379,7 +4385,7 @@ function openChatThread(me, other){
           border:1px solid ${active ? 'rgba(62,143,104,0.5)' : 'var(--line)'};
           border-radius:100px; padding:2px 6px; font-size:11px; cursor:pointer;
           display:inline-flex; align-items:center; gap:2px; color:var(--ink); line-height:1.3;
-        ">${em}<span style="font-size:9.5px;color:var(--muted);font-family:'Inter',sans-serif;">${users.length}</span></button>`;
+        ">${em}<span style="font-size:9.5px;color:var(--muted);font-family:'Inter', sans-serif;">${users.length}</span></button>`;
       }).join('');
       const isPinned = pinnedMsgId === d.id;
       const pinBtn = `<button onclick="toggleChatPin('${threadId}','${d.id}')" title="${isPinned ? 'Odepnout' : 'Připnout'}" style="background:none;border:none;color:${isPinned ? 'var(--accent)' : 'var(--muted)'};cursor:pointer;padding:0;display:inline-flex;align-items:center;">${pinMsgIconSVG(isPinned)}</button>`;
@@ -4518,7 +4524,7 @@ function openChatThread(me, other){
     const snippet = pinned.text ? pinned.text.slice(0,60) : (pinned.image ? '📷 fotka' : '');
     el.innerHTML = `
       <span style="flex:0 0 auto;color:var(--accent);display:inline-flex;">${pinMsgIconSVG(true)}</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-family:'Inter',sans-serif;font-size:12px;text-align:left;"><b>${pinned.from}:</b> ${snippet}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-family:'Inter', sans-serif;font-size:12px;text-align:left;"><b>${pinned.from}:</b> ${snippet}</span>
       <button id="chatUnpinBtn" title="Odepnout" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:15px;line-height:1;">×</button>
     `;
     el.onclick = () => {
@@ -4742,15 +4748,15 @@ function showPayment(eventTitle){
     backdrop.innerHTML = '<div class="ev-modal" style="text-align:center;"><div class="sheet-grabber-down" onclick="this.closest(&quot;.ev-modal-backdrop&quot;).remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>'
       + '<button class="ev-modal-close" onclick="this.closest(\'.ev-modal-backdrop\').remove()">×</button>'
       + '<div class="ev-modal-title" style="margin-bottom:4px;">💸 Příspěvek na akci</div>'
-      + '<div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
+      + '<div style="font-family:\'Inter\', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
       + '<a href="' + qrUrl + '" target="_blank" rel="noopener" download="qr-platba.png">'
       + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:var(--radius-md);background:#fff;padding:4px;cursor:pointer;">'
       + '</a>'
-      + '<div style="font-family:Inter,sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Klikni pro uložení QR kódu</div>'
-      + '<div style="font-family:Inter,sans-serif;font-weight:500;font-size:13px;color:var(--muted);margin-top:12px;line-height:1.8;">'
+      + '<div style="font-family:\'Inter\', sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Klikni pro uložení QR kódu</div>'
+      + '<div style="font-family:\'Inter\', sans-serif;font-weight:500;font-size:13px;color:var(--muted);margin-top:12px;line-height:1.8;">'
       + '1518140045/3030<br>příspěvek Kokršnekům za ' + (eventTitle||'akci')
       + '</div>'
-      + '<button id="copyPayBtn" style="display:block;width:100%;margin-top:12px;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zkopírovat platební údaje</button>'
+      + '<button id="copyPayBtn" style="display:block;width:100%;margin-top:12px;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:\'Inter\', sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zkopírovat platební údaje</button>'
       + '</div>';
     document.body.appendChild(backdrop);
     document.getElementById('copyPayBtn').addEventListener('click', function(){
@@ -4790,12 +4796,12 @@ function askExpensePassword(ev){
       <div class="ev-modal" style="text-align:center;">
         <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
         <div class="ev-modal-title" style="margin-bottom:14px;">🔒 Heslo pro úpravu nákladů</div>
-        <input id="expPwdInput" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Heslo" style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:20px;padding:12px;border-radius:var(--radius-sm);outline:none;margin-bottom:14px;">
+        <input id="expPwdInput" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Heslo" style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:20px;padding:12px;border-radius:var(--radius-sm);outline:none;margin-bottom:14px;">
         <div style="display:flex;gap:8px;">
-          <button id="expPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
-          <button id="expPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
+          <button id="expPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
+          <button id="expPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
         </div>
-        <button id="expYearSummaryBtn" style="display:block;width:100%;margin-top:10px;padding:11px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">📅 Náklady za rok ${year}</button>
+        <button id="expYearSummaryBtn" style="display:block;width:100%;margin-top:10px;padding:11px;border-radius:var(--radius-sm);background:none;border:1px solid var(--line);color:var(--muted);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;cursor:pointer;">📅 Náklady za rok ${year}</button>
       </div>`;
     document.body.appendChild(backdrop);
     const input = document.getElementById('expPwdInput');
@@ -4914,18 +4920,18 @@ function openExpenseEditor(key, ev, existingItems, existingContributions){
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="margin-bottom:2px;">🧾 Náklady akce</div>
-      <div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
+      <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
       <div id="expenseItemsList" style="text-align:left;margin-bottom:10px;max-height:26vh;overflow-y:auto;"></div>
-      <div style="font-family:Inter,sans-serif;font-size:10.5px;color:var(--muted);margin:0 0 8px;text-align:left;">Tip: napiš do Položky "přispěl/a JMÉNO" a do Ceny částku, ať se to počítá jako příspěvek, ne náklad.</div>
+      <div style="font-family:'Inter', sans-serif;font-size:10.5px;color:var(--muted);margin:0 0 8px;text-align:left;">Tip: napiš do Položky "přispěl/a JMÉNO" a do Ceny částku, ať se to počítá jako příspěvek, ne náklad.</div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input id="expItemName" placeholder="Položka" style="flex:2;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
-        <input id="expItemQty" placeholder="Množství" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemName" placeholder="Položka" style="flex:2;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemQty" placeholder="Množství" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
       </div>
       <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <input id="expItemPrice" type="number" inputmode="decimal" placeholder="Cena (Kč)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="expItemPrice" type="number" inputmode="decimal" placeholder="Cena (Kč)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
         <button id="expAddItemBtn" style="flex:0 0 auto;background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 16px;border-radius:var(--radius-sm);cursor:pointer;">Přidat</button>
       </div>
-      <button id="expCreateBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit</button>
+      <button id="expCreateBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Vytvořit</button>
     </div>`;
   document.body.appendChild(backdrop);
 
@@ -4942,7 +4948,7 @@ function openExpenseEditor(key, ev, existingItems, existingContributions){
 
   function renderItemsList(){
     const itemRows = items.map((it, i) => `
-      <div data-type="item" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;font-size:13px;cursor:pointer;">
+      <div data-type="item" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:13px;cursor:pointer;">
         <span style="flex:1;color:var(--ink);">${it.name}</span>
         <span style="color:var(--muted);font-size:12px;">${it.qty||'—'}</span>
         <span style="color:var(--ink);font-weight:600;min-width:60px;text-align:right;">${it.price} Kč</span>
@@ -4950,7 +4956,7 @@ function openExpenseEditor(key, ev, existingItems, existingContributions){
       </div>
     `).join('');
     const contribRows = contributions.map((c, i) => `
-      <div data-type="contrib" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;font-size:13px;cursor:pointer;">
+      <div data-type="contrib" data-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:13px;cursor:pointer;">
         <span style="flex:1;color:var(--accent);">💸 přispěl(a) ${c.name}</span>
         <span style="color:var(--accent);font-weight:600;min-width:60px;text-align:right;">${c.amount} Kč</span>
         <button data-remove="contrib" data-idx="${i}" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;">×</button>
@@ -5073,14 +5079,14 @@ function showExpenseReceipt(key, ev, items, contributions){
   const balance = total - totalContrib;
   const dateStr = ev.start ? `${DAYS_FULL[ev.start.getDay()]} ${ev.start.getDate()}.${ev.start.getMonth()+1}.${ev.start.getFullYear()}` : '';
   const rowsHtml = items.map(it => `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
       <span style="flex:1;font-size:13.5px;color:var(--ink);">${it.name}</span>
       <span style="font-size:12px;color:var(--muted);min-width:46px;text-align:right;">${it.qty || '—'}</span>
       <span style="font-size:13.5px;font-weight:600;color:var(--ink);min-width:64px;text-align:right;">${it.price} Kč</span>
     </div>
   `).join('');
   const contribHtml = contributions.length ? contributions.map(c => `
-    <div style="display:flex;justify-content:space-between;align-items:center;font-family:Inter,sans-serif;padding:4px 0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-family:'Inter', sans-serif;padding:4px 0;">
       <span style="font-size:13.5px;color:var(--accent);">${c.name}</span>
       <span style="font-size:13.5px;font-weight:600;color:var(--accent);">${c.amount} Kč</span>
     </div>
@@ -5093,25 +5099,25 @@ function showExpenseReceipt(key, ev, items, contributions){
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="margin-bottom:2px;">${ev.title || ''}</div>
-      <div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:16px;">${dateStr}</div>
-      <div style="text-align:left;display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;padding-bottom:6px;border-bottom:1px solid var(--line);">
+      <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:16px;">${dateStr}</div>
+      <div style="text-align:left;display:flex;justify-content:space-between;font-family:'Inter', sans-serif;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;padding-bottom:6px;border-bottom:1px solid var(--line);">
         <span>co</span><span>kolik / za kolik</span>
       </div>
       <div style="text-align:left;">${rowsHtml}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:Inter,sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
         <span style="font-size:20px;font-weight:700;color:var(--ink);">${total} Kč</span>
       </div>
-      <div style="margin-top:10px;font-family:Inter,sans-serif;text-align:left;">
+      <div style="margin-top:10px;font-family:'Inter', sans-serif;text-align:left;">
         <div style="font-size:13px;color:var(--ink);margin-bottom:2px;">přispěli</div>
         ${contribHtml}
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:Inter,sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
         <span style="font-size:20px;font-weight:700;color:var(--ink);">${balance} Kč</span>
       </div>
       <img src="qr-platba.png" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;">
-      <div style="font-family:Inter,sans-serif;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.7;">
+      <div style="font-family:'Inter', sans-serif;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.7;">
         KoKrŠNeK – 1518140045/3030<br>Díky za příspěvek
       </div>
     </div>`;
@@ -5161,7 +5167,7 @@ async function showYearlyExpenseSummary(year){
     const grandContrib = rows.reduce((s,r) => s + r.contrib, 0);
 
     const rowsHtml = rows.map(r => `
-      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-family:Inter,sans-serif;">
+      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
         <div style="font-size:13.5px;font-weight:600;color:var(--ink);">${r.title}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${DAYS_FULL[r.dt.getDay()]} ${r.dt.getDate()}.${r.dt.getMonth()+1}.${r.dt.getFullYear()}</div>
         <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink);">
@@ -5173,7 +5179,7 @@ async function showYearlyExpenseSummary(year){
 
     listEl.innerHTML = `
       ${rowsHtml}
-      <div style="margin-top:14px;font-family:Inter,sans-serif;">
+      <div style="margin-top:14px;font-family:'Inter', sans-serif;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
           <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandCost} Kč</span>
@@ -5203,8 +5209,8 @@ async function fillAvatars(container){
     const names = [...new Set([...spans].map(s => s.dataset.name))];
     const results = await Promise.all(names.map(n => db.collection('userProfiles').doc(n).get()));
     const map = {};
-    names.forEach((n,i) => { map[n] = (results[i].exists && results[i].data().avatar) ? results[i].data().avatar : '👤'; });
-    spans.forEach(s => { s.textContent = map[s.dataset.name] || '👤'; });
+    names.forEach((n,i) => { map[n] = (results[i].exists && results[i].data().avatar) ? results[i].data().avatar : ''; });
+    spans.forEach(s => { s.textContent = map[s.dataset.name] || ''; });
   }catch(e){ /* necháme výchozí 👤 */ }
 }
 
@@ -5225,7 +5231,7 @@ async function showLikers(evIdx, key){
         const time = data.at
           ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
           : '';
-        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
           <span ${personLink(d.id)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">❤️ <span class="mini-avatar" data-name="${d.id}">👤</span> ${d.id}</span>
           <span style="font-size:11.5px;color:var(--muted);">${time}</span>
         </div>`;
@@ -5360,7 +5366,7 @@ async function showDecliners(evIdx, key){
         const time = data.at
           ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
           : '';
-        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
           <span ${personLink(d.id)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">👎 <span class="mini-avatar" data-name="${d.id}">👤</span> ${d.id}</span>
           <span style="font-size:11.5px;color:var(--muted);">${time}</span>
         </div>`;
@@ -5392,7 +5398,7 @@ async function showAttendees(evIdx, key){
         const time = data.at
           ? (data.at.toDate ? data.at.toDate() : new Date(data.at)).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
           : '';
-        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+        return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
           <span ${personLink(d.id)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">✋ <span class="mini-avatar" data-name="${d.id}">👤</span> ${d.id}</span>
           <span style="font-size:11.5px;color:var(--muted);">${time}</span>
         </div>`;
@@ -5427,21 +5433,21 @@ function openCommentEditor(evIdx, key, parentId){
 
   editor.innerHTML = `
     <div style="margin-bottom:10px;padding-top:4px;">
-      <span style="font-family:'Inter',sans-serif;font-size:14.5px;font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:6px;">
+      <span style="font-family:'Inter', sans-serif;font-size:14.5px;font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:6px;">
         ${parentId ? `${replyIconSVG()}Odpověď` : '💬 Nový komentář'}
       </span>
     </div>
     <textarea id="editorTextarea" placeholder="Napiš komentář…" style="
       flex:1;background:var(--surface);
       border:1px solid var(--line);
-      color:var(--ink);font-family:'Inter',sans-serif;
+      color:var(--ink);font-family:'Inter', sans-serif;
       font-size:16px;padding:12px 14px;border-radius:var(--radius-sm);
       outline:none;resize:none;line-height:1.5;
       margin-bottom:10px;
     "></textarea>
     <button id="editorSendBtn" style="
       background:var(--accent);border:none;color:#12261C;
-      font-family:'Inter',sans-serif;font-size:14px;font-weight:700;
+      font-family:'Inter', sans-serif;font-size:14px;font-weight:700;
       padding:11px;border-radius:var(--radius-sm);cursor:pointer;
       flex-shrink:0;
       margin-bottom:8px;
@@ -5577,16 +5583,16 @@ async function refreshComments(evIdx, key){
           border:1px solid ${active ? 'rgba(62,143,104,0.5)' : 'var(--line)'};
           border-radius:100px; padding:3px 8px; font-size:12.5px; cursor:pointer;
           display:inline-flex; align-items:center; gap:3px; color:var(--ink); line-height:1.3;
-        ">${em}${users.length > 0 ? `<span style="font-size:10.5px;color:var(--muted);font-family:'Inter',sans-serif;">${users.length}</span>` : ''}</button>`;
+        ">${em}${users.length > 0 ? `<span style="font-size:10.5px;color:var(--muted);font-family:'Inter', sans-serif;">${users.length}</span>` : ''}</button>`;
       }).join('');
       return `<div style="padding:8px 0 4px;${depth > 0 ? `margin-left:${indent}px;border-left:2px solid var(--line);padding-left:10px;` : 'border-bottom:1px solid var(--line);'}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span ${personLink(data.user)} style="font-size:12px;font-weight:700;color:var(--accent);font-family:'Inter',sans-serif;${PERSON_LINK_STYLE}">${data.user}</span>
-          <span style="font-size:11.5px;color:var(--muted);font-family:'Inter',sans-serif;">${time}</span>
-          <button onclick="openCommentEditor(${evIdx},window['evKey_'+${evIdx}],'${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;padding:0;font-family:'Inter',sans-serif;font-weight:500;display:inline-flex;align-items:center;gap:4px;">${replyIconSVG()}odpovědět</button>
+          <span ${personLink(data.user)} style="font-size:12px;font-weight:700;color:var(--accent);font-family:'Inter', sans-serif;${PERSON_LINK_STYLE}">${data.user}</span>
+          <span style="font-size:11.5px;color:var(--muted);font-family:'Inter', sans-serif;">${time}</span>
+          <button onclick="openCommentEditor(${evIdx},window['evKey_'+${evIdx}],'${d.id}')" style="background:none;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;padding:0;font-family:'Inter', sans-serif;font-weight:500;display:inline-flex;align-items:center;gap:4px;">${replyIconSVG()}odpovědět</button>
           <button onclick="deleteComment(${evIdx},'${key}','${d.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;margin-left:auto;display:inline-flex;align-items:center;">${trashIconSVG()}</button>
         </div>
-        <div style="font-size:14px;color:var(--ink);margin-top:3px;font-family:'Inter',sans-serif;">${data.text}</div>
+        <div style="font-size:14px;color:var(--ink);margin-top:3px;font-family:'Inter', sans-serif;">${data.text}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;">${reactionsRow}</div>
         ${childReplies.map(r => renderComment(r, depth + 1)).join('')}
       </div>`;
@@ -5595,11 +5601,11 @@ async function refreshComments(evIdx, key){
     const roots = docs.filter(d => !d.data().parentId);
 
     list.innerHTML = roots.length === 0
-      ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;font-family:\'Inter\',sans-serif;">Zatím žádné komentáře</div>'
+      ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;font-family:Inter,sans-serif;">Zatím žádné komentáře</div>'
       : roots.map(d => renderComment(d, 0)).join('');
   }catch(e){
     const list2 = document.getElementById('commentList_'+evIdx);
-    if(list2) list2.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:8px;font-family:\'Inter\',sans-serif;">'+e.message+'</div>';
+    if(list2) list2.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:8px;font-family:Inter,sans-serif;">'+e.message+'</div>';
   }
 }
 
@@ -5861,13 +5867,13 @@ function nextQuizQuestion(){
   if(!content) return;
   const order = [0,1,2].sort(() => Math.random()-0.5);
   content.innerHTML = `
-    <div style="font-family:'Inter',sans-serif;font-size:12px;letter-spacing:0.02em;color:var(--muted);font-weight:600;margin-bottom:6px;">Série: ${st.streak}</div>
-    <div id="quizTimer" style="font-family:'Inter',sans-serif;font-size:30px;font-weight:800;color:var(--accent);margin-bottom:10px;">10</div>
+    <div style="font-family:'Inter', sans-serif;font-size:12px;letter-spacing:0.02em;color:var(--muted);font-weight:600;margin-bottom:6px;">Série: ${st.streak}</div>
+    <div id="quizTimer" style="font-family:'Inter', sans-serif;font-size:30px;font-weight:800;color:var(--accent);margin-bottom:10px;">10</div>
     <div class="ev-modal-title" style="margin-bottom:16px;">${question.q}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       ${order.map(i => `<button onclick="answerQuiz(${i === question.correct})" style="
         background:var(--surface);border:1px solid var(--line);
-        color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:15px;
+        color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:15px;
         padding:13px;border-radius:var(--radius-sm);cursor:pointer;">${question.a[i]}</button>`).join('')}
     </div>
   `;
@@ -5909,13 +5915,13 @@ function endQuiz(reason){
     <input id="quizNameInput" type="text" placeholder="Tvoje jméno…" value="${savedName}" style="
       width:100%; box-sizing:border-box;
       background:var(--surface); border:1px solid var(--line);
-      color:var(--ink); font-family:'Inter',sans-serif;
+      color:var(--ink); font-family:'Inter', sans-serif;
       font-size:16px; padding:12px 14px; border-radius:var(--radius-sm); outline:none; margin-bottom:12px;
     ">
     <button onclick="submitQuizScore()" style="
       display:block;width:100%;
       background:var(--accent);border:none;color:#12261C;
-      font-family:'Inter',sans-serif;font-size:14px;
+      font-family:'Inter', sans-serif;font-size:14px;
       padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;
     ">Uložit a zobrazit žebříček</button>
   `;
@@ -5988,17 +5994,17 @@ async function showQuizLeaderboard(saveError){
           }
           return `
           <div onclick="showQuizAttempts('${r.name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;">
-            <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--muted);width:22px;">${i+1}.</span>
-            <span style="flex:1;font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;color:var(--ink);"><span class="mini-avatar" data-name="${r.name.replace(/"/g,'&quot;')}">👤</span> ${r.name}</span>
-            <span style="font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${dateStr}</span>
-            <span style="font-family:'Inter',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${r.score}</span>
+            <span style="font-family:'Inter', sans-serif;font-weight:600;font-size:13px;color:var(--muted);width:22px;">${i+1}.</span>
+            <span style="flex:1;font-family:'Inter', sans-serif;font-weight:600;font-size:14.5px;color:var(--ink);"><span class="mini-avatar" data-name="${r.name.replace(/"/g,'&quot;')}">👤</span> ${r.name}</span>
+            <span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${dateStr}</span>
+            <span style="font-family:'Inter', sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${r.score}</span>
           </div>
         `;}).join('')}
       </div>
       <button onclick="document.getElementById('quizBackdrop')?.remove()" style="
         display:block;width:100%;margin-top:16px;
         background:var(--surface);border:1px solid var(--line);color:var(--ink);
-        font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+        font-family:'Inter', sans-serif;font-weight:600;font-size:14px;
         padding:11px;border-radius:var(--radius-sm);cursor:pointer;">Zavřít</button>
     `;
     fillAvatars(content);
@@ -6006,11 +6012,11 @@ async function showQuizLeaderboard(saveError){
     console.error('Chyba při načítání žebříčku:', e);
     content.innerHTML = `
       ${saveErrorHtml}
-      <div style="color:var(--coral);font-size:12.5px;text-align:center;margin-bottom:12px;font-family:'Inter',sans-serif;">Nepodařilo se načíst žebříček: ${e.message}</div>
+      <div style="color:var(--coral);font-size:12.5px;text-align:center;margin-bottom:12px;font-family:'Inter', sans-serif;">Nepodařilo se načíst žebříček: ${e.message}</div>
       <button onclick="document.getElementById('quizBackdrop')?.remove()" style="
         display:block;width:100%;
         background:var(--surface);border:1px solid var(--line);color:var(--ink);
-        font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+        font-family:'Inter', sans-serif;font-weight:600;font-size:14px;
         padding:11px;border-radius:var(--radius-sm);cursor:pointer;">Zavřít</button>
     `;
   }
@@ -6035,26 +6041,26 @@ async function showQuizAttempts(name){
           }
           return `
           <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);">
-            <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--muted);width:22px;">${i+1}.</span>
-            <span style="flex:1;font-family:'Inter',sans-serif;font-size:11.5px;color:var(--muted);">${dateStr}</span>
-            <span style="font-family:'Inter',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${r.score}</span>
+            <span style="font-family:'Inter', sans-serif;font-weight:600;font-size:13px;color:var(--muted);width:22px;">${i+1}.</span>
+            <span style="flex:1;font-family:'Inter', sans-serif;font-size:11.5px;color:var(--muted);">${dateStr}</span>
+            <span style="font-family:'Inter', sans-serif;font-size:15px;font-weight:800;color:var(--accent);">${r.score}</span>
           </div>
         `;}).join('')}
       </div>
       <button onclick="showQuizLeaderboard()" style="
         display:block;width:100%;margin-top:16px;
         background:var(--surface);border:1px solid var(--line);color:var(--ink);
-        font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+        font-family:'Inter', sans-serif;font-weight:600;font-size:14px;
         padding:11px;border-radius:var(--radius-sm);cursor:pointer;">← Zpět na žebříček</button>
     `;
   }catch(e){
     console.error('Chyba při načítání pokusů:', e);
     content.innerHTML = `
-      <div style="color:var(--coral);font-size:12.5px;text-align:center;margin-bottom:12px;font-family:'Inter',sans-serif;">Nepodařilo se načíst pokusy: ${e.message}</div>
+      <div style="color:var(--coral);font-size:12.5px;text-align:center;margin-bottom:12px;font-family:'Inter', sans-serif;">Nepodařilo se načíst pokusy: ${e.message}</div>
       <button onclick="showQuizLeaderboard()" style="
         display:block;width:100%;
         background:var(--surface);border:1px solid var(--line);color:var(--ink);
-        font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+        font-family:'Inter', sans-serif;font-weight:600;font-size:14px;
         padding:11px;border-radius:var(--radius-sm);cursor:pointer;">← Zpět na žebříček</button>
     `;
   }
@@ -6237,7 +6243,7 @@ async function showAttendanceLeaderboard(){
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">🏆 Žebříček docházky</div>
       <div id="attendanceLeaderboardList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
-      <button id="exportAttendanceXlsxBtn" style="margin-top:14px;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">⬇ Export do XLSX</button>
+      <button id="exportAttendanceXlsxBtn" style="margin-top:14px;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">⬇ Export do XLSX</button>
     </div>`;
   document.body.appendChild(backdrop);
 
@@ -6253,7 +6259,7 @@ async function showAttendanceLeaderboard(){
     });
     sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
     listEl.innerHTML = sorted.length ? sorted.map(([user, count], i) => `
-      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
         <span ${personLink(user)} style="font-size:14px;color:var(--ink);font-weight:600;${PERSON_LINK_STYLE}">${i+1}. <span class="mini-avatar" data-name="${user}">👤</span> ${user}</span>
         <span style="font-size:13px;color:var(--muted);">${count}×</span>
       </div>`).join('') : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádná data</div>';
@@ -6381,9 +6387,9 @@ function maybePromptForNotifications(){
   backdrop.innerHTML = `
     <div class="ev-modal" style="text-align:center;">
       <div class="ev-modal-title" style="margin-bottom:6px;">🔔 Zapnout upozornění?</div>
-      <div style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);margin-bottom:18px;">Ať ti nic neuteče — nové akce, komentáře, lajky, Dojdu/Nedojdu i zprávy od party.</div>
-      <button id="notifPromptYes" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter',sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;margin-bottom:8px;">Zapnout</button>
-      <button id="notifPromptNo" style="display:block;width:100%;background:none;border:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:13px;padding:10px;cursor:pointer;">Teď ne</button>
+      <div style="font-family:'Inter', sans-serif;font-size:14px;color:var(--muted);margin-bottom:18px;">Ať ti nic neuteče — nové akce, komentáře, lajky, Dojdu/Nedojdu i zprávy od party.</div>
+      <button id="notifPromptYes" style="display:block;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter', sans-serif;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;margin-bottom:8px;">Zapnout</button>
+      <button id="notifPromptNo" style="display:block;width:100%;background:none;border:none;color:var(--muted);font-family:'Inter', sans-serif;font-size:13px;padding:10px;cursor:pointer;">Teď ne</button>
     </div>`;
   document.body.appendChild(backdrop);
   backdrop.querySelector('#notifPromptYes').onclick = () => { backdrop.remove(); toggleNotifications(); };
