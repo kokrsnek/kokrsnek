@@ -1949,11 +1949,11 @@ function showEventDetail(idx){
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>` : ''}
       </div>
       ${isFuture ? `<div style="margin-top:8px;">
-        <button onclick="openBringList(window['evKey_'+${idx}], rawEvents[${idx}])" style="
+        <button id="bringBtn_${idx}" style="
           width:100%;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
-        ">${bringIconSVG()}Kdo co přinese</button>
+        ">${bringIconSVG()}Kdo co přinese<span id="bringBtnCount_${idx}"></span></button>
       </div>` : ''}
       ${!isFuture ? `<div style="margin-top:8px;">
         <button id="expenseBtn_${idx}" style="
@@ -2067,6 +2067,7 @@ function showEventDetail(idx){
   refreshComments(idx, fbKey);
   refreshAttendance(idx, fbKey, isFuture);
   if(!isFuture) wireExpenseBtn(idx, fbKey, ev);
+  if(isFuture) wireBringBtn(idx, fbKey, ev);
 
   // Long press na like button = zobraz kdo lajkoval
   const likeBtn = document.getElementById('likeBtn_'+idx);
@@ -2915,13 +2916,15 @@ let calendarLoaded = false;
 fetchGoogleCalendarEvents().then(() => {
   calendarLoaded = true;
   // Otevřeno z push notifikace? V URL je buď ?event=KEY (otevři kartu akce),
-  // ?chat=JMÉNO (otevři rovnou dané vlákno v minichatu), nebo ?poll=ID
-  // (otevři rovnou danou anketu).
+  // ?chat=JMÉNO (otevři rovnou dané vlákno v minichatu), ?poll=ID (otevři
+  // rovnou danou anketu), nebo ?bring=KEY (otevři rovnou "Kdo co přinese"
+  // dané akce).
   try{
     const params = new URLSearchParams(location.search);
     const evKey = params.get('event');
     const chatWith = params.get('chat');
     const pollId = params.get('poll');
+    const bringKey = params.get('bring');
     if(evKey){
       setTimeout(() => openEventByKey(evKey), 100);
       history.replaceState(null, '', location.pathname);
@@ -2931,6 +2934,9 @@ fetchGoogleCalendarEvents().then(() => {
       history.replaceState(null, '', location.pathname);
     } else if(pollId){
       setTimeout(() => openPollDetail(pollId), 100);
+      history.replaceState(null, '', location.pathname);
+    } else if(bringKey){
+      setTimeout(() => openBringListByKey(bringKey), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
@@ -3809,6 +3815,16 @@ function openEventByKey(key){
   showEventDetail(idx);
 }
 
+// Otevře rovnou "Kdo co přinese" pro danou akci (prokliknutí z notifikace
+// broadcastBringList() → Cloud Function → sw.js, viz "?bring=" v URL
+// a "open-bring" v postMessage níže).
+function openBringListByKey(key){
+  if(!key) return;
+  const ev = (rawEvents||[]).find(e => { try{ return getEventKey(e) === key; }catch(err){ return false; } });
+  if(!ev) return;
+  openBringList(key, ev);
+}
+
 // Zprávu z service workeru (klik na notifikaci u už běžící appky) obsluhujeme stejnou cestou.
 if(navigator.serviceWorker){
   navigator.serviceWorker.addEventListener('message', (event) => {
@@ -3819,6 +3835,8 @@ if(navigator.serviceWorker){
       if(me) openChatThread(me, event.data.chatWith);
     } else if(event.data && event.data.type === 'open-poll' && event.data.pollId){
       openPollDetail(event.data.pollId);
+    } else if(event.data && event.data.type === 'open-bring' && event.data.bringKey){
+      openBringListByKey(event.data.bringKey);
     }
   });
 }
@@ -4807,6 +4825,110 @@ function bringIconSVG(){
   return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>`;
 }
 
+// Doplní za text tlačítka "Kdo co přinese" počet položek (jen když už nějaké
+// jsou) a zapojí krátký stisk (otevře seznam) i skryté dlouhé podržení
+// (pošle notifikaci celé partě po zadání hesla — viz broadcastBringList níže).
+// Stejný osvědčený vzor jako u expenseBtn: skutečná akce se spouští až na
+// touchend, ne na obyčejný onclick, ať se to spolehlivě odliší od dlouhého
+// podržení i na iOS.
+async function wireBringBtn(idx, key, ev){
+  const countEl = document.getElementById('bringBtnCount_'+idx);
+  const btn = document.getElementById('bringBtn_'+idx);
+  if(!btn) return;
+  try{
+    const snap = await db.collection('bringLists').doc(key).collection('items').get();
+    if(snap.empty){
+      if(countEl) countEl.textContent = '';
+    } else {
+      let taken = 0, free = 0;
+      snap.forEach(d => { if(d.data().takenBy) taken++; else free++; });
+      if(countEl) countEl.innerHTML = ` ${snap.size} (<span style="color:var(--accent);">${taken}</span>/<span style="color:var(--coral);">${free}</span>)`;
+    }
+  }catch(e){ console.error('Chyba při načítání počtu položek:', e); }
+
+  let pressTimer, longPressed = false, startX = 0, startY = 0;
+  btn.style.userSelect = 'none'; btn.style.webkitUserSelect = 'none'; btn.style.webkitTouchCallout = 'none';
+  btn.addEventListener('touchstart', e => {
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+    pressTimer = setTimeout(() => {
+      longPressed = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      broadcastBringList(key, ev);
+    }, 550);
+  }, {passive:true});
+  btn.addEventListener('touchend', e => {
+    clearTimeout(pressTimer);
+    if(longPressed){ e.preventDefault(); return; }
+    openBringList(key, ev);
+  });
+  btn.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+  }, {passive:true});
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  // Záskok pro myš (desktop.html/prohlížeč bez dotyků) — touch událostem
+  // se tu nic nespustí, takže obyčejný klik zůstává jako jediná cesta dovnitř.
+  btn.addEventListener('click', () => { if(!('ontouchstart' in window)) openBringList(key, ev); });
+}
+
+// Skryté heslo pro rozeslání "Co kdo donese?" celé partě (dlouhé podržení
+// tlačítka). Jiné heslo než u Nákladů akce, samostatný modál.
+function askBringBroadcastPassword(){
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
+    backdrop.innerHTML = `
+      <div class="ev-modal" style="text-align:center;">
+        <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+        <div class="ev-modal-title" style="margin-bottom:14px;">🔒 Heslo pro upozornění celé partě</div>
+        <input id="bringPwdInput" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Heslo" style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:20px;padding:12px;border-radius:var(--radius-sm);outline:none;margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+          <button id="bringPwdCancel" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Zrušit</button>
+          <button id="bringPwdOk" style="flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const input = document.getElementById('bringPwdInput');
+    setTimeout(() => input.focus(), 60);
+    const finish = (val) => { backdrop.remove(); resolve(val); };
+    document.getElementById('bringPwdCancel').onclick = () => finish(null);
+    document.getElementById('bringPwdOk').onclick = () => finish(input.value);
+    input.addEventListener('keydown', e => { if(e.key==='Enter') finish(input.value); });
+  });
+}
+
+// Skutečné odeslání — jen když seznam má aspoň jednu položku a heslo sedí.
+// Zapíše se dokument do bringBroadcasts/, o zbytek (notifikace celé partě
+// s proklikem rovnou do tohoto seznamu) se postará Cloud Function.
+async function broadcastBringList(key, ev){
+  let hasItems = false;
+  try{
+    const snap = await db.collection('bringLists').doc(key).collection('items').limit(1).get();
+    hasItems = !snap.empty;
+  }catch(e){ console.error('Chyba při kontrole seznamu:', e); return; }
+  if(!hasItems){ alert('Seznam je zatím prázdný — nejdřív přidej aspoň jednu položku.'); return; }
+
+  const pwd = await askBringBroadcastPassword();
+  if(pwd === null) return;
+  if(pwd !== '9640'){ alert('Špatné heslo.'); return; }
+
+  const me = getUserName();
+  try{
+    await db.collection('bringBroadcasts').add({
+      eventKey: key,
+      eventTitle: ev.title || '',
+      requestedBy: me || '',
+      at: new Date().toISOString(),
+    });
+    alert('Upozornění odesláno celé partě.');
+  }catch(e){ console.error('Chyba při odesílání upozornění:', e); alert('Nepodařilo se odeslat upozornění.'); }
+}
+
 let activeBringUnsub = null;
 
 function openBringList(key, ev){
@@ -4818,7 +4940,16 @@ function openBringList(key, ev){
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; }
   const backdrop = document.createElement('div');
-  const close = () => { if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; } backdrop.remove(); };
+  const close = () => {
+    if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; }
+    backdrop.remove();
+    // Obnoví počet na tlačítku na kartě, ať se po zavření hned promítne
+    // cokoliv, co se v okně mezitím vzalo/pustilo/přidalo.
+    document.querySelectorAll('[id^="bringBtn_"]').forEach(b => {
+      const idx = b.id.replace('bringBtn_','');
+      if(window['evKey_'+idx] === key) wireBringBtnCount(idx, key);
+    });
+  };
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) close(); };
   backdrop.innerHTML = `

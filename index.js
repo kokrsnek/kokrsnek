@@ -32,6 +32,10 @@
  *                            vlákně "Celá parta" (viz index.html -> openChatThread())
  *  15b. onChatReaction     — emoji reakce na zprávu v chatu, notifikace jen autorovi zprávy
  *  15c. onPollCreated      — nová anketa (viz index.html -> openPollEditor()), notifikace všem kromě autora
+ *  15d. onBringItemCreated/onBringItemUpdated — "Kdo co přinese": nová položka nebo
+ *                            přihlášení/odhlášení, notifikace VÝHRADNĚ uživateli Šuraj
+ *  15e. onBringBroadcastCreated — skryté dlouhé podržení tlačítka "Kdo co přinese"
+ *                            (s heslem) — "Co kdo donese?" pošle celé partě
  *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
  *                            appky přidělí custom claim partyMember, které vyžadují
  *                            pravidla Firestore databáze pro každé čtení/zápis
@@ -123,7 +127,8 @@ async function sendToTokens(tokens, notification) {
     // vždy jen náš vlastní kód, přesně jednou.
     // eventId cestuje spolu s notifikací, aby klik na ni (sw.js -> notificationclick)
     // uměl appku otevřít rovnou na kartě té konkrétní akce. chatWith stejným
-    // způsobem otevře rovnou dané vlákno v minichatu, pollId rovnou danou anketu.
+    // způsobem otevře rovnou dané vlákno v minichatu, pollId rovnou danou anketu,
+    // bringKey rovnou "Kdo co přinese" dané akce.
     // webpush.headers.Urgency = 'high' — appka je nainstalovaná appka (PWA), takže
     // tokeny jsou webové FCM tokeny z prohlížeče, ne nativní Android tokeny (proto
     // tady nepomůže "android: {priority:'high'}", který platí jen pro nativní appky).
@@ -138,6 +143,7 @@ async function sendToTokens(tokens, notification) {
         eventId: notification.eventId || '',
         chatWith: notification.chatWith || '',
         pollId: notification.pollId || '',
+        bringKey: notification.bringKey || '',
       },
       webpush: {
         headers: { Urgency: 'high' },
@@ -369,7 +375,10 @@ exports.onQuizScoreWritten = onDocumentWritten(
     const after = event.data && event.data.after;
     if (!after || !after.exists) return;
     const afterData = after.data();
-    const newName = afterData.name || event.params.name;
+    // Stejná oprava jako u chatu výš — event.params.name by u jmen s
+    // diakritikou (Dáša, Šuraj...) dorazilo poškozené; after.id (skutečné ID
+    // dokumentu) je vždycky správně dekódované.
+    const newName = afterData.name || after.id;
     const newScore = afterData.score || 0;
 
     const scoresSnap = await db
@@ -381,7 +390,7 @@ exports.onQuizScoreWritten = onDocumentWritten(
     let prevLeader = null;
     let prevLeaderScore = -1;
     scoresSnap.forEach((doc) => {
-      if (doc.id === event.params.name) return; // vynech sám sebe
+      if (doc.id === after.id) return; // vynech sám sebe
       const s = doc.data().score || 0;
       if (s > prevLeaderScore) {
         prevLeaderScore = s;
@@ -868,7 +877,13 @@ exports.onChatMessageCreated = onDocumentCreated(
     }
     const from = normName(data.from);
     const body = data.text || '📷 Fotka';
-    const threadId = event.params.threadId;
+    // POZOR: event.params.threadId u dokumentů s diakritikou v ID (jméno v
+    // "Android__Dáša") dorazí z Cloud Functions v2 poškozené — pár znaků se
+    // cestou přes params špatně dekóduje (potvrzeno logy: "Dáša" jako
+    // "DĀ¡Å¡a"), takže hledání tokenů podle takhle zkomoleného jména
+    // pochopitelně nikoho nenajde. event.data.ref (skutečná reference na
+    // dokument) je na rozdíl od params vždycky dekódovaná správně.
+    const threadId = event.data.ref.parent.parent.id;
 
     if (threadId === PARTY_THREAD_ID) {
       const mutedSet = await getMutedSet(threadId);
@@ -948,7 +963,9 @@ exports.onChatReaction = onDocumentUpdated(
     });
     if (!added.length) return;
 
-    const threadId = event.params.threadId;
+    // Stejná oprava jako u onChatMessageCreated výš — event.params by u jmen
+    // s diakritikou (např. "Android__Dáša") vrátilo poškozený řetězec.
+    const threadId = event.data.after.ref.parent.parent.id;
     const mutedSet = await getMutedSet(threadId);
     if (mutedSet.has(normName(after.from))) return; // autor zprávy má tohle vlákno ztlumené
     const snippet = after.text ? after.text.slice(0, 100) : (after.image ? '📷 fotka' : '');
@@ -983,6 +1000,66 @@ exports.onPollCreated = onDocumentCreated(
       pollId: event.params.pollId,
     });
     console.log('[poll] notifikace odeslána');
+  }
+);
+
+// --- 15d) Kdo co přinese — notifikace jen pro Šuraj --------------------------
+// Trigger: bringLists/{eventKey}/items/{itemId} — nová položka i změna
+// (přihlášení/odhlášení, viz index.html -> openBringList()/toggleBringItem()).
+// Na výslovné přání jde notifikace VÝHRADNĚ uživateli "Šuraj", nikomu
+// jinému z party — a ne ani jemu, když je změna od něj samotného.
+const BRING_LIST_WATCHER = 'Šuraj';
+
+exports.onBringItemCreated = onDocumentCreated(
+  'bringLists/{eventKey}/items/{itemId}',
+  async (event) => {
+    const data = event.data.data();
+    if (!data || !data.name || !data.addedBy) return;
+    if (normName(data.addedBy) === normName(BRING_LIST_WATCHER)) return;
+    const tokens = await getTokensFor(BRING_LIST_WATCHER);
+    if (!tokens.length) return;
+    await sendToTokens(tokens, {
+      title: '🎒 Nová položka k přinesení',
+      body: `${data.addedBy} přidal(a) „${data.name}“${data.takenBy ? ` (bere ${data.takenBy})` : ''}`,
+      eventId: event.params.eventKey,
+    });
+  }
+);
+
+exports.onBringItemUpdated = onDocumentUpdated(
+  'bringLists/{eventKey}/items/{itemId}',
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    if (!before || !after || before.takenBy === after.takenBy) return;
+    const actor = after.takenBy || before.takenBy; // kdo si to vzal, nebo kdo to pustil
+    if (!actor || normName(actor) === normName(BRING_LIST_WATCHER)) return;
+    const tokens = await getTokensFor(BRING_LIST_WATCHER);
+    if (!tokens.length) return;
+    const body = after.takenBy
+      ? `${after.takenBy} bere „${after.name}“`
+      : `${before.takenBy} pustil(a) „${after.name}“`;
+    await sendToTokens(tokens, { title: '🎒 Kdo co přinese', body, eventId: event.params.eventKey });
+  }
+);
+
+// --- 15e) Kdo co přinese — rozeslání celé partě ------------------------------
+// Trigger: bringBroadcasts/{broadcastId} — appka sem zapíše po skrytém dlouhém
+// podržení tlačítka "Kdo co přinese" a zadání hesla (viz index.html ->
+// broadcastBringList()). Na rozdíl od 15d jde TATO notifikace celé partě
+// (kromě toho, kdo ji poslal) a s proklikem rovnou do seznamu té akce.
+exports.onBringBroadcastCreated = onDocumentCreated(
+  'bringBroadcasts/{broadcastId}',
+  async (event) => {
+    const data = event.data.data();
+    if (!data || !data.eventKey || !data.requestedBy) return;
+    const tokens = await getTokensExcept(data.requestedBy);
+    if (!tokens.length) return;
+    await sendToTokens(tokens, {
+      title: '🎒 Co kdo donese?',
+      body: `Co kdo donese na „${data.eventTitle || 'akci'}“?`,
+      bringKey: data.eventKey,
+    });
   }
 );
 
