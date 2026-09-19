@@ -1948,6 +1948,13 @@ function showEventDetail(idx){
           color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>` : ''}
       </div>
+      ${isFuture ? `<div style="margin-top:8px;">
+        <button onclick="openBringList(window['evKey_'+${idx}], rawEvents[${idx}])" style="
+          width:100%;background:var(--surface);border:1px solid var(--line);
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
+          padding:10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+        ">${bringIconSVG()}Kdo co přinese</button>
+      </div>` : ''}
       ${!isFuture ? `<div style="margin-top:8px;">
         <button id="expenseBtn_${idx}" style="
           width:100%;background:var(--surface);border:1px solid var(--line);
@@ -3605,6 +3612,7 @@ function showWelcome(){
     ['Domeček','Vrátí na aktuální událost, znovu načte kalendář a obnoví dnešní datum.'],
     ['Fotoalba','Tlačítko fotek — přepínej mezi řazením "Dle data" (podle roku) a "Dle akce" (unikátní názvy, číslovky se ignorují). Nová alba mají značku "NOVÉ", tlačítko fotek ukazuje počet.'],
     ['👍 Dojdu / 👎 Nedojdu','V detailu události i přímo na kartě v timeline — označ, jestli dorazíš nebo ne (vzájemně se vylučují). Appka ukazuje počty na obou stranách, klikem na jména uvidíš celé seznamy.'],
+    ['🎒 Kdo co přinese','U nadcházejících událostí, hned pod Dojdu/Nedojdu — navrhni položku (pivo, led, reproduktor...) a buď ji rovnou vezmi, nebo nech volnou pro kohokoliv jiného. Klik na "Beru" tě k položce přihlásí, "Pustit" zase odhlásí. Žádné heslo — je to otevřené pro celou partu.'],
     ['Sdílení','V detailu události ikona sdílení (šipka nahoru) — pošle název, datum, mapu místa, počasí a album fotek přes systémové sdílení nebo do schránky.'],
     ['Do kalendáře','U budoucích událostí ikona kalendáře — stáhne .ics soubor pro přidání do vlastního kalendáře.'],
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
@@ -4786,6 +4794,102 @@ function showPayment(eventTitle){
 // vyvolá textovou klávesnici a nejde mu nastavit inputmode, takže by se
 // u čtyřmístného čísla furt otvírala celá abeceda. Zůstává to Promise, ať se
 // dá v dlouhém podržení počkat na výsledek přes await, stejně jako na prompt().
+// =====================================================
+// KDO CO PŘINESE — u nadcházejících akcí, hned nad Nákladi akce (ty jsou zas
+// jen u minulých). Na rozdíl od nákladů žádné heslo — je to otevřené
+// koordinování dopředu, ne účtování zpětně, takže by nemělo klást žádné
+// překážky. Položky žijí jako samostatné dokumenty v podkolekci (ne jedno
+// pole se seznamem v jednom dokumentu), aby si dva lidi mohli v stejnou
+// chvíli přihlásit/odhlásit RŮZNÉ položky bez vzájemného přepsání.
+// =====================================================
+
+function bringIconSVG(){
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>`;
+}
+
+let activeBringUnsub = null;
+
+function openBringList(key, ev){
+  const me = getUserName();
+  if(!me) return;
+  if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; }
+  const backdrop = document.createElement('div');
+  const close = () => { if(activeBringUnsub){ activeBringUnsub(); activeBringUnsub = null; } backdrop.remove(); };
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) close(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" id="bringListClose">×</button>
+      <div class="ev-modal-title" style="margin-bottom:2px;">🎒 Kdo co přinese</div>
+      <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
+      <div id="bringItemsList" style="text-align:left;margin-bottom:12px;max-height:40vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input id="bringNewItem" placeholder="Navrhnout položku…" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 12px;border-radius:var(--radius-sm);outline:none;">
+        <button id="bringAddBtn" style="flex:0 0 auto;background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 16px;border-radius:var(--radius-sm);cursor:pointer;">Přidat</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="bringTakeNow" style="width:16px;height:16px;">
+        Hned to vezmu já
+      </label>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.getElementById('bringListClose').onclick = close;
+  backdrop.querySelector('.sheet-grabber-down').onclick = close;
+
+  const listEl = document.getElementById('bringItemsList');
+  activeBringUnsub = db.collection('bringLists').doc(key).collection('items').orderBy('at').onSnapshot(snap => {
+    if(snap.empty){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné položky — navrhni první!</div>';
+      return;
+    }
+    listEl.innerHTML = snap.docs.map(d => {
+      const it = d.data();
+      const free = !it.takenBy;
+      const mine = !free && normName(it.takenBy) === normName(me);
+      const actionBtn = free
+        ? `<button onclick="toggleBringItem('${key}','${d.id}', true)" style="flex:0 0 auto;background:var(--accent);border:1px solid var(--accent);color:#fff;font-weight:600;font-size:12px;padding:7px 12px;border-radius:var(--radius-sm);cursor:pointer;">Beru</button>`
+        : (mine ? `<button onclick="toggleBringItem('${key}','${d.id}', false)" style="flex:0 0 auto;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:12px;padding:7px 12px;border-radius:var(--radius-sm);cursor:pointer;">Pustit</button>` : '');
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;">
+          <div>
+            <div style="font-size:13.5px;color:var(--ink);font-weight:600;">${it.name}</div>
+            <div style="font-size:11.5px;color:${free?'var(--muted)':'var(--accent)'};">${free?'zatím nikdo':'přinese: '+it.takenBy}</div>
+          </div>
+          ${actionBtn}
+        </div>`;
+    }).join('');
+  }, err => { console.error('Chyba při načítání seznamu věcí:', err); });
+
+  const addBtn = document.getElementById('bringAddBtn');
+  const nameInput = document.getElementById('bringNewItem');
+  const takeNowChk = document.getElementById('bringTakeNow');
+  addBtn.onclick = async () => {
+    const name = nameInput.value.trim();
+    if(!name) return;
+    const takeNow = takeNowChk.checked;
+    try{
+      await db.collection('bringLists').doc(key).collection('items').add({
+        name,
+        takenBy: takeNow ? me : null,
+        addedBy: me,
+        at: new Date().toISOString(),
+      });
+      nameInput.value = '';
+      takeNowChk.checked = false;
+    }catch(e){ console.error('Chyba při přidávání položky:', e); alert('Nepodařilo se přidat položku.'); }
+  };
+  nameInput.addEventListener('keydown', e => { if(e.key==='Enter') addBtn.click(); });
+}
+
+async function toggleBringItem(key, itemId, claim){
+  const me = getUserName();
+  if(!me) return;
+  try{
+    await db.collection('bringLists').doc(key).collection('items').doc(itemId).update({ takenBy: claim ? me : null });
+  }catch(e){ console.error('Chyba při zápisu do seznamu věcí:', e); }
+}
+
 function askExpensePassword(ev){
   return new Promise((resolve) => {
     const year = ev && ev.start ? ev.start.getFullYear() : new Date().getFullYear();
