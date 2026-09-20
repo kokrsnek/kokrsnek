@@ -1967,7 +1967,7 @@ function showEventDetail(idx){
           color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:12.5px;
           padding:10px 6px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
           opacity:0.45;text-align:center;line-height:1.25;
-        ">${bringIconSVG()}<span>Přinesl(a) na akci</span></button>
+        ">${bringIconSVG()}<span>Přinesli</span></button>
       </div>` : ''}
       ${!isFuture ? `<div id="attendedRow_${idx}" style="margin-top:10px;display:none;"></div>` : ''}
       <div style="margin-top:14px;">
@@ -3644,7 +3644,7 @@ function showWelcome(){
     ['Fotoalba','Tlačítko fotek — přepínej mezi řazením "Dle data" (podle roku) a "Dle akce" (unikátní názvy, číslovky se ignorují). Nová alba mají značku "NOVÉ", tlačítko fotek ukazuje počet.'],
     ['👍 Dojdu / 👎 Nedojdu','V detailu události i přímo na kartě v timeline — označ, jestli dorazíš nebo ne (vzájemně se vylučují). Appka ukazuje počty na obou stranách, klikem na jména uvidíš celé seznamy.'],
     ['🎒 Kdo co přinese','U nadcházejících událostí, hned pod Dojdu/Nedojdu — navrhni položku (pivo, led, reproduktor...) a buď ji rovnou vezmi, nebo nech volnou pro kohokoliv jiného. Klik na "Beru" tě k položce přihlásí, "Pustit" zase odhlásí. Žádné heslo — je to otevřené pro celou partu.'],
-    ['📋 Přinesl(a) na akci','U probíhajících/minulých událostí, hned vedle Nákladů akce — jen ke čtení, ukáže se tu ten samý seznam z "Kdo co přinese", jak vypadal před začátkem akce (kdo co nakonec skutečně přinesl, případně že to nedonesl nikdo). Tlačítko je zašedlé, dokud u akce nikdy žádná položka nebyla.'],
+    ['📋 Přinesli','U probíhajících/minulých událostí, hned vedle Nákladů akce — ukáže se tu ten samý seznam z "Kdo co přinese", jak vypadal před začátkem akce (kdo co nakonec skutečně přinesl, případně že to nedonesl nikdo). Tlačítko je zašedlé, dokud u akce nikdy žádná položka nebyla. Dlouhé podržení + heslo 9640 otevře editaci seznamu — jméno u položky jde přepsat na kohokoliv, položky přidat i smazat.'],
     ['Sdílení','V detailu události ikona sdílení (šipka nahoru) — pošle název, datum, mapu místa, počasí a album fotek přes systémové sdílení nebo do schránky.'],
     ['Do kalendáře','U budoucích událostí ikona kalendáře — stáhne .ics soubor pro přidání do vlastního kalendáře.'],
     ['❤️ Lajkování','V detailu události — krátký stisk přidá lajk, dlouhý ukáže kdo lajkoval. Počet lajků a komentářů je vidět i přímo na kartě v timeline.'],
@@ -4970,8 +4970,41 @@ async function wireBroughtBtn(idx, key, ev){
     hasItems = !snap.empty;
   }catch(e){ console.error('Chyba při načítání seznamu věcí:', e); }
   btn.style.opacity = hasItems ? '1' : '0.45';
-  btn.style.cursor = hasItems ? 'pointer' : 'default';
-  btn.onclick = () => { if(hasItems) openBroughtList(key, ev); };
+
+  // Krátký stisk = jen náhled (a jen když už něco je, viz hasItems výš).
+  // Dlouhé podržení + heslo 9640 = editace seznamu — funguje i u prázdného
+  // seznamu, ať jde retroaktivně něco přidat, i když se to předem přes
+  // "Kdo co přinese" vůbec neřešilo.
+  let pressTimer, longPressed = false, startX = 0, startY = 0;
+  btn.style.userSelect = 'none'; btn.style.webkitUserSelect = 'none'; btn.style.webkitTouchCallout = 'none';
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+    pressTimer = setTimeout(async () => {
+      longPressed = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      const pwd = await askBringBroadcastPassword();
+      if(pwd === null) return;
+      if(pwd !== '9640'){ alert('Špatné heslo.'); return; }
+      openBroughtEditor(key, ev);
+    }, 550);
+  }, {passive:false});
+  btn.addEventListener('touchend', e => {
+    clearTimeout(pressTimer);
+    e.preventDefault();
+    if(longPressed) return;
+    if(hasItems) openBroughtList(key, ev);
+  });
+  btn.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+  }, {passive:true});
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  btn.addEventListener('click', () => { if(!('ontouchstart' in window) && hasItems) openBroughtList(key, ev); });
 }
 
 async function openBroughtList(key, ev){
@@ -4982,7 +5015,7 @@ async function openBroughtList(key, ev){
     <div class="ev-modal">
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="margin-bottom:2px;">${bringIconSVG()} Přinesl(a) na akci</div>
+      <div class="ev-modal-title" style="margin-bottom:2px;">${bringIconSVG()} Přinesli</div>
       <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
       <div id="broughtItemsList" style="text-align:left;max-height:50vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
     </div>`;
@@ -5010,8 +5043,90 @@ async function openBroughtList(key, ev){
   }
 }
 
+// Skrytá editace seznamu "Přinesli" u proběhlé akce (dlouhé podržení + heslo,
+// viz wireBroughtBtn výš) — na rozdíl od openBroughtList tady jde jméno u
+// položky zapsat libovolně (ne jen "beru za sebe" jako před akcí), položky
+// přidávat i mazat. Ukládá se rovnou při opuštění políčka, žádné velké
+// "Uložit" tlačítko na konci.
+async function openBroughtEditor(key, ev){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="margin-bottom:2px;">✏️ Upravit „Přinesli“</div>
+      <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
+      <div id="broughtEditList" style="text-align:left;max-height:42vh;overflow-y:auto;margin-bottom:10px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <div style="display:flex;gap:6px;">
+        <input id="broughtNewName" placeholder="Nová položka…" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="broughtNewTaken" placeholder="Kdo (nepovinné)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <button id="broughtAddBtn" style="flex:0 0 auto;background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 14px;border-radius:var(--radius-sm);cursor:pointer;">+</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('broughtEditList');
+  const itemsCol = db.collection('bringLists').doc(key).collection('items');
+
+  const renderRow = (id, name, taken) => `
+    <div data-row="${id}" style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line);">
+      <input class="bi-name" data-id="${id}" value="${name.replace(/"/g,'&quot;')}" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;padding:7px 8px;border-radius:8px;outline:none;">
+      <input class="bi-taken" data-id="${id}" value="${(taken||'').replace(/"/g,'&quot;')}" placeholder="nikdo" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--accent);font-family:'Inter',sans-serif;font-size:13.5px;padding:7px 8px;border-radius:8px;outline:none;">
+      <button data-del="${id}" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;">${trashIconSVG()}</button>
+    </div>`;
+
+  const wireRow = (id) => {
+    const row = listEl.querySelector(`[data-row="${id}"]`);
+    if(!row) return;
+    row.querySelector('.bi-name').addEventListener('blur', async (e) => {
+      try{ await itemsCol.doc(id).update({ name: e.target.value.trim() || '(bez názvu)' }); }catch(err){ console.error(err); }
+    });
+    row.querySelector('.bi-taken').addEventListener('blur', async (e) => {
+      const val = e.target.value.trim();
+      try{ await itemsCol.doc(id).update({ takenBy: val || null }); }catch(err){ console.error(err); }
+    });
+    row.querySelector('[data-del]').onclick = async () => {
+      if(!confirm('Smazat tuhle položku?')) return;
+      try{ await itemsCol.doc(id).delete(); row.remove(); }catch(err){ console.error(err); }
+    };
+  };
+
+  try{
+    const snap = await itemsCol.orderBy('at').get();
+    if(snap.empty){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">Zatím žádné položky.</div>';
+    } else {
+      listEl.innerHTML = snap.docs.map(d => renderRow(d.id, d.data().name || '', d.data().takenBy || '')).join('');
+      snap.docs.forEach(d => wireRow(d.id));
+    }
+  }catch(e){
+    console.error('Chyba při načítání seznamu věcí:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+
+  document.getElementById('broughtAddBtn').onclick = async () => {
+    const nameInput = document.getElementById('broughtNewName');
+    const takenInput = document.getElementById('broughtNewTaken');
+    const name = nameInput.value.trim();
+    if(!name) return;
+    const taken = takenInput.value.trim();
+    try{
+      const ref = await itemsCol.add({
+        name, takenBy: taken || null, addedBy: getUserName() || '', eventTitle: ev.title || '', at: new Date().toISOString(),
+      });
+      if(listEl.querySelector('div')?.textContent === 'Zatím žádné položky.') listEl.innerHTML = '';
+      listEl.insertAdjacentHTML('beforeend', renderRow(ref.id, name, taken));
+      wireRow(ref.id);
+      nameInput.value = ''; takenInput.value = '';
+    }catch(e){ console.error('Chyba při přidávání položky:', e); alert('Nepodařilo se přidat položku.'); }
+  };
+}
+
 function askBringBroadcastPassword(){
   return new Promise((resolve) => {
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
     backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
@@ -5767,6 +5882,7 @@ function wireAttendedEdit(evIdx, key){
 
 function askAttendeesEditPassword(){
   return new Promise((resolve) => {
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
     backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(null); } };
@@ -5886,8 +6002,9 @@ async function showAttendees(evIdx, key){
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  const isFutureEv = rawEvents[evIdx] && rawEvents[evIdx].start > new Date();
   const rows = snap.empty
-    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím se nikdo nepřihlásil</div>'
+    ? `<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">${isFutureEv ? 'Zatím se nikdo nepřihlásil' : 'Nikdo nedorazil'}</div>`
     : [...snap.docs].sort((a,b) => {
         const ta = a.data().at; const tb = b.data().at;
         const da = ta ? (ta.toDate ? ta.toDate() : new Date(ta)) : new Date(0);
@@ -5906,7 +6023,7 @@ async function showAttendees(evIdx, key){
   backdrop.innerHTML = `
     <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">Kdo se zúčastní</div>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${isFutureEv ? 'Kdo se zúčastní' : 'Zúčastnili se'}</div>
       ${rows}
     </div>`;
   document.body.appendChild(backdrop);
