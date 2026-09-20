@@ -5090,6 +5090,7 @@ async function openBroughtEditor(key, ev){
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="margin-bottom:2px;">✏️ Upravit „Přinesli“</div>
       <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
+      <button id="broughtExportBtn" style="display:block;width:100%;margin-bottom:12px;padding:10px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;">📤 Export do nákladů</button>
       <div id="broughtEditList" style="text-align:left;max-height:42vh;overflow-y:auto;margin-bottom:10px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
       <div style="display:flex;gap:6px;">
         <input id="broughtNewName" placeholder="Nová položka…" style="flex:1.3;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
@@ -5200,6 +5201,63 @@ async function openBroughtEditor(key, ev){
       wireRow(ref.id);
       nameInput.value = ''; takenSelect.value = '';
     }catch(e){ console.error('Chyba při přidávání položky:', e); alert('Nepodařilo se přidat položku.'); }
+  };
+
+  document.getElementById('broughtExportBtn').onclick = () => openBroughtExportPicker(key, ev, itemsCol);
+}
+
+// Zaškrtávací výběr z "Přinesli" -> "Náklady akce" (viz tlačítko "📤 Export do
+// nákladů" v openBroughtEditor výš). Náklady mají teď stejné heslo (9640)
+// takže se pořád ptá, i když se sem přišlo skrz editor Přinesli (9640) —
+// stejná hranice jako běžný vstup do Nákladů akce.
+async function openBroughtExportPicker(key, ev, itemsCol){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">📤 Export do nákladů</div>
+      <div id="exportPickList" style="text-align:left;max-height:44vh;overflow-y:auto;margin-bottom:14px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <button id="exportPickBtn" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Přidat vybrané do nákladů</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const listEl = document.getElementById('exportPickList');
+  let names = [];
+  try{
+    const snap = await itemsCol.orderBy('at').get();
+    names = [...new Set(snap.docs.map(d => (d.data().name || '').trim()).filter(Boolean))];
+    listEl.innerHTML = names.length
+      ? names.map((n, i) => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);cursor:pointer;">
+          <input type="checkbox" data-name="${n.replace(/"/g,'&quot;')}" style="width:18px;height:18px;flex:0 0 auto;">
+          ${n}
+        </label>`).join('')
+      : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Seznam Přinesli je prázdný.</div>';
+  }catch(e){
+    console.error('Chyba při načítání seznamu věcí:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+    return;
+  }
+
+  document.getElementById('exportPickBtn').onclick = async () => {
+    const picked = [...listEl.querySelectorAll('[data-name]:checked')].map(c => c.dataset.name);
+    if(!picked.length){ alert('Vyber aspoň jednu položku.'); return; }
+    const pwd = await askExpensePassword(ev);
+    if(pwd !== '9640'){ if(pwd !== null) alert('Špatné heslo'); return; }
+    let currentItems = [], currentContributions = [];
+    try{
+      const expSnap = await db.collection('expensePdfs').doc(key).get();
+      if(expSnap.exists){
+        currentItems = expSnap.data().items || [];
+        currentContributions = expSnap.data().contributions || [];
+      }
+    }catch(e){ console.error('Chyba při načítání nákladů:', e); }
+    const merged = [...currentItems, ...picked.map(name => ({ name, qty: '', price: 0 }))];
+    backdrop.remove();
+    openExpenseEditor(key, ev, merged, currentContributions);
   };
 }
 
@@ -5430,7 +5488,7 @@ async function wireExpenseBtn(idx, key, ev){
       longPressed = true;
       if(navigator.vibrate) navigator.vibrate(15);
       const pwd = await askExpensePassword(ev);
-      if(pwd !== '800629'){ if(pwd !== null) alert('Špatné heslo'); return; }
+      if(pwd !== '9640'){ if(pwd !== null) alert('Špatné heslo'); return; }
       // Znovu načte aktuální položky z Firestore, ať editor neotevře starou
       // (prázdnou) kopii z doby, kdy se karta poprvé vykreslila, kdyby mezi
       // tím uživatel náklady ve stejné relaci už jednou vytvořil/upravil.
