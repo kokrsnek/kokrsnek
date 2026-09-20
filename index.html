@@ -5086,8 +5086,8 @@ async function openBroughtEditor(key, ev){
       <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
       <div id="broughtEditList" style="text-align:left;max-height:42vh;overflow-y:auto;margin-bottom:10px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
       <div style="display:flex;gap:6px;">
-        <input id="broughtNewName" placeholder="Nová položka…" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
-        <input id="broughtNewTaken" placeholder="Kdo (nepovinné)" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <input id="broughtNewName" placeholder="Nová položka…" style="flex:1.3;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 10px;border-radius:var(--radius-sm);outline:none;">
+        <select id="broughtNewTaken" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:9px 6px;border-radius:var(--radius-sm);outline:none;"><option value="">nikdo</option></select>
         <button id="broughtAddBtn" style="flex:0 0 auto;background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:0 14px;border-radius:var(--radius-sm);cursor:pointer;">+</button>
       </div>
     </div>`;
@@ -5096,10 +5096,21 @@ async function openBroughtEditor(key, ev){
   const listEl = document.getElementById('broughtEditList');
   const itemsCol = db.collection('bringLists').doc(key).collection('items');
 
+  // Seznam všech členů party pro rozbalovací "kdo" — místo psaní jména ručně.
+  let partyNames = [];
+  try{
+    const profilesSnap = await db.collection('userProfiles').get();
+    partyNames = profilesSnap.docs.map(d => d.id).sort((a,b) => a.localeCompare(b, 'cs'));
+  }catch(e){ console.error('Chyba při načítání seznamu party:', e); }
+  const takenOptions = (selected) => `<option value="">nikdo</option>` + partyNames.map(n =>
+    `<option value="${n}" ${n===selected?'selected':''}>${n}</option>`
+  ).join('');
+  document.getElementById('broughtNewTaken').innerHTML = takenOptions('');
+
   const renderRow = (id, name, taken) => `
     <div data-row="${id}" style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line);">
-      <input class="bi-name" data-id="${id}" value="${name.replace(/"/g,'&quot;')}" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;padding:7px 8px;border-radius:8px;outline:none;">
-      <input class="bi-taken" data-id="${id}" value="${(taken||'').replace(/"/g,'&quot;')}" placeholder="nikdo" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--accent);font-family:'Inter',sans-serif;font-size:13.5px;padding:7px 8px;border-radius:8px;outline:none;">
+      <input class="bi-name" data-id="${id}" value="${name.replace(/"/g,'&quot;')}" style="flex:1.3;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:7px 8px;border-radius:8px;outline:none;">
+      <select class="bi-taken" data-id="${id}" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--accent);font-family:'Inter',sans-serif;font-size:16px;padding:7px 4px;border-radius:8px;outline:none;">${takenOptions(taken)}</select>
       <button data-del="${id}" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;">${trashIconSVG()}</button>
     </div>`;
 
@@ -5109,9 +5120,8 @@ async function openBroughtEditor(key, ev){
     row.querySelector('.bi-name').addEventListener('blur', async (e) => {
       try{ await itemsCol.doc(id).update({ name: e.target.value.trim() || '(bez názvu)' }); }catch(err){ console.error(err); }
     });
-    row.querySelector('.bi-taken').addEventListener('blur', async (e) => {
-      const val = e.target.value.trim();
-      try{ await itemsCol.doc(id).update({ takenBy: val || null }); }catch(err){ console.error(err); }
+    row.querySelector('.bi-taken').addEventListener('change', async (e) => {
+      try{ await itemsCol.doc(id).update({ takenBy: e.target.value || null }); }catch(err){ console.error(err); }
     });
     row.querySelector('[data-del]').onclick = async () => {
       if(!confirm('Smazat tuhle položku?')) return;
@@ -5134,18 +5144,23 @@ async function openBroughtEditor(key, ev){
 
   document.getElementById('broughtAddBtn').onclick = async () => {
     const nameInput = document.getElementById('broughtNewName');
-    const takenInput = document.getElementById('broughtNewTaken');
+    const takenSelect = document.getElementById('broughtNewTaken');
     const name = nameInput.value.trim();
     if(!name) return;
-    const taken = takenInput.value.trim();
+    const taken = takenSelect.value;
     try{
+      // eventStart se posílá spolu s položkou schválně — Cloud Function podle
+      // něj pozná, že jde o už proběhlou akci, a NEPOŠLE kvůli týhle úpravě
+      // žádnou notifikaci (na rozdíl od živého "Kdo co přinese" před akcí,
+      // kde notifikace smysl dávají).
       const ref = await itemsCol.add({
-        name, takenBy: taken || null, addedBy: getUserName() || '', eventTitle: ev.title || '', at: new Date().toISOString(),
+        name, takenBy: taken || null, addedBy: getUserName() || '', eventTitle: ev.title || '',
+        eventStart: ev.start ? ev.start.toISOString() : '', at: new Date().toISOString(),
       });
       if(listEl.querySelector('div')?.textContent === 'Zatím žádné položky.') listEl.innerHTML = '';
       listEl.insertAdjacentHTML('beforeend', renderRow(ref.id, name, taken));
       wireRow(ref.id);
-      nameInput.value = ''; takenInput.value = '';
+      nameInput.value = ''; takenSelect.value = '';
     }catch(e){ console.error('Chyba při přidávání položky:', e); alert('Nepodařilo se přidat položku.'); }
   };
 }
@@ -5283,6 +5298,7 @@ function openBringList(key, ev){
         takenBy: takeNow ? me : null,
         addedBy: me,
         eventTitle: ev.title || '',
+        eventStart: ev.start ? ev.start.toISOString() : '',
         at: new Date().toISOString(),
       });
       nameInput.value = '';

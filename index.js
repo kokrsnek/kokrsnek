@@ -1015,12 +1015,16 @@ exports.onBringItemCreated = onDocumentCreated(
   async (event) => {
     const data = event.data.data();
     if (!data || !data.name || !data.addedBy) return;
+    // Akce už proběhla → tahle položka je retroaktivní zápis přes skrytou
+    // editaci "Přinesli" (index.html -> openBroughtEditor()), ne živé
+    // koordinování před akcí — notifikace by tu neměla smysl.
+    if (data.eventStart && new Date(data.eventStart) < new Date()) return;
     if (normName(data.addedBy) === normName(BRING_LIST_WATCHER)) return;
     const tokens = await getTokensFor(BRING_LIST_WATCHER);
     if (!tokens.length) return;
     await sendToTokens(tokens, {
       title: '🎒 Nová položka k přinesení',
-      body: `${data.addedBy} přidal(a) „${data.name}“${data.takenBy ? ` (bere ${data.takenBy})` : ''}`,
+      body: `${data.addedBy} přidal(a) „${data.name}“ na „${data.eventTitle || 'akci'}“${data.takenBy ? ` (bere ${data.takenBy})` : ''}`,
       eventId: event.params.eventKey,
     });
   }
@@ -1032,13 +1036,16 @@ exports.onBringItemUpdated = onDocumentUpdated(
     const before = event.data.before.data();
     const after = event.data.after.data();
     if (!before || !after || before.takenBy === after.takenBy) return;
+    // Stejná pojistka jako u onBringItemCreated výš — u už proběhlé akce jde
+    // o zpětnou opravu přes openBroughtEditor(), ne o živé přihlášení/odhlášení.
+    if (after.eventStart && new Date(after.eventStart) < new Date()) return;
     const actor = after.takenBy || before.takenBy; // kdo si to vzal, nebo kdo to pustil
     if (!actor || normName(actor) === normName(BRING_LIST_WATCHER)) return;
     const tokens = await getTokensFor(BRING_LIST_WATCHER);
     if (!tokens.length) return;
     const body = after.takenBy
-      ? `${after.takenBy} bere „${after.name}“`
-      : `${before.takenBy} pustil(a) „${after.name}“`;
+      ? `${after.takenBy} bere „${after.name}“ na „${after.eventTitle || 'akci'}“`
+      : `${before.takenBy} pustil(a) „${after.name}“ na „${after.eventTitle || 'akci'}“`;
     await sendToTokens(tokens, { title: '🎒 Kdo co přinese', body, eventId: event.params.eventKey });
   }
 );
