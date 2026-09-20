@@ -5102,10 +5102,35 @@ async function openBroughtEditor(key, ev){
     const profilesSnap = await db.collection('userProfiles').get();
     partyNames = profilesSnap.docs.map(d => d.id).sort((a,b) => a.localeCompare(b, 'cs'));
   }catch(e){ console.error('Chyba při načítání seznamu party:', e); }
-  const takenOptions = (selected) => `<option value="">nikdo</option>` + partyNames.map(n =>
-    `<option value="${n}" ${n===selected?'selected':''}>${n}</option>`
-  ).join('');
+  // "Jiný…" na konci umožní zapsat i někoho mimo appku (viz
+  // resolveTakenSelectValue níž) — jméno se pak dopíše jako vlastní <option>,
+  // ať zůstane u položky vidět i po přenačtení.
+  const takenOptions = (selected) => {
+    let opts = `<option value="">nikdo</option>` + partyNames.map(n =>
+      `<option value="${n}" ${n===selected?'selected':''}>${n}</option>`
+    ).join('');
+    if(selected && !partyNames.includes(selected)){
+      opts += `<option value="${selected}" selected>${selected}</option>`;
+    }
+    opts += `<option value="__other__">Jiný…</option>`;
+    return opts;
+  };
   document.getElementById('broughtNewTaken').innerHTML = takenOptions('');
+
+  // Po výběru "Jiný…" appka rovnou zeptá na jméno a přidá ho do selectu jako
+  // novou volbu — funguje stejně u řádku i u pole pro novou položku.
+  function resolveTakenSelectValue(selectEl){
+    if(selectEl.value !== '__other__') return selectEl.value;
+    const custom = prompt('Jméno:');
+    if(!custom || !custom.trim()){ selectEl.value = ''; return ''; }
+    const val = custom.trim();
+    const otherOpt = [...selectEl.options].find(o => o.value === '__other__');
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    selectEl.insertBefore(opt, otherOpt);
+    selectEl.value = val;
+    return val;
+  }
 
   const renderRow = (id, name, taken) => `
     <div data-row="${id}" style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line);">
@@ -5121,7 +5146,8 @@ async function openBroughtEditor(key, ev){
       try{ await itemsCol.doc(id).update({ name: e.target.value.trim() || '(bez názvu)' }); }catch(err){ console.error(err); }
     });
     row.querySelector('.bi-taken').addEventListener('change', async (e) => {
-      try{ await itemsCol.doc(id).update({ takenBy: e.target.value || null }); }catch(err){ console.error(err); }
+      const val = resolveTakenSelectValue(e.target);
+      try{ await itemsCol.doc(id).update({ takenBy: val || null }); }catch(err){ console.error(err); }
     });
     row.querySelector('[data-del]').onclick = async () => {
       if(!confirm('Smazat tuhle položku?')) return;
@@ -5147,7 +5173,7 @@ async function openBroughtEditor(key, ev){
     const takenSelect = document.getElementById('broughtNewTaken');
     const name = nameInput.value.trim();
     if(!name) return;
-    const taken = takenSelect.value;
+    const taken = resolveTakenSelectValue(takenSelect);
     try{
       // eventStart se posílá spolu s položkou schválně — Cloud Function podle
       // něj pozná, že jde o už proběhlou akci, a NEPOŠLE kvůli týhle úpravě
