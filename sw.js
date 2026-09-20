@@ -41,11 +41,13 @@ self.addEventListener('notificationclick', (event) => {
   const chatWith = event.notification.data && event.notification.data.chatWith;
   const pollId = event.notification.data && event.notification.data.pollId;
   const bringKey = event.notification.data && event.notification.data.bringKey;
+  const expenseKey = event.notification.data && event.notification.data.expenseKey;
   let targetUrl = './index.html';
   if (eventId) targetUrl = `./index.html?event=${encodeURIComponent(eventId)}`;
   else if (chatWith) targetUrl = `./index.html?chat=${encodeURIComponent(chatWith)}`;
   else if (pollId) targetUrl = `./index.html?poll=${encodeURIComponent(pollId)}`;
   else if (bringKey) targetUrl = `./index.html?bring=${encodeURIComponent(bringKey)}`;
+  else if (expenseKey) targetUrl = `./index.html?expense=${encodeURIComponent(expenseKey)}`;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -53,15 +55,16 @@ self.addEventListener('notificationclick', (event) => {
         if ('focus' in client) {
           // Appka už běží: pošli jí zprávu (pro případ, že poslouchá) a zkus i tvrdou
           // navigaci na cílovou URL, ať se to otevře spolehlivě i bez zprávy.
-          if ((eventId || chatWith || pollId || bringKey) && 'postMessage' in client) {
+          if ((eventId || chatWith || pollId || bringKey || expenseKey) && 'postMessage' in client) {
             try {
               if (eventId) client.postMessage({ type: 'open-event', eventId });
               else if (chatWith) client.postMessage({ type: 'open-chat', chatWith });
               else if (pollId) client.postMessage({ type: 'open-poll', pollId });
-              else client.postMessage({ type: 'open-bring', bringKey });
+              else if (bringKey) client.postMessage({ type: 'open-bring', bringKey });
+              else client.postMessage({ type: 'open-expense', expenseKey });
             } catch (e) {}
           }
-          if ((eventId || chatWith || pollId || bringKey) && 'navigate' in client) {
+          if ((eventId || chatWith || pollId || bringKey || expenseKey) && 'navigate' in client) {
             return client.navigate(targetUrl).then((c) => (c || client).focus()).catch(() => client.focus());
           }
           return client.focus();

@@ -2956,6 +2956,7 @@ fetchGoogleCalendarEvents().then(() => {
     const chatWith = params.get('chat');
     const pollId = params.get('poll');
     const bringKey = params.get('bring');
+    const expenseKey = params.get('expense');
     if(evKey){
       setTimeout(() => openEventByKey(evKey), 100);
       history.replaceState(null, '', location.pathname);
@@ -2968,6 +2969,9 @@ fetchGoogleCalendarEvents().then(() => {
       history.replaceState(null, '', location.pathname);
     } else if(bringKey){
       setTimeout(() => openBringListByKey(bringKey), 100);
+      history.replaceState(null, '', location.pathname);
+    } else if(expenseKey){
+      setTimeout(() => showExpenseReceiptByKey(expenseKey), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
@@ -3857,6 +3861,20 @@ function openBringListByKey(key){
   openBringList(key, ev);
 }
 
+// Otevře náhled nákladů (showExpenseReceipt) rovnou podle klíče akce —
+// prokliknutí z notifikace broadcastExpenseToAttendees() (viz "?expense="
+// v URL a "open-expense" v postMessage níže).
+async function showExpenseReceiptByKey(key){
+  if(!key) return;
+  const ev = (rawEvents||[]).find(e => { try{ return getEventKey(e) === key; }catch(err){ return false; } });
+  if(!ev) return;
+  try{
+    const snap = await db.collection('expensePdfs').doc(key).get();
+    if(!snap.exists) return;
+    showExpenseReceipt(key, ev, snap.data().items || [], snap.data().contributions || []);
+  }catch(e){ console.error('Chyba při načítání nákladů:', e); }
+}
+
 // Zprávu z service workeru (klik na notifikaci u už běžící appky) obsluhujeme stejnou cestou.
 if(navigator.serviceWorker){
   navigator.serviceWorker.addEventListener('message', (event) => {
@@ -3869,6 +3887,8 @@ if(navigator.serviceWorker){
       openPollDetail(event.data.pollId);
     } else if(event.data && event.data.type === 'open-bring' && event.data.bringKey){
       openBringListByKey(event.data.bringKey);
+    } else if(event.data && event.data.type === 'open-expense' && event.data.expenseKey){
+      showExpenseReceiptByKey(event.data.expenseKey);
     }
   });
 }
@@ -5414,6 +5434,7 @@ async function toggleBringItem(key, itemId, claim){
 
 function askExpensePassword(ev){
   return new Promise((resolve) => {
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const year = ev && ev.start ? ev.start.getFullYear() : new Date().getFullYear();
     const backdrop = document.createElement('div');
     backdrop.className = 'ev-modal-backdrop';
@@ -5535,6 +5556,7 @@ async function wireExpenseBtn(idx, key, ev){
 // Klik na už zadanou položku/příspěvek (ne na její ×) ji nahraje zpátky do
 // polí k úpravě — tlačítko "Přidat" se přitom přepne na "Uložit".
 function openExpenseEditor(key, ev, existingItems, existingContributions){
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const items = (existingItems || []).map(i => ({...i})); // kopie, ať needituju uloženou verzi rovnou
   const contributions = (existingContributions || []).map(c => ({...c}));
   let editing = null; // { type: 'item'|'contrib', index: number } nebo null
@@ -5724,7 +5746,7 @@ function showExpenseReceipt(key, ev, items, contributions){
     <div class="ev-modal" style="text-align:center;">
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
-      <div class="ev-modal-title" style="margin-bottom:2px;">${ev.title || ''}</div>
+      <div class="ev-modal-title" id="expenseReceiptTitle" style="margin-bottom:2px;">${ev.title || ''}</div>
       <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:16px;">${dateStr}</div>
       <div style="text-align:left;display:flex;justify-content:space-between;font-family:'Inter', sans-serif;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;padding-bottom:6px;border-bottom:1px solid var(--line);">
         <span>co</span><span>kolik / za kolik</span>
@@ -5748,6 +5770,53 @@ function showExpenseReceipt(key, ev, items, contributions){
       </div>
     </div>`;
   document.body.appendChild(backdrop);
+  wireExpenseReceiptBroadcast(key, ev);
+}
+
+// Skryté dlouhé podržení názvu akce v náhledu nákladů — pošle notifikaci
+// jen lidem, co jsou u akce v "Zúčastnili se" (ne celé partě), s proklikem
+// rovnou zpátky do tohohle náhledu nákladů. Žádné heslo — kdo se sem
+// dostal (náhled nákladů nikdy heslo nevyžadoval), může i tohle.
+function wireExpenseReceiptBroadcast(key, ev){
+  const el = document.getElementById('expenseReceiptTitle');
+  if(!el) return;
+  let pressTimer, longPressed = false, startX = 0, startY = 0;
+  el.style.userSelect = 'none'; el.style.webkitUserSelect = 'none'; el.style.webkitTouchCallout = 'none';
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+    pressTimer = setTimeout(async () => {
+      longPressed = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      await broadcastExpenseToAttendees(key, ev);
+    }, 550);
+  }, {passive:false});
+  el.addEventListener('touchend', e => { clearTimeout(pressTimer); e.preventDefault(); });
+  el.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+  }, {passive:true});
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+async function broadcastExpenseToAttendees(key, ev){
+  let recipients = [];
+  try{
+    const attendSnap = await db.collection('events').doc(key).collection('attendees').get();
+    recipients = attendSnap.docs.map(d => d.id);
+  }catch(e){ console.error('Chyba při načítání zúčastněných:', e); alert('Nepodařilo se načíst seznam zúčastněných.'); return; }
+  if(!recipients.length){ alert('U téhle akce zatím nikdo není v "Zúčastnili se".'); return; }
+  try{
+    await db.collection('expenseBroadcasts').add({
+      eventKey: key, eventTitle: ev.title || '', requestedBy: getUserName() || '',
+      recipients, at: new Date().toISOString(),
+    });
+    alert('Upozornění odesláno zúčastněným.');
+  }catch(e){ console.error('Chyba při odesílání upozornění:', e); alert('Nepodařilo se odeslat upozornění.'); }
 }
 
 // Přehled nákladů/příspěvků za celý kalendářní rok, akce za akcí, s celkovým

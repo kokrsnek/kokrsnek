@@ -36,6 +36,8 @@
  *                            přihlášení/odhlášení, notifikace VÝHRADNĚ uživateli Šuraj
  *  15e. onBringBroadcastCreated — skryté dlouhé podržení tlačítka "Kdo co přinese"
  *                            (s heslem) — "Co kdo donese?" pošle celé partě
+ *  15f. onExpenseBroadcastCreated — skryté dlouhé podržení názvu akce v náhledu
+ *                            nákladů — notifikace jen lidem ze "Zúčastnili se"
  *  16. verifyPartyPassword — callable funkce: ověří heslo party a anonymní identitě
  *                            appky přidělí custom claim partyMember, které vyžadují
  *                            pravidla Firestore databáze pro každé čtení/zápis
@@ -116,6 +118,19 @@ async function getTokensFor(targetUser) {
   return tokens;
 }
 
+/** Stejné jako getTokensFor, ale pro víc konkrétních jmen najednou (jeden
+ * průchod přes pushTokens místo volání getTokensFor v cyklu). */
+async function getTokensForMany(targetUsers) {
+  const targets = new Set((targetUsers || []).map(normName));
+  const snap = await db.collection('pushTokens').get();
+  const tokens = [];
+  snap.forEach((doc) => {
+    const data = doc.data();
+    if (data.token && targets.has(normName(data.user))) tokens.push(data.token);
+  });
+  return tokens;
+}
+
 /** Pošle notifikaci na seznam tokenů a rovnou smaže ty, co už nejsou platné (appka odinstalovaná apod.). */
 async function sendToTokens(tokens, notification) {
   if (!tokens.length) return;
@@ -144,6 +159,7 @@ async function sendToTokens(tokens, notification) {
         chatWith: notification.chatWith || '',
         pollId: notification.pollId || '',
         bringKey: notification.bringKey || '',
+        expenseKey: notification.expenseKey || '',
       },
       webpush: {
         headers: { Urgency: 'high' },
@@ -1066,6 +1082,29 @@ exports.onBringBroadcastCreated = onDocumentCreated(
       title: '🎒 Co kdo donese?',
       body: `Co kdo donese na „${data.eventTitle || 'akci'}“?`,
       bringKey: data.eventKey,
+    });
+  }
+);
+
+// --- 15f) Náklady akce — rozeslání jen zúčastněným ---------------------------
+// Trigger: expenseBroadcasts/{id} — appka sem zapíše po skrytém dlouhém
+// podržení názvu akce v náhledu nákladů (viz index.html ->
+// broadcastExpenseToAttendees()). Na rozdíl od 15e (celá parta) tahle jde
+// jen konkrétním lidem uvedeným v "recipients" — appka tam posílá ty, co
+// jsou u akce v "Zúčastnili se" — a s proklikem rovnou do náhledu nákladů.
+exports.onExpenseBroadcastCreated = onDocumentCreated(
+  'expenseBroadcasts/{broadcastId}',
+  async (event) => {
+    const data = event.data.data();
+    if (!data || !data.eventKey || !data.requestedBy || !Array.isArray(data.recipients)) return;
+    const recipients = data.recipients.filter((n) => normName(n) !== normName(data.requestedBy));
+    if (!recipients.length) return;
+    const tokens = await getTokensForMany(recipients);
+    if (!tokens.length) return;
+    await sendToTokens(tokens, {
+      title: '🧾 Náklady akce',
+      body: `Jsou spočítané náklady na „${data.eventTitle || 'akci'}“.`,
+      expenseKey: data.eventKey,
     });
   }
 );
