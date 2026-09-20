@@ -1001,9 +1001,16 @@ function fmtTime(d, end){
 }
 
 function isMultiDay(ev){
+  const isAllDay = !!(ev.raw && ev.raw.start && ev.raw.start.date && !ev.raw.start.dateTime);
   const startDay = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
   const endDay   = new Date(ev.end.getFullYear(),   ev.end.getMonth(),   ev.end.getDate());
-  return endDay - startDay >= 86400000;
+  const diff = endDay - startDay;
+  // Celodenní akce má od Googlu konec (end.date) posunutý o den dopředu
+  // (exkluzivní konec) — i jednodenní celodenní akce tak "trvá" technicky
+  // 1 den navíc. Bez týhle korekce by appka takovou akci mylně vyhodnotila
+  // jako vícedenní (datum "5. – 5. pro" místo jen "5. pro").
+  if(isAllDay) return diff >= 2 * 86400000;
+  return diff >= 86400000;
 }
 
 function fmtDateRange(ev){
