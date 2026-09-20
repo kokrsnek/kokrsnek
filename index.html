@@ -3826,6 +3826,24 @@ function normName(s){
   return (s || '').normalize('NFC').trim();
 }
 
+// Seznam VŠECH, koho appka o partě ví — sjednocení userProfiles (kdo si
+// vybral avatara) a pushTokens (kdo jen zapnul notifikace). Někdo jako Dejv
+// nemá avatara, takže by ho čistě userProfiles seznam vynechal, i když je
+// to plnohodnotný člen party — appka ho tímhle dostane do všech výběrů jmen
+// (Přinesli, editace docházky), ne jen do seznamu zpráv.
+async function getAllKnownPartyNames(){
+  const names = new Set();
+  try{
+    const [profilesSnap, tokensSnap] = await Promise.all([
+      db.collection('userProfiles').get(),
+      db.collection('pushTokens').get(),
+    ]);
+    profilesSnap.forEach(d => names.add(d.id));
+    tokensSnap.forEach(d => { if(d.data().user) names.add(normName(d.data().user)); });
+  }catch(e){ console.error('Chyba při načítání seznamu party:', e); }
+  return [...names].sort((a,b) => a.localeCompare(b, 'cs'));
+}
+
 function getUserName(){
   let name = localStorage.getItem('kokrsnekUser');
   if(!name){
@@ -5133,8 +5151,7 @@ async function openBroughtEditor(key, ev){
   // Seznam všech členů party pro rozbalovací "kdo" — místo psaní jména ručně.
   let partyNames = [];
   try{
-    const profilesSnap = await db.collection('userProfiles').get();
-    partyNames = profilesSnap.docs.map(d => d.id).sort((a,b) => a.localeCompare(b, 'cs'));
+    partyNames = await getAllKnownPartyNames();
   }catch(e){ console.error('Chyba při načítání seznamu party:', e); }
   // "Jiný…" na konci umožní zapsat i někoho mimo appku (viz
   // resolveTakenSelectValue níž) — jméno se pak dopíše jako vlastní <option>,
@@ -6137,12 +6154,11 @@ async function openAttendeesEditor(evIdx, key){
 
   const listEl = document.getElementById('attendEditorList');
   try{
-    const [profilesSnap, attendSnap] = await Promise.all([
-      db.collection('userProfiles').get(),
+    const [names, attendSnap] = await Promise.all([
+      getAllKnownPartyNames(),
       db.collection('events').doc(key).collection('attendees').get()
     ]);
     const attending = new Set(attendSnap.docs.map(d => d.id));
-    const names = profilesSnap.docs.map(d => d.id).sort((a,b) => a.localeCompare(b, 'cs'));
     listEl.innerHTML = names.map(n => `
       <label style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);cursor:pointer;">
         <input type="checkbox" data-name="${n}" ${attending.has(n) ? 'checked' : ''} style="width:18px;height:18px;flex:0 0 auto;">
