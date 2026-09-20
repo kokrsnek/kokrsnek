@@ -5148,12 +5148,18 @@ async function openBroughtEditor(key, ev){
   const wireRow = (id) => {
     const row = listEl.querySelector(`[data-row="${id}"]`);
     if(!row) return;
+    // eventStart/eventTitle se dopisují při KAŽDÉ úpravě schválně — starší
+    // položky (zadané ještě před tím, než appka datum akce u položek vůbec
+    // ukládala) ho nemají, takže si Cloud Function neměla podle čeho ověřit,
+    // že jde o proběhlou akci, a notifikaci (i tobě) přesto poslala. Tímhle
+    // se to při první úpravě "dohojí" i zpětně.
+    const retroFields = { eventStart: ev.start ? ev.start.toISOString() : '', eventTitle: ev.title || '' };
     row.querySelector('.bi-name').addEventListener('blur', async (e) => {
-      try{ await itemsCol.doc(id).update({ name: e.target.value.trim() || '(bez názvu)' }); }catch(err){ console.error(err); }
+      try{ await itemsCol.doc(id).update({ name: e.target.value.trim() || '(bez názvu)', ...retroFields }); }catch(err){ console.error(err); }
     });
     row.querySelector('.bi-taken').addEventListener('change', async (e) => {
       const val = resolveTakenSelectValue(e.target);
-      try{ await itemsCol.doc(id).update({ takenBy: val || null }); }catch(err){ console.error(err); }
+      try{ await itemsCol.doc(id).update({ takenBy: val || null, ...retroFields }); }catch(err){ console.error(err); }
     });
     row.querySelector('[data-del]').onclick = async () => {
       if(!confirm('Smazat tuhle položku?')) return;
