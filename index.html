@@ -439,6 +439,22 @@
     justify-content:center;
     gap:6px;
   }
+  .month-sticky{
+    position:sticky;
+    top:0;
+    z-index:5;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:8px 0;
+    background:var(--bg);
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
+  }
   .eyebrow .pip{
     width:6px; height:6px;
     border-radius:50%;
@@ -560,6 +576,7 @@
     animation: fadeIn .2s ease;
   }
   @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+  @keyframes recPulse{ 0%,100%{opacity:1} 50%{opacity:0.25} }
   @keyframes sheetUp{
     from{ transform:translateY(100%); }
     to{ transform:translateY(0); }
@@ -814,6 +831,7 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
@@ -909,6 +927,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 const auth = firebase.auth();
 const partyFunctions = firebase.app().functions('us-central1');
 
@@ -987,6 +1006,7 @@ const partyFunctions = firebase.app().functions('us-central1');
 })();
 
 const MONTHS = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
+const MONTHS_NOM = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"];
 const DAYS = ["ne","po","út","st","čt","pá","so"];
 
 function fmtDate(d){
@@ -2459,9 +2479,20 @@ async function fetchCardStats(ev, uid, row, evIdx){
     const attendColor = attendNew ? 'var(--accent)' : mutedColor;
     const declineColor = declineNew ? '#E2664F' : mutedColor;
 
+    // Malé avatary prvních pár lidí, co mají Jdu — ať je hned na kartě vidět,
+    // kdo se chystá, bez rozklikávání detailu. Emoji avatar (viz getAvatarCached)
+    // se cachuje, ať appka nedělá zbytečné dotazy na Firestore pro každou kartu.
+    const avatarNames = attendSnap.docs.map(d => d.id).slice(0, 5);
+    const avatarEmojis = avatarNames.length ? await Promise.all(avatarNames.map(n => getAvatarCached(n))) : [];
+    const avatarsHtml = avatarNames.length ? `
+      <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;cursor:pointer;">
+        ${avatarEmojis.map((a,i) => `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--surface);border:1.5px solid var(--card);font-size:11px;margin-left:${i===0?'0':'-6px'};">${a || '👤'}</span>`).join('')}
+      </span>` : '';
+
     row.innerHTML = `
       <span onclick="event.stopPropagation();openQuickComments(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${commentColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">${commentIconSVG()}${commentCount}</span>
       <span onclick="event.stopPropagation();openQuickLikes(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${likeColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">${heartIconSVGSmall()}${likeCount}</span>
+      ${avatarsHtml}
       <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${attendColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">👍${attendCount}</span>
       <span onclick="event.stopPropagation();openQuickAttend(${evIdx})" style="display:flex;align-items:center;gap:4px;color:${declineColor};font-family:'Inter', sans-serif;font-size:11px;cursor:pointer;">👎${declineCount}</span>
     `;
@@ -2792,6 +2823,7 @@ function renderTimeline(instantScroll = true){
   // Roky zastoupené v událostech — globálně pro onclick
   window._yearsInTimeline = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
   let lastYear = null;
+  let lastMonthKey = null;
 
   orderedIndices.forEach((i) => {
     const ev = rawEvents[i];
@@ -2817,6 +2849,18 @@ function renderTimeline(instantScroll = true){
       yd.onclick = () => openYearPicker(window._yearsInTimeline, evYear);
       app.appendChild(yd);
       lastYear = evYear;
+    }
+
+    // Sticky nadpis měsíce — přilepí se nahoru, dokud ho nevystrčí další měsíc.
+    // Pod ročním oddělovačem se taky ukáže, ať je hned na první pohled jasné,
+    // v jakém měsíci daná skupina karet je.
+    const evMonthKey = `${evYear}-${ev.start.getMonth()}`;
+    if(evMonthKey !== lastMonthKey){
+      const md = document.createElement('div');
+      md.className = 'month-sticky';
+      md.textContent = `${MONTHS_NOM[ev.start.getMonth()]} ${evYear}`;
+      app.appendChild(md);
+      lastMonthKey = evMonthKey;
     }
 
     const slot = buildTimelineSlot(ev, i, isNow, isPast);
@@ -3068,6 +3112,12 @@ function pinMsgIconSVG(filled){
 }
 function searchIconSVG(){
   return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`;
+}
+function linkIconSVG(){
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.5-1.5"/></svg>`;
+}
+function micIconSVG(){
+  return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>`;
 }
 function bellIconSVG(muted){
   return muted
@@ -3832,6 +3882,17 @@ async function getAvatar(name){
   }catch(e){ return ''; }
 }
 
+// Avatar konkrétního člověka se v appce skoro nemění, tak si ho po prvním
+// načtení schováme do paměti — jinak by každá karta v timeline dělala
+// vlastní Firestore dotaz na avatara každého, kdo má u akce Jdu.
+window._avatarCache = window._avatarCache || {};
+async function getAvatarCached(name){
+  if(window._avatarCache[name] !== undefined) return window._avatarCache[name];
+  const a = await getAvatar(name);
+  window._avatarCache[name] = a;
+  return a;
+}
+
 // České znaky s háčky/čárkami (Š, Ř, ...) lze v textu uložit dvěma různými
 // způsoby zápisu Unicode, které vypadají na obrazovce identicky, ale pro
 // přesné porovnání textů (typicky "user" == "Šuraj" ve Firestore) jsou to dva
@@ -4454,11 +4515,23 @@ function openChatThread(me, other){
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
         <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
-      <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
-      <div style="flex:0 0 auto;display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
-        <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
-        <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
-        <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
+      <div style="flex:1 1 auto;min-height:0;position:relative;">
+        <div id="chatMessages" style="height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
+        <button id="chatScrollDownBtn" title="Dolů na poslední zprávu" style="display:none;position:absolute;right:6px;bottom:10px;width:34px;height:34px;border-radius:50%;background:var(--surface-strong);border:1px solid var(--line);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);z-index:3;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
+      </div>
+      <div style="flex:0 0 auto;">
+        <div id="chatComposerRow" style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
+          <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
+          <textarea id="chatInput" maxlength="160" placeholder="Napiš zprávu…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
+          <button id="chatMicBtn" title="Nahrát hlasovku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${micIconSVG()}</button>
+          <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
+        </div>
+        <div id="chatRecordRow" style="display:none;margin-top:12px;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--coral);border-radius:var(--radius-sm);padding:8px 12px;">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--coral);flex:0 0 auto;animation:recPulse 1s infinite;"></span>
+          <span id="chatRecordTimer" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);">0:00</span>
+          <button id="chatRecordCancelBtn" title="Zahodit nahrávku" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;display:flex;align-items:center;">${trashIconSVG()}</button>
+          <button id="chatRecordSendBtn" title="Odeslat hlasovku" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
+        </div>
       </div>
       <input type="file" id="chatImageInput" accept="image/*" multiple style="display:none;flex:0 0 auto;">
     </div>`;
@@ -4476,9 +4549,17 @@ function openChatThread(me, other){
   }
 
   const msgsEl = document.getElementById('chatMessages');
+  const scrollDownBtn = document.getElementById('chatScrollDownBtn');
+  const isNearChatBottom = () => (msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight) < 120;
+  const scrollChatToBottom = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
+  msgsEl.addEventListener('scroll', () => {
+    scrollDownBtn.style.display = isNearChatBottom() ? 'none' : 'flex';
+  });
+  scrollDownBtn.onclick = scrollChatToBottom;
   const QUICK_CHAT_EMOJIS = ['👍','❤️','😂','😮','😢'];
   let latestMsgDocs = [];
   let otherLastSeenIso = null;
+  let latestLastSeenMap = {};
   let latestTypingMap = {};
   let chatSearchQuery = '';
   let pinnedMsgId = null;
@@ -4486,29 +4567,55 @@ function openChatThread(me, other){
   // Vykreslí zprávy znovu, kdykoliv přijdou nové zprávy NEBO se změní, kdy si
   // druhá strana naposledy otevřela vlákno (viz posluchač na chats/{threadId}
   // níže) — u vlastních zpráv tak "Přečteno" naskočí i živě, bez zavření chatu.
-  // U skupinového vlákna "Celá parta" se "Přečteno/Odesláno" nezobrazuje —
-  // u víc lidí najednou by to bylo matoucí (čí přečtení by se mělo počítat?),
-  // takže se tam ukazuje jen čas.
-  // Odkazy v textu zprávy (http/https) se automaticky změní na klikatelný
-  // odkaz, co se otevře v nové kartě — text zprávy se jinak nijak neupravuje.
+  // U skupinového vlákna "Celá parta" se u "Přečteno" navíc vypíšou i jména
+  // (podle stejného lastSeen mapování jako u 1:1), ne jen holý čas.
+  // Odkazy v textu zprávy (http/https) se automaticky změní na klikatelnou
+  // "chipku" s doménou (místo dlouhé holé URL) — otevře se v nové kartě.
+  // Plný náhled s titulkem/obrázkem stránky by vyžadoval stažení cizí
+  // stránky na serveru (kvůli CORS to z prohlížeče nejde), takže zatím jen
+  // hezčí odkaz, ne obrázkový náhled.
   function linkifyChatText(text){
     const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,:;!?"')\]])/g;
-    return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:inherit;text-decoration:underline;word-break:break-all;">${url}</a>`);
+    return text.replace(urlRegex, url => {
+      let domain = url;
+      try{ domain = new URL(url).hostname.replace(/^www\./,''); }catch(e){}
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;gap:5px;max-width:100%;margin-top:2px;padding:5px 10px;background:rgba(255,255,255,0.1);border-radius:100px;color:inherit;text-decoration:none;font-size:12px;font-weight:600;vertical-align:middle;">${linkIconSVG()}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${domain}</span></a>`;
+    });
   }
 
   function renderChatMessages(){
     const docs = chatSearchQuery
       ? latestMsgDocs.filter(d => normalizeCz(d.data().text||'').includes(chatSearchQuery))
       : latestMsgDocs;
+    // Nová zpráva strhne pohled dolů, jen když si člověk zrovna nerolí historii
+    // výš — jinak by ho nová příchozí zpráva otravně vytrhla z čtení. Když
+    // zůstane výš, jen se mu ukáže tlačítko "dolů" (viz scrollDownBtn).
+    const wasNearBottom = msgsEl.childElementCount === 0 || isNearChatBottom();
     msgsEl.innerHTML = docs.map(d => {
       const data = d.data();
       const mine = data.from === me;
       const time = data.at ? new Date(data.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
       const read = !isGroup && mine && data.at && otherLastSeenIso && new Date(data.at) <= new Date(otherLastSeenIso);
-      const status = (!isGroup && mine) ? `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>` : '';
+      // U skupinového vlákna se "kdo přečetl" pozná stejně jako u 1:1 —
+      // porovnáním času zprávy s tím, kdy si dotyčný vlákno naposledy otevřel
+      // (chats/{threadId}.lastSeen). Kdo nikdy vlákno neotevřel, v mapě
+      // vůbec není, takže se logicky počítá za "ještě nepřečetl".
+      const groupReaders = (isGroup && mine && data.at) ? Object.keys(latestLastSeenMap).filter(n =>
+        n !== me && latestLastSeenMap[n] && new Date(latestLastSeenMap[n]) > new Date(data.at)
+      ) : [];
+      let status = '';
+      if(!isGroup && mine){
+        status = `<span style="color:${read?'var(--accent)':'var(--muted)'};">${read?' · Přečteno':' · Odesláno'}</span>`;
+      } else if(isGroup && mine){
+        const label = groupReaders.length
+          ? `Přečteno: ${groupReaders.slice(0,2).join(', ')}${groupReaders.length>2 ? ` +${groupReaders.length-2}` : ''}`
+          : 'Odesláno';
+        status = `<span title="${groupReaders.join(', ')}" style="color:${groupReaders.length?'var(--accent)':'var(--muted)'};"> · ${label}</span>`;
+      }
       const editedLabel = data.edited ? ' · upraveno' : '';
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
       const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox(this.src, getChatGalleryImages())" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
+      const audioHtml = data.audio ? `<audio controls preload="none" src="${data.audio}" style="width:210px;max-width:100%;height:34px;display:block;${data.text?'margin-bottom:6px;':''}"></audio>` : '';
       const reactions = data.reactions || {};
       // Řádek reakcí se ukazuje, jen když už na zprávě nějaká je (ťuknutím na
       // ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji jde přes
@@ -4529,7 +4636,7 @@ function openChatThread(me, other){
       const editBtn = mine ? `<button onclick="editChatMessage('${threadId}','${d.id}')" title="Upravit zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${editIconSVG()}</button>` : '';
       const deleteBtn = mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${trashIconSVG()}</button>` : '';
       return `<div data-msg-id="${d.id}" style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">
-        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${data.image?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
+        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${(data.image||data.audio)?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${audioHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;${mine?'justify-content:flex-end;':''}">
           <span style="text-align:${mine?'right':'left'};">${time}${status}${editedLabel}</span>
           ${pinBtn}${editBtn}${deleteBtn}
@@ -4537,7 +4644,8 @@ function openChatThread(me, other){
         ${reactionsRow ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>` : ''}
       </div>`;
     }).join('') || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">${chatSearchQuery ? 'Nic takového jsem nenašel' : 'Zatím žádné zprávy'}</div>`;
-    msgsEl.scrollTop = msgsEl.scrollHeight;
+    if(wasNearBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    scrollDownBtn.style.display = isNearChatBottom() ? 'none' : 'flex';
     wireChatLongPress();
   }
 
@@ -4624,6 +4732,7 @@ function openChatThread(me, other){
   activeChatSeenUnsub = db.collection('chats').doc(threadId).onSnapshot(snap => {
     const data = snap.data();
     otherLastSeenIso = (!isGroup && data && data.lastSeen) ? data.lastSeen[other] : null;
+    latestLastSeenMap = (data && data.lastSeen) || {};
     latestTypingMap = (data && data.typing) || {};
     renderChatMessages();
     updateTypingIndicator();
@@ -4761,6 +4870,99 @@ function openChatThread(me, other){
     chatImageBtn.innerHTML = origIcon;
     chatImageInput.value = '';
   });
+
+  // --- Hlasovky ---
+  // Zvuk se na rozdíl od fotek NEukládá jako base64 do Firestore dokumentu
+  // (i pár vteřin řeči by snadno přerostlo přes 1MB limit na dokument), ale
+  // nahraje se do Firebase Storage (viz "storage" výš) a do zprávy jde jen
+  // URL + délka nahrávky. Nahrávání max. 2 minuty, pak se samo zastaví.
+  const MAX_RECORD_SECONDS = 120;
+  const chatMicBtn = document.getElementById('chatMicBtn');
+  const chatComposerRow = document.getElementById('chatComposerRow');
+  const chatRecordRow = document.getElementById('chatRecordRow');
+  const chatRecordTimer = document.getElementById('chatRecordTimer');
+  const chatRecordCancelBtn = document.getElementById('chatRecordCancelBtn');
+  const chatRecordSendBtn = document.getElementById('chatRecordSendBtn');
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordStream = null;
+  let recordStartedAt = null;
+  let recordTimerInterval = null;
+  let recordCancelled = false;
+
+  function formatRecordTime(sec){
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function stopRecordTracks(){
+    if(recordStream){ recordStream.getTracks().forEach(t => t.stop()); recordStream = null; }
+    if(recordTimerInterval){ clearInterval(recordTimerInterval); recordTimerInterval = null; }
+  }
+
+  async function startRecording(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert('Nahrávání zvuku tenhle prohlížeč nepodporuje.');
+      return;
+    }
+    try{
+      recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }catch(e){
+      alert('Bez povolení mikrofonu nejde hlasovku nahrát.');
+      return;
+    }
+    recordedChunks = [];
+    recordCancelled = false;
+    const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+    mediaRecorder = mimeType ? new MediaRecorder(recordStream, { mimeType }) : new MediaRecorder(recordStream);
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stopRecordTracks();
+      chatComposerRow.style.display = 'flex';
+      chatRecordRow.style.display = 'none';
+      if(recordCancelled || !recordedChunks.length) return;
+      uploadVoiceMessage(new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' }), Math.round((Date.now() - recordStartedAt) / 1000));
+    };
+    mediaRecorder.start();
+    recordStartedAt = Date.now();
+    chatComposerRow.style.display = 'none';
+    chatRecordRow.style.display = 'flex';
+    chatRecordTimer.textContent = '0:00';
+    recordTimerInterval = setInterval(() => {
+      const sec = Math.round((Date.now() - recordStartedAt) / 1000);
+      chatRecordTimer.textContent = formatRecordTime(sec);
+      if(sec >= MAX_RECORD_SECONDS) mediaRecorder.stop();
+    }, 250);
+  }
+
+  async function uploadVoiceMessage(blob, durationSec){
+    if(durationSec < 1) return; // omylem ťuknutý mikrofon na zlomek vteřiny
+    chatMicBtn.disabled = true;
+    try{
+      const ext = (blob.type||'').includes('mp4') ? 'm4a' : (blob.type||'').includes('ogg') ? 'ogg' : 'webm';
+      const path = `chatAudio/${threadId}/${Date.now()}_${me}.${ext}`;
+      const ref = storage.ref(path);
+      await ref.put(blob, { contentType: blob.type || 'audio/webm' });
+      const url = await ref.getDownloadURL();
+      await db.collection('chats').doc(threadId).collection('messages').add({
+        from: me, audio: url, audioDuration: durationSec, at: new Date().toISOString()
+      });
+    }catch(e){
+      console.error('Chyba při odesílání hlasovky:', e);
+      alert('Nepodařilo se odeslat hlasovku.');
+    }
+    chatMicBtn.disabled = false;
+  }
+
+  chatMicBtn.onclick = startRecording;
+  chatRecordCancelBtn.onclick = () => {
+    recordCancelled = true;
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    else { stopRecordTracks(); chatComposerRow.style.display = 'flex'; chatRecordRow.style.display = 'none'; }
+  };
+  chatRecordSendBtn.onclick = () => {
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  };
 }
 
 // Malá bublina s 5 emoji, co vyskočí po dlouhém podržení zprávy v chatu (viz

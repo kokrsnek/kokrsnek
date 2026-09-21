@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Stejná podmínka jako ve firestore.rules — appka po zadání správného
+    // hesla (Cloud Function verifyPartyPassword) dostane anonymní identitu
+    // s razítkem partyMember:true.
+    function isPartyMember() {
+      return request.auth != null && request.auth.token.partyMember == true;
+    }
+
+    // Hlasovky z minichatu — cesta chatAudio/{threadId}/{soubor}.
+    match /chatAudio/{threadId}/{fileName} {
+      allow read, write: if isPartyMember();
+    }
+  }
+}
