@@ -3660,7 +3660,7 @@ function showWelcome(){
     ['Domeček','Vrátí na aktuální událost, znovu načte kalendář a obnoví dnešní datum.'],
     ['Fotoalba','Tlačítko fotek — přepínej mezi řazením "Dle data" (podle roku) a "Dle akce" (unikátní názvy, číslovky se ignorují). Nová alba mají značku "NOVÉ", tlačítko fotek ukazuje počet.'],
     ['👍 Dojdu / 👎 Nedojdu','V detailu události i přímo na kartě v timeline — označ, jestli dorazíš nebo ne (vzájemně se vylučují). Appka ukazuje počty na obou stranách, klikem na jména uvidíš celé seznamy.'],
-    ['🎒 Kdo co přinese','U nadcházejících událostí, hned pod Dojdu/Nedojdu — navrhni položku (pivo, led, reproduktor...) a buď ji rovnou vezmi, nebo nech volnou pro kohokoliv jiného. Klik na "Beru" tě k položce přihlásí, "Pustit" zase odhlásí. Žádné heslo — je to otevřené pro celou partu.'],
+    ['🎒 Kdo co přinese','U nadcházejících (i právě probíhajících) událostí, hned pod Dojdu/Nedojdu — navrhni položku (pivo, led, reproduktor...) a buď ji rovnou vezmi, nebo nech volnou pro kohokoliv jiného. Klik na "Beru" tě k položce přihlásí, "Pustit" zase odhlásí. Dlouhé podržení tlačítka na kartě + heslo 9640 otevře editaci celého seznamu (jméno u položky jde přepsat na kohokoliv). Uvnitř otevřeného seznamu dlouhé podržení nadpisu "Kdo co přinese" + heslo 9640 pošle notifikaci "Co kdo donese?" celé partě.'],
     ['📋 Přinesli','U probíhajících/minulých událostí, hned vedle Nákladů akce — ukáže se tu ten samý seznam z "Kdo co přinese", jak vypadal před začátkem akce (kdo co nakonec skutečně přinesl, případně že to nedonesl nikdo). Tlačítko je zašedlé, dokud u akce nikdy žádná položka nebyla. Dlouhé podržení + heslo 9640 otevře editaci seznamu — jméno u položky jde přepsat na kohokoliv, položky přidat i smazat.'],
     ['Sdílení','V detailu události ikona sdílení (šipka nahoru) — pošle název, datum, mapu místa, počasí a album fotek přes systémové sdílení nebo do schránky.'],
     ['Do kalendáře','U budoucích událostí ikona kalendáře — stáhne .ics soubor pro přidání do vlastního kalendáře.'],
@@ -4954,20 +4954,29 @@ function bringIconSVG(){
 // Stejný osvědčený vzor jako u expenseBtn: skutečná akce se spouští až na
 // touchend, ne na obyčejný onclick, ať se to spolehlivě odliší od dlouhého
 // podržení i na iOS.
-async function wireBringBtn(idx, key, ev){
+// Jen obnoví počet na tlačítku "Kdo co přinese" (bez znovu-navěšování
+// dotykových posluchačů) — volá se z wireBringBtn při prvním vykreslení
+// karty, a znovu po zavření otevřeného seznamu, ať se hned promítne
+// cokoliv, co se v seznamu mezitím vzalo/pustilo/přidalo.
+async function refreshBringBtnCount(idx, key){
   const countEl = document.getElementById('bringBtnCount_'+idx);
-  const btn = document.getElementById('bringBtn_'+idx);
-  if(!btn) return;
+  if(!countEl) return;
   try{
     const snap = await db.collection('bringLists').doc(key).collection('items').get();
     if(snap.empty){
-      if(countEl) countEl.textContent = '';
+      countEl.textContent = '';
     } else {
       let taken = 0, free = 0;
       snap.forEach(d => { if(d.data().takenBy) taken++; else free++; });
-      if(countEl) countEl.innerHTML = ` ${snap.size} (<span style="color:var(--accent);">${taken}</span>/<span style="color:var(--coral);">${free}</span>)`;
+      countEl.innerHTML = ` ${snap.size} (<span style="color:var(--accent);">${taken}</span>/<span style="color:var(--coral);">${free}</span>)`;
     }
   }catch(e){ console.error('Chyba při načítání počtu položek:', e); }
+}
+
+async function wireBringBtn(idx, key, ev){
+  const btn = document.getElementById('bringBtn_'+idx);
+  if(!btn) return;
+  await refreshBringBtnCount(idx, key);
 
   let pressTimer, longPressed = false, startX = 0, startY = 0;
   btn.style.userSelect = 'none'; btn.style.webkitUserSelect = 'none'; btn.style.webkitTouchCallout = 'none';
@@ -4982,10 +4991,13 @@ async function wireBringBtn(idx, key, ev){
     longPressed = false;
     const t = e.touches && e.touches[0];
     startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
-    pressTimer = setTimeout(() => {
+    pressTimer = setTimeout(async () => {
       longPressed = true;
       if(navigator.vibrate) navigator.vibrate(15);
-      broadcastBringList(key, ev);
+      const pwd = await askBroughtEditPassword();
+      if(pwd === null) return;
+      if(pwd !== '9640'){ alert('Špatné heslo.'); return; }
+      openBroughtEditor(key, ev);
     }, 550);
   }, {passive:false});
   btn.addEventListener('touchend', e => {
@@ -5334,6 +5346,37 @@ function askBringBroadcastPassword(){
 // Skutečné odeslání — jen když seznam má aspoň jednu položku a heslo sedí.
 // Zapíše se dokument do bringBroadcasts/, o zbytek (notifikace celé partě
 // s proklikem rovnou do tohoto seznamu) se postará Cloud Function.
+// Dlouhé podržení titulku "🎒 Kdo co přinese" UVNITŘ otevřeného seznamu (ne
+// tlačítka na kartě — to teď otevírá editaci, viz wireBringBtn výš) — pošle
+// notifikaci celé partě. Stejný vzor jako u náhledu nákladů
+// (wireExpenseReceiptBroadcast) — žádné heslo, protože samotný seznam taky
+// žádné nevyžaduje.
+function wireBringListTitleBroadcast(key, ev){
+  const el = document.getElementById('bringListTitle');
+  if(!el) return;
+  let pressTimer, longPressed = false, startX = 0, startY = 0;
+  el.style.userSelect = 'none'; el.style.webkitUserSelect = 'none'; el.style.webkitTouchCallout = 'none';
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    longPressed = false;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
+    pressTimer = setTimeout(async () => {
+      longPressed = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      await broadcastBringList(key, ev);
+    }, 550);
+  }, {passive:false});
+  el.addEventListener('touchend', e => { clearTimeout(pressTimer); e.preventDefault(); });
+  el.addEventListener('touchmove', e => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+  }, {passive:true});
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 async function broadcastBringList(key, ev){
   let hasItems = false;
   try{
@@ -5376,7 +5419,7 @@ function openBringList(key, ev){
     // cokoliv, co se v okně mezitím vzalo/pustilo/přidalo.
     document.querySelectorAll('[id^="bringBtn_"]').forEach(b => {
       const idx = b.id.replace('bringBtn_','');
-      if(window['evKey_'+idx] === key) wireBringBtnCount(idx, key);
+      if(window['evKey_'+idx] === key) refreshBringBtnCount(idx, key);
     });
   };
   backdrop.className = 'ev-modal-backdrop';
@@ -5385,7 +5428,7 @@ function openBringList(key, ev){
     <div class="ev-modal">
       <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" id="bringListClose">×</button>
-      <div class="ev-modal-title" style="margin-bottom:2px;">🎒 Kdo co přinese</div>
+      <div class="ev-modal-title" id="bringListTitle" style="margin-bottom:2px;">🎒 Kdo co přinese</div>
       <div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;text-align:center;">${ev.title||''}</div>
       <div id="bringItemsList" style="text-align:left;margin-bottom:12px;max-height:40vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -5400,6 +5443,7 @@ function openBringList(key, ev){
   document.body.appendChild(backdrop);
   document.getElementById('bringListClose').onclick = close;
   backdrop.querySelector('.sheet-grabber-down').onclick = close;
+  wireBringListTitleBroadcast(key, ev);
 
   const listEl = document.getElementById('bringItemsList');
   activeBringUnsub = db.collection('bringLists').doc(key).collection('items').orderBy('at').onSnapshot(snap => {
