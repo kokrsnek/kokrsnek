@@ -1831,11 +1831,13 @@ function showEventDetail(idx){
   // Datum a čas
   // Jednodenní celodenní akce (bez konkrétního času od Googlu) nemá smysl
   // zobrazovat s "00:00 – 00:00" — u těch ukážeme jen datum, stejně jako
-  // to řeší fmtTimeRow jinde v appce.
+  // to řeší fmtTimeRow jinde v appce. U jednodenních akcí (celodenních i
+  // časových) navíc před datum přidáme den v týdnu — stejně jako na kartě
+  // v timeline (fmtDateRangeCard).
   const isAllDayDetail = !!(r.start && r.start.date && !r.start.dateTime);
   const dateVal = (isMultiDay(ev) || isAllDayDetail)
-    ? fmtDateRange(ev)
-    : `${fmtDateRange(ev)}  ·  ${fmtTime(ev.start, ev.end)}`;
+    ? fmtDateRangeCard(ev)
+    : `${fmtDateRangeCard(ev)}  ·  ${fmtTime(ev.start, ev.end)}`;
   rows.push({label:'Datum a čas', value: dateVal});
 
   if(ev.place){
