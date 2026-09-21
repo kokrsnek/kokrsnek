@@ -1820,7 +1820,11 @@ function showEventDetail(idx){
   const rows = [];
 
   // Datum a čas
-  const dateVal = isMultiDay(ev)
+  // Jednodenní celodenní akce (bez konkrétního času od Googlu) nemá smysl
+  // zobrazovat s "00:00 – 00:00" — u těch ukážeme jen datum, stejně jako
+  // to řeší fmtTimeRow jinde v appce.
+  const isAllDayDetail = !!(r.start && r.start.date && !r.start.dateTime);
+  const dateVal = (isMultiDay(ev) || isAllDayDetail)
     ? fmtDateRange(ev)
     : `${fmtDateRange(ev)}  ·  ${fmtTime(ev.start, ev.end)}`;
   rows.push({label:'Datum a čas', value: dateVal});
