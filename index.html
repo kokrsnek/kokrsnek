@@ -4516,7 +4516,7 @@ function openChatThread(me, other){
         <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
       <div style="flex:1 1 auto;min-height:0;position:relative;">
-        <div id="chatMessages" style="height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
+        <div id="chatMessages" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
         <button id="chatScrollDownBtn" title="Dolů na poslední zprávu" style="display:none;position:absolute;right:6px;bottom:10px;width:34px;height:34px;border-radius:50%;background:var(--surface-strong);border:1px solid var(--line);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);z-index:3;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
       </div>
       <div style="flex:0 0 auto;">
