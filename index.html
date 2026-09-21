@@ -3902,6 +3902,40 @@ function normName(s){
   return (s || '').normalize('NFC').trim();
 }
 
+// --- Online stav ("je zrovna v appce") ---
+// Firestore sám o sobě neumí poznat, že někomu spadlo spojení (na rozdíl od
+// Realtime Database s jejím onDisconnect), takže se to řeší "tepem":
+// dokud má appku otevřenou a viditelnou na obrazovce, zapisuje si každých
+// pár vteřin aktuální čas do presence/{jméno}. Kdokoliv jiný pak jen
+// porovná, jak dávno tenhle čas byl — "online" je, kdo ťukl v posledním
+// necelém intervalu (dost rezervy i pro krátký výpadek sítě).
+const PRESENCE_HEARTBEAT_MS = 25000;
+const PRESENCE_ONLINE_THRESHOLD_MS = 60000;
+let presenceHeartbeatInterval = null;
+
+function isPresenceOnline(lastActiveIso){
+  if(!lastActiveIso) return false;
+  return (Date.now() - new Date(lastActiveIso).getTime()) < PRESENCE_ONLINE_THRESHOLD_MS;
+}
+
+function startPresenceHeartbeat(){
+  const me = localStorage.getItem('kokrsnekUser');
+  if(!me || presenceHeartbeatInterval) return;
+  const beat = () => {
+    if(document.hidden) return;
+    db.collection('presence').doc(me).set({ lastActive: new Date().toISOString() }, { merge: true }).catch(()=>{});
+  };
+  beat();
+  presenceHeartbeatInterval = setInterval(beat, PRESENCE_HEARTBEAT_MS);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) beat(); });
+}
+
+// Malá zelená tečka k jménu/avataru — společný kus HTML pro seznam zpráv
+// i hlavičku otevřeného vlákna, ať vypadá všude stejně.
+function onlineDotHTML(){
+  return `<span title="Online" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#34C759;box-shadow:0 0 0 2px var(--bg2);flex:0 0 auto;"></span>`;
+}
+
 // Seznam VŠECH, koho appka o partě ví — sjednocení userProfiles (kdo si
 // vybral avatara) a pushTokens (kdo jen zapnul notifikace). Někdo jako Dejv
 // nemá avatara, takže by ho čistě userProfiles seznam vynechal, i když je
@@ -4127,14 +4161,17 @@ async function openChatList(){
 
   const list = document.getElementById('chatUserList');
   try{
-    const [tokensSnap, profilesSnap, messagesSnap, partyMsgsSnap] = await Promise.all([
+    const [tokensSnap, profilesSnap, messagesSnap, partyMsgsSnap, presenceSnap] = await Promise.all([
       db.collection('pushTokens').get(),
       db.collection('userProfiles').get(),
       db.collectionGroup('messages').get(),
-      db.collection('chats').doc(PARTY_THREAD_ID).collection('messages').get()
+      db.collection('chats').doc(PARTY_THREAD_ID).collection('messages').get(),
+      db.collection('presence').get()
     ]);
     const avatarMap = {};
     profilesSnap.forEach(d => { if(d.data().avatar) avatarMap[d.id] = d.data().avatar; });
+    const presenceMap = {};
+    presenceSnap.forEach(d => { presenceMap[d.id] = d.data().lastActive; });
 
     // Nepřečtené ve skupinovém vlákně "Celá parta" — spočítané zvlášť, protože
     // nemá dva účastníky jako 1:1 vlákna.
@@ -4199,9 +4236,10 @@ async function openChatList(){
     } else {
       list.innerHTML = partyRow + pollRow + names.map(n => {
         const unread = unreadMap[n] || 0;
+        const online = isPresenceOnline(presenceMap[n]);
         return `
         <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-          <span>${avatarMap[n] || ''} ${n}</span>
+          <span style="display:flex;align-items:center;gap:6px;">${avatarMap[n] || ''} ${n}${online ? onlineDotHTML() : ''}</span>
           <span style="display:flex;align-items:center;gap:8px;">
             ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
             <span style="color:var(--muted);font-size:16px;">›</span>
@@ -4426,10 +4464,12 @@ async function closePoll(pollId){
 let activeChatUnsub = null;
 let activeChatSeenUnsub = null;
 let activeChatTypingInterval = null;
+let activeChatPresenceUnsub = null;
 function openChatThread(me, other){
   if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
   if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
   if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
+  if(activeChatPresenceUnsub){ activeChatPresenceUnsub(); activeChatPresenceUnsub = null; }
   const isGroup = other === PARTY_THREAD_ID;
   const threadId = isGroup ? PARTY_THREAD_ID : chatThreadId(me, other);
   const backdrop = document.createElement('div');
@@ -4479,6 +4519,7 @@ function openChatThread(me, other){
     if(activeChatUnsub){ activeChatUnsub(); activeChatUnsub = null; }
     if(activeChatSeenUnsub){ activeChatSeenUnsub(); activeChatSeenUnsub = null; }
     if(activeChatTypingInterval){ clearInterval(activeChatTypingInterval); activeChatTypingInterval = null; }
+    if(activeChatPresenceUnsub){ activeChatPresenceUnsub(); activeChatPresenceUnsub = null; }
     if(window.visualViewport){
       window.visualViewport.removeEventListener('resize', fitChatModalToViewport);
       window.visualViewport.removeEventListener('scroll', fitChatModalToViewport);
@@ -4507,7 +4548,7 @@ function openChatThread(me, other){
           <button id="chatMuteBtn" title="Ztlumit notifikace z tohoto vlákna" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:inline-flex;align-items:center;">${bellIconSVG(false)}</button>
           <button id="chatSearchBtn" title="Hledat ve zprávách" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:inline-flex;align-items:center;">${searchIconSVG()}</button>
         </div>
-        <span style="padding:0 64px;">${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other}`}</span>
+        <span style="padding:0 64px;">${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other} <span id="chatThreadPresenceDot" style="display:none;"></span>`}</span>
         ${!isGroup ? `<button id="chatThreadPokeBtn" title="Hipnout" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
       <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter', sans-serif;"></div>
@@ -4520,7 +4561,7 @@ function openChatThread(me, other){
         <div id="chatComposerRow" style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
           <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
           <textarea id="chatInput" maxlength="160" placeholder="Napiš…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
-          <button id="chatMicBtn" title="Nahrát hlasovku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${micIconSVG()}</button>
+          <button id="chatMicBtn" title="Nahrát hlasovku" style="display:none;background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;align-items:center;justify-content:center;">${micIconSVG()}</button>
           <button id="chatSendBtn" style="background:var(--accent);border:none;color:#fff;font-weight:700;font-size:13px;padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;">Odeslat</button>
         </div>
         <div id="chatRecordRow" style="display:none;margin-top:12px;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--coral);border-radius:var(--radius-sm);padding:8px 12px;">
@@ -4541,6 +4582,15 @@ function openChatThread(me, other){
   document.getElementById('chatThreadClose').onclick = closeThread;
   if(!isGroup){
     getAvatar(other).then(a => { const el = document.getElementById('chatThreadAvatar'); if(el) el.textContent = a; });
+    // Živě aktualizovaná tečka podle presence/{other} — reaguje hned, jak
+    // druhá strana appku zavře/otevře, ne jen při otevření vlákna.
+    const presenceDotEl = document.getElementById('chatThreadPresenceDot');
+    if(presenceDotEl) presenceDotEl.innerHTML = onlineDotHTML();
+    activeChatPresenceUnsub = db.collection('presence').doc(other).onSnapshot(snap => {
+      if(!presenceDotEl) return;
+      const online = isPresenceOnline(snap.data() && snap.data().lastActive);
+      presenceDotEl.style.display = online ? 'inline-block' : 'none';
+    }, err => console.error('Chyba při sledování online stavu:', err));
     const chatPokeBtn = document.getElementById('chatThreadPokeBtn');
     if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
   }
@@ -7735,6 +7785,7 @@ attachLongPress(document.getElementById('homeBtn'), showAttendanceLeaderboard);
 
 renderTimeline();
 showNamePromptIfNeeded(() => {
+  startPresenceHeartbeat();
   if(!localStorage.getItem('welcomeShownOnce')){
     localStorage.setItem('welcomeShownOnce','1');
     setTimeout(showWelcome, 300);
