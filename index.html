@@ -4478,6 +4478,13 @@ function openChatThread(me, other){
   // U skupinového vlákna "Celá parta" se "Přečteno/Odesláno" nezobrazuje —
   // u víc lidí najednou by to bylo matoucí (čí přečtení by se mělo počítat?),
   // takže se tam ukazuje jen čas.
+  // Odkazy v textu zprávy (http/https) se automaticky změní na klikatelný
+  // odkaz, co se otevře v nové kartě — text zprávy se jinak nijak neupravuje.
+  function linkifyChatText(text){
+    const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,:;!?"')\]])/g;
+    return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:inherit;text-decoration:underline;word-break:break-all;">${url}</a>`);
+  }
+
   function renderChatMessages(){
     const docs = chatSearchQuery
       ? latestMsgDocs.filter(d => normalizeCz(d.data().text||'').includes(chatSearchQuery))
@@ -4511,7 +4518,7 @@ function openChatThread(me, other){
       const editBtn = mine ? `<button onclick="editChatMessage('${threadId}','${d.id}')" title="Upravit zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${editIconSVG()}</button>` : '';
       const deleteBtn = mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${trashIconSVG()}</button>` : '';
       return `<div data-msg-id="${d.id}" style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">
-        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${data.image?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${data.text ? `<div>${data.text}</div>` : ''}</div>
+        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${data.image?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;${mine?'justify-content:flex-end;':''}">
           <span style="text-align:${mine?'right':'left'};">${time}${status}${editedLabel}</span>
           ${pinBtn}${editBtn}${deleteBtn}
