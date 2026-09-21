@@ -4615,7 +4615,15 @@ function openChatThread(me, other){
       const editedLabel = data.edited ? ' · upraveno' : '';
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
       const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox(this.src, getChatGalleryImages())" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
-      const audioHtml = data.audio ? `<audio controls preload="auto" src="${data.audio}" style="width:210px;max-width:100%;height:34px;display:block;${data.text?'margin-bottom:6px;':''}"></audio>` : '';
+      // Dočasná diagnostika: když se hlasovka nepřehraje, appka rovnou
+      // vypíše kód chyby z MediaError (to, co by jinak ukázal jen Web
+      // Inspector) — 1 ABORTED, 2 NETWORK (síť/CORS), 3 DECODE (poškozená/
+      // nepodporovaná data), 4 SRC_NOT_SUPPORTED (formát). Až bude jasné,
+      // co to je, tenhle řádek zase odstraníme.
+      const audioHtml = data.audio ? `<div${data.text?' style="margin-bottom:6px;"':''}>
+        <audio controls preload="auto" src="${data.audio}" onerror="this.nextElementSibling.textContent='⚠️ MediaError kód ' + (this.error ? this.error.code : '?') + ' (' + (this.error ? ({1:'ABORTED',2:'NETWORK',3:'DECODE',4:'SRC_NOT_SUPPORTED'}[this.error.code] || 'neznámý') : '?') + ')'" style="width:210px;max-width:100%;height:34px;display:block;"></audio>
+        <div style="font-size:10px;color:var(--coral);margin-top:2px;"></div>
+      </div>` : '';
       const reactions = data.reactions || {};
       // Řádek reakcí se ukazuje, jen když už na zprávě nějaká je (ťuknutím na
       // ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji jde přes
