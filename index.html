@@ -4072,9 +4072,11 @@ async function openChatList(){
       if(at > partySeen) partyUnread++;
     });
 
-    // Nepřečtené na osobu + zajištění, že v seznamu bude i ten, kdo mi psal,
-    // i kdyby zrovna neměl (už) zapnuté notifikace.
+    // Nepřečtené na osobu + čas poslední zprávy (na řazení seznamu podle
+    // toho, s kým si appka nejčerstvěji píše) + zajištění, že v seznamu
+    // bude i ten, kdo mi psal, i kdyby zrovna neměl (už) zapnuté notifikace.
     const unreadMap = {};
+    const lastMsgMap = {};
     const partnerSet = new Set();
     messagesSnap.forEach(d => {
       const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
@@ -4085,16 +4087,24 @@ async function openChatList(){
       if(!other) return;
       partnerSet.add(other);
       const data = d.data();
+      const at = data.at ? new Date(data.at) : new Date(0);
+      if(!lastMsgMap[other] || at > lastMsgMap[other]) lastMsgMap[other] = at;
       if(data.from === me) return;
       const seenRaw = localStorage.getItem('kokrsnekChatSeen_' + threadId);
       const seen = seenRaw ? new Date(seenRaw) : new Date(0);
-      const at = data.at ? new Date(data.at) : new Date(0);
       if(at > seen) unreadMap[other] = (unreadMap[other] || 0) + 1;
     });
     tokensSnap.docs.forEach(d => { if(d.data().user) partnerSet.add(d.data().user); });
     partnerSet.delete(me);
 
-    const names = [...partnerSet].sort((a,b) => a.localeCompare(b, 'cs'));
+    // Nejčerstvěji popsané vlákno nahoře; s kým appka ještě nikdy nepsala
+    // (jen má zapnuté notifikace), jde na konec, seřazené abecedně.
+    const names = [...partnerSet].sort((a,b) => {
+      const ta = lastMsgMap[a] ? lastMsgMap[a].getTime() : 0;
+      const tb = lastMsgMap[b] ? lastMsgMap[b].getTime() : 0;
+      if(ta !== tb) return tb - ta;
+      return a.localeCompare(b, 'cs');
+    });
     const partyRow = `
       <button class="chat-user-row" data-party="1" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:700;cursor:pointer;text-align:left;">
         <span>👥 Celá parta</span>
