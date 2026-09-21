@@ -4195,9 +4195,13 @@ async function openChatList(){
     // Nepřečtené na osobu + čas poslední zprávy (na řazení seznamu podle
     // toho, s kým si appka nejčerstvěji píše) + zajištění, že v seznamu
     // bude i ten, kdo mi psal, i kdyby zrovna neměl (už) zapnuté notifikace.
+    // statsMap navíc počítá počet zpráv (poslal/přišlo), fotek a odkazů na
+    // osobu — zobrazí se jako malý řádek pod jménem v seznamu.
     const unreadMap = {};
     const lastMsgMap = {};
+    const statsMap = {};
     const partnerSet = new Set();
+    const urlTestRegex = /https?:\/\//;
     messagesSnap.forEach(d => {
       const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
       if(!threadId || threadId === PARTY_THREAD_ID) return;
@@ -4209,6 +4213,11 @@ async function openChatList(){
       const data = d.data();
       const at = data.at ? new Date(data.at) : new Date(0);
       if(!lastMsgMap[other] || at > lastMsgMap[other]) lastMsgMap[other] = at;
+      const stat = statsMap[other] || (statsMap[other] = { total: 0, sent: 0, received: 0, photos: 0, links: 0 });
+      stat.total++;
+      if(data.from === me) stat.sent++; else stat.received++;
+      if(data.image) stat.photos++;
+      if(data.text && urlTestRegex.test(data.text)) stat.links++;
       if(data.from === me) return;
       const seenRaw = localStorage.getItem('kokrsnekChatSeen_' + threadId);
       const seen = seenRaw ? new Date(seenRaw) : new Date(0);
@@ -4244,10 +4253,15 @@ async function openChatList(){
       list.innerHTML = partyRow + pollRow + names.map(n => {
         const unread = unreadMap[n] || 0;
         const online = isPresenceOnline(presenceMap[n]);
+        const stat = statsMap[n];
+        const statLine = stat ? `<span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;margin-top:1px;">${stat.total} (<span style="color:var(--accent);">${stat.sent}</span>/<span style="color:var(--coral);">${stat.received}</span>)${stat.photos ? ` · 📷${stat.photos}` : ''}${stat.links ? ` · 🔗${stat.links}` : ''}</span>` : '';
         return `
         <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-          <span style="display:flex;align-items:center;gap:6px;">${avatarMap[n] || ''} ${n}${online ? onlineDotHTML() : ''}</span>
-          <span style="display:flex;align-items:center;gap:8px;">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:center;gap:6px;">${avatarMap[n] || ''} ${n}${online ? onlineDotHTML() : ''}</span>
+            ${statLine}
+          </span>
+          <span style="display:flex;align-items:center;gap:8px;flex:0 0 auto;">
             ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
             <span style="color:var(--muted);font-size:16px;">›</span>
           </span>
