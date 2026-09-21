@@ -3119,61 +3119,6 @@ function linkIconSVG(){
 function micIconSVG(){
   return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>`;
 }
-
-// Přehraje zvuk přes Media Source Extensions místo obyčejného <audio src> —
-// viz komentář u handleAudioError, proč to je pro některé Safari nahrávky
-// potřeba. mime musí být PLNÝ typ s kodekem (např. 'audio/mp4;codecs=mp4a.40.2'),
-// ne jen holé 'audio/mp4' — addSourceBuffer bez kodeku odmítne.
-async function playAudioViaMSE(audioEl, url, mime){
-  const mediaSource = new MediaSource();
-  audioEl.src = URL.createObjectURL(mediaSource);
-  await new Promise((resolve, reject) => {
-    mediaSource.addEventListener('sourceopen', async () => {
-      try{
-        const sourceBuffer = mediaSource.addSourceBuffer(mime);
-        const resp = await fetch(url);
-        const buf = await resp.arrayBuffer();
-        sourceBuffer.addEventListener('updateend', () => {
-          try{ mediaSource.endOfStream(); }catch(e){}
-          resolve();
-        }, {once:true});
-        sourceBuffer.addEventListener('error', reject, {once:true});
-        sourceBuffer.appendBuffer(buf);
-      }catch(e){ reject(e); }
-    }, {once:true});
-  });
-}
-
-// Volá se z onerror atributu <audio> elementu hlasovky (viz audioHtml v
-// renderChatMessages). Kód 4 (SRC_NOT_SUPPORTED) na iOS Safari typicky
-// znamená přesně tenhle případ — zkusí se tedy jednou náhradní cesta přes
-// MSE, než appka rezignuje a jen vypíše kód chyby.
-async function handleAudioError(audioEl){
-  const diag = audioEl.nextElementSibling;
-  const code = audioEl.error ? audioEl.error.code : null;
-  if(!audioEl.dataset.mseTried && code === 4){
-    const mime = audioEl.dataset.mime;
-    if(!window.MediaSource){
-      if(diag) diag.textContent = '⚠️ MediaError 4 — MediaSource není v tomhle prohlížeči k dispozici';
-      return;
-    }
-    if(!mime || !MediaSource.isTypeSupported(mime)){
-      if(diag) diag.textContent = '⚠️ MediaError 4 — MSE nepodporuje typ "' + mime + '"';
-      return;
-    }
-    audioEl.dataset.mseTried = '1';
-    try{
-      await playAudioViaMSE(audioEl, audioEl.dataset.url, mime);
-      if(diag) diag.textContent = '';
-      return;
-    }catch(e){
-      console.error('Chyba MSE přehrávání hlasovky:', e);
-      if(diag) diag.textContent = '⚠️ MSE selhalo: ' + (e && e.message ? e.message : e);
-      return;
-    }
-  }
-  if(diag) diag.textContent = '⚠️ MediaError kód ' + (code !== null ? code : '?');
-}
 function bellIconSVG(muted){
   return muted
     ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 3.7A6 6 0 0 1 18 8c0 4.4 1.2 6.6 2 7.7"/><path d="M6 8a6 6 0 0 0 0 .5c0 7-3 9-3 9h14"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M2 2l20 20"/></svg>`
@@ -4670,17 +4615,11 @@ function openChatThread(me, other){
       const editedLabel = data.edited ? ' · upraveno' : '';
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
       const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox(this.src, getChatGalleryImages())" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
-      // Dočasná diagnostika + oprava: Safari na iOS umí hlasovku, kterou sama
-      // nahrála (audio/mp4 z MediaRecorderu), paradoxně odmítnout přehrát
-      // obyčejným <audio src> (MediaError 4/SRC_NOT_SUPPORTED) — je to
-      // "fragmentovaný" MP4 stavěný spíš pro streamování přes Media Source
-      // Extensions než pro běžný soubor. handleAudioError() to při téhle
-      // konkrétní chybě zkusí přehrát přes MSE (viz playAudioViaMSE níže);
-      // když MSE není k dispozici nebo taky selže, vypíše se aspoň kód chyby.
-      const audioHtml = data.audio ? `<div${data.text?' style="margin-bottom:6px;"':''}>
-        <audio controls preload="auto" src="${data.audio}" data-url="${data.audio}" data-mime="${data.audioMime || data.audioType || ''}" onerror="handleAudioError(this)" style="width:210px;max-width:100%;height:34px;display:block;"></audio>
-        <div style="font-size:10px;color:var(--coral);margin-top:2px;"></div>
-      </div>` : '';
+      // Hlasovky appka nahrává jako obyčejný WAV (viz startRecording/
+      // encodeWavBlob) právě proto, aby se vyhnula MediaRecorder formátům,
+      // které Safari na iOS uměla nahrát, ale pak odmítala přehrát — pro
+      // WAV žádná taková past nehrozí, stačí prostý <audio src>.
+      const audioHtml = data.audio ? `<audio controls preload="metadata" src="${data.audio}" style="width:210px;max-width:100%;height:34px;display:block;${data.text?'margin-bottom:6px;':''}"></audio>` : '';
       const reactions = data.reactions || {};
       // Řádek reakcí se ukazuje, jen když už na zprávě nějaká je (ťuknutím na
       // ni jde vlastní reakci přidat/odebrat) — výběr NOVÉ emoji jde přes
@@ -4950,6 +4889,15 @@ function openChatThread(me, other){
   // (i pár vteřin řeči by snadno přerostlo přes 1MB limit na dokument), ale
   // nahraje se do Firebase Storage (viz "storage" výš) a do zprávy jde jen
   // URL + délka nahrávky. Nahrávání max. 2 minuty, pak se samo zastaví.
+  //
+  // POZOR: záměrně se NEPOUŽÍVÁ MediaRecorder. Ten na iOS Safari produkuje
+  // "fragmentovaný" MP4/AAC, který sama Safari umí nahrát, ale pak ho svým
+  // vlastním <audio> přehrávačem odmítne přehrát (MediaError 4), a Media
+  // Source Extensions coby náhradní cesta pro zvuk na iOS vůbec nejsou
+  // k dispozici (ověřeno v appce diagnostikou přímo na zařízení). Místo
+  // toho appka bere syrová PCM data přímo z mikrofonu přes Web Audio API
+  // a sama je poskládá do obyčejného WAV souboru — žádná komprese, žádný
+  // kontejner, žádné kodeky — to umí přehrát bez výjimky každý prohlížeč.
   const MAX_RECORD_SECONDS = 120;
   const chatMicBtn = document.getElementById('chatMicBtn');
   const chatComposerRow = document.getElementById('chatComposerRow');
@@ -4957,9 +4905,12 @@ function openChatThread(me, other){
   const chatRecordTimer = document.getElementById('chatRecordTimer');
   const chatRecordCancelBtn = document.getElementById('chatRecordCancelBtn');
   const chatRecordSendBtn = document.getElementById('chatRecordSendBtn');
-  let mediaRecorder = null;
-  let recordedChunks = [];
   let recordStream = null;
+  let recordAudioCtx = null;
+  let recordSourceNode = null;
+  let recordProcessorNode = null;
+  let recordSilentGain = null;
+  let recordChunks = []; // pole Float32Array bloků z onaudioprocess
   let recordStartedAt = null;
   let recordTimerInterval = null;
   let recordCancelled = false;
@@ -4972,6 +4923,46 @@ function openChatThread(me, other){
   function stopRecordTracks(){
     if(recordStream){ recordStream.getTracks().forEach(t => t.stop()); recordStream = null; }
     if(recordTimerInterval){ clearInterval(recordTimerInterval); recordTimerInterval = null; }
+    if(recordProcessorNode){ recordProcessorNode.disconnect(); recordProcessorNode.onaudioprocess = null; recordProcessorNode = null; }
+    if(recordSourceNode){ recordSourceNode.disconnect(); recordSourceNode = null; }
+    if(recordSilentGain){ recordSilentGain.disconnect(); recordSilentGain = null; }
+    if(recordAudioCtx){ recordAudioCtx.close().catch(()=>{}); recordAudioCtx = null; }
+  }
+
+  // Spojí všechny nahrané bloky do jednoho Float32Array a zabalí do
+  // standardní 44bajtové WAV hlavičky (16bit PCM, mono, vzorkovací
+  // frekvence podle AudioContextu daného zařízení).
+  function encodeWavBlob(chunks, sampleRate){
+    let totalLen = 0;
+    for(const c of chunks) totalLen += c.length;
+    const samples = new Float32Array(totalLen);
+    let offset = 0;
+    for(const c of chunks){ samples.set(c, offset); offset += c.length; }
+
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+    const writeStr = (o, s) => { for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);        // délka fmt bloku
+    view.setUint16(20, 1, true);         // PCM
+    view.setUint16(22, 1, true);         // mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // byte rate (mono, 16bit)
+    view.setUint16(32, 2, true);         // block align
+    view.setUint16(34, 16, true);        // bits per sample
+    writeStr(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let pos = 44;
+    for(let i = 0; i < samples.length; i++, pos += 2){
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
   }
 
   async function startRecording(){
@@ -4985,24 +4976,26 @@ function openChatThread(me, other){
       alert('Bez povolení mikrofonu nejde hlasovku nahrát.');
       return;
     }
-    recordedChunks = [];
+    recordChunks = [];
     recordCancelled = false;
-    // Preferuje audio/mp4 (AAC) i na Androidu, přestože by si tam appka
-    // "přirozeně" vybrala webm — webm totiž iPhone (Safari) neumí vůbec
-    // přehrát (ne kvůli právům/CORS, ale protože ten kontejner/kodek
-    // nezná), takže hlasovka nahraná na Androidu by na iPhonu navěky jen
-    // točila kolečko. mp4/AAC umí přehrát obě platformy.
-    const mimeType = ['audio/mp4', 'audio/webm', 'audio/ogg'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
-    mediaRecorder = mimeType ? new MediaRecorder(recordStream, { mimeType }) : new MediaRecorder(recordStream);
-    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size > 0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      stopRecordTracks();
-      chatComposerRow.style.display = 'flex';
-      chatRecordRow.style.display = 'none';
-      if(recordCancelled || !recordedChunks.length) return;
-      uploadVoiceMessage(new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' }), Math.round((Date.now() - recordStartedAt) / 1000));
+    const AC = window.AudioContext || window.webkitAudioContext;
+    recordAudioCtx = new AC();
+    recordSourceNode = recordAudioCtx.createMediaStreamSource(recordStream);
+    // ScriptProcessorNode je sice oficiálně zastaralý, ale funguje úplně
+    // všude (včetně starších Safari) a pro krátké hlasovky je jednodušší
+    // a spolehlivější než AudioWorklet. Musí být připojený až do
+    // destination (přes tichý gain 0), jinak by v některých prohlížečích
+    // onaudioprocess vůbec nezačal chodit.
+    recordProcessorNode = recordAudioCtx.createScriptProcessor(4096, 1, 1);
+    recordSilentGain = recordAudioCtx.createGain();
+    recordSilentGain.gain.value = 0;
+    recordProcessorNode.onaudioprocess = e => {
+      recordChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
     };
-    mediaRecorder.start();
+    recordSourceNode.connect(recordProcessorNode);
+    recordProcessorNode.connect(recordSilentGain);
+    recordSilentGain.connect(recordAudioCtx.destination);
+
     recordStartedAt = Date.now();
     chatComposerRow.style.display = 'none';
     chatRecordRow.style.display = 'flex';
@@ -5010,27 +5003,31 @@ function openChatThread(me, other){
     recordTimerInterval = setInterval(() => {
       const sec = Math.round((Date.now() - recordStartedAt) / 1000);
       chatRecordTimer.textContent = formatRecordTime(sec);
-      if(sec >= MAX_RECORD_SECONDS) mediaRecorder.stop();
+      if(sec >= MAX_RECORD_SECONDS) finishRecording();
     }, 250);
+  }
+
+  function finishRecording(){
+    const durationSec = Math.round((Date.now() - recordStartedAt) / 1000);
+    const sampleRate = recordAudioCtx ? recordAudioCtx.sampleRate : 44100;
+    const chunks = recordChunks;
+    stopRecordTracks();
+    chatComposerRow.style.display = 'flex';
+    chatRecordRow.style.display = 'none';
+    if(recordCancelled || !chunks.length) return;
+    uploadVoiceMessage(encodeWavBlob(chunks, sampleRate), durationSec);
   }
 
   async function uploadVoiceMessage(blob, durationSec){
     if(durationSec < 1) return; // omylem ťuknutý mikrofon na zlomek vteřiny
     chatMicBtn.disabled = true;
     try{
-      const ext = (blob.type||'').includes('mp4') ? 'm4a' : (blob.type||'').includes('ogg') ? 'ogg' : 'webm';
-      // Čistý Content-Type bez kodeku (ne "audio/mp4;codecs=mp4a.40.2") —
-      // Safari na iOS je na tenhle detail háklivé a s "kvalifikovaným"
-      // Content-Type hlášeným rovnou z blob.type umí zprávu přijmout, ale
-      // pak ji nepřehraje ("Chyba"), zatímco Chrome na Androidu si s tím
-      // poradí bez potíží.
-      const contentType = ext === 'm4a' ? 'audio/mp4' : ext === 'ogg' ? 'audio/ogg' : 'audio/webm';
-      const path = `chatAudio/${threadId}/${Date.now()}_${me}.${ext}`;
+      const path = `chatAudio/${threadId}/${Date.now()}_${me}.wav`;
       const ref = storage.ref(path);
-      await ref.put(blob, { contentType, contentDisposition: 'inline' });
+      await ref.put(blob, { contentType: 'audio/wav', contentDisposition: 'inline' });
       const url = await ref.getDownloadURL();
       await db.collection('chats').doc(threadId).collection('messages').add({
-        from: me, audio: url, audioType: contentType, audioMime: blob.type || contentType, audioDuration: durationSec, at: new Date().toISOString()
+        from: me, audio: url, audioType: 'audio/wav', audioDuration: durationSec, at: new Date().toISOString()
       });
     }catch(e){
       console.error('Chyba při odesílání hlasovky:', e);
@@ -5042,12 +5039,9 @@ function openChatThread(me, other){
   chatMicBtn.onclick = startRecording;
   chatRecordCancelBtn.onclick = () => {
     recordCancelled = true;
-    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    else { stopRecordTracks(); chatComposerRow.style.display = 'flex'; chatRecordRow.style.display = 'none'; }
+    finishRecording();
   };
-  chatRecordSendBtn.onclick = () => {
-    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  };
+  chatRecordSendBtn.onclick = finishRecording;
 }
 
 // Malá bublina s 5 emoji, co vyskočí po dlouhém podržení zprávy v chatu (viz
