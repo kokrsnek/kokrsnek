@@ -3151,14 +3151,25 @@ async function playAudioViaMSE(audioEl, url, mime){
 async function handleAudioError(audioEl){
   const diag = audioEl.nextElementSibling;
   const code = audioEl.error ? audioEl.error.code : null;
-  if(!audioEl.dataset.mseTried && code === 4 && window.MediaSource && audioEl.dataset.mime && MediaSource.isTypeSupported(audioEl.dataset.mime)){
+  if(!audioEl.dataset.mseTried && code === 4){
+    const mime = audioEl.dataset.mime;
+    if(!window.MediaSource){
+      if(diag) diag.textContent = '⚠️ MediaError 4 — MediaSource není v tomhle prohlížeči k dispozici';
+      return;
+    }
+    if(!mime || !MediaSource.isTypeSupported(mime)){
+      if(diag) diag.textContent = '⚠️ MediaError 4 — MSE nepodporuje typ "' + mime + '"';
+      return;
+    }
     audioEl.dataset.mseTried = '1';
     try{
-      await playAudioViaMSE(audioEl, audioEl.dataset.url, audioEl.dataset.mime);
+      await playAudioViaMSE(audioEl, audioEl.dataset.url, mime);
       if(diag) diag.textContent = '';
       return;
     }catch(e){
       console.error('Chyba MSE přehrávání hlasovky:', e);
+      if(diag) diag.textContent = '⚠️ MSE selhalo: ' + (e && e.message ? e.message : e);
+      return;
     }
   }
   if(diag) diag.textContent = '⚠️ MediaError kód ' + (code !== null ? code : '?');
