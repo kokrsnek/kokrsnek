@@ -5943,9 +5943,9 @@ async function showYearlyExpenseSummary(year){
       <div style="padding:9px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
         <div style="font-size:13.5px;font-weight:600;color:var(--ink);">${r.title}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${DAYS_FULL[r.dt.getDay()]} ${r.dt.getDate()}.${r.dt.getMonth()+1}.${r.dt.getFullYear()}</div>
-        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink);">
-          <span>náklady: ${r.cost} Kč</span>
-          <span>příspěvky: ${r.contrib} Kč</span>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;">
+          <span style="color:var(--coral);">náklady: ${r.cost} Kč</span>
+          <span style="color:var(--accent);">příspěvky: ${r.contrib} Kč</span>
         </div>
       </div>
     `).join('');
@@ -5955,11 +5955,11 @@ async function showYearlyExpenseSummary(year){
       <div style="margin-top:14px;font-family:'Inter', sans-serif;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
-          <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandCost} Kč</span>
+          <span style="font-size:18px;font-weight:700;color:var(--coral);">${grandCost} Kč</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
           <span style="font-size:13px;color:var(--ink);">celkové příspěvky</span>
-          <span style="font-size:18px;font-weight:700;color:var(--ink);">${grandContrib} Kč</span>
+          <span style="font-size:18px;font-weight:700;color:var(--accent);">${grandContrib} Kč</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
           <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
