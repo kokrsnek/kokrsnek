@@ -4515,10 +4515,7 @@ function openChatThread(me, other){
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
         <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
-      <div style="flex:1 1 auto;min-height:0;position:relative;">
-        <div id="chatMessages" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
-        <button id="chatScrollDownBtn" title="Dolů na poslední zprávu" style="display:none;position:absolute;right:6px;bottom:10px;width:34px;height:34px;border-radius:50%;background:var(--surface-strong);border:1px solid var(--line);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);z-index:3;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
-      </div>
+      <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="flex:0 0 auto;">
         <div id="chatComposerRow" style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
           <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
@@ -4549,13 +4546,16 @@ function openChatThread(me, other){
   }
 
   const msgsEl = document.getElementById('chatMessages');
-  const scrollDownBtn = document.getElementById('chatScrollDownBtn');
   const isNearChatBottom = () => (msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight) < 120;
   const scrollChatToBottom = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
-  msgsEl.addEventListener('scroll', () => {
-    scrollDownBtn.style.display = isNearChatBottom() ? 'none' : 'flex';
-  });
-  scrollDownBtn.onclick = scrollChatToBottom;
+  // Tlačítko "dolů" se překresluje spolu se zprávami (viz renderChatMessages
+  // níže — je poslední položka uvnitř #chatMessages), takže se pokaždé musí
+  // dohledat znovu podle id, místo aby se odkaz zachytil jen jednou napevno.
+  const updateScrollDownBtn = () => {
+    const btn = document.getElementById('chatScrollDownBtn');
+    if(btn) btn.style.display = isNearChatBottom() ? 'none' : 'flex';
+  };
+  msgsEl.addEventListener('scroll', updateScrollDownBtn);
   const QUICK_CHAT_EMOJIS = ['👍','❤️','😂','😮','😢'];
   let latestMsgDocs = [];
   let otherLastSeenIso = null;
@@ -4644,8 +4644,15 @@ function openChatThread(me, other){
         ${reactionsRow ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>` : ''}
       </div>`;
     }).join('') || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">${chatSearchQuery ? 'Nic takového jsem nenašel' : 'Zatím žádné zprávy'}</div>`;
+    // Tlačítko "dolů" jako poslední prvek v seznamu: obal má height:0 (nezabírá
+    // místo v seznamu, nezpůsobí žádnou mezeru pod poslední zprávou) a
+    // position:sticky ho drží u spodního okraje viditelné (odrolované) plochy.
+    msgsEl.innerHTML += `<div style="position:sticky;bottom:4px;height:0;overflow:visible;align-self:flex-end;z-index:3;pointer-events:none;">
+      <button id="chatScrollDownBtn" title="Dolů na poslední zprávu" style="display:none;pointer-events:auto;width:34px;height:34px;border-radius:50%;background:var(--surface-strong);border:1px solid var(--line);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
+    </div>`;
     if(wasNearBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
-    scrollDownBtn.style.display = isNearChatBottom() ? 'none' : 'flex';
+    document.getElementById('chatScrollDownBtn').onclick = scrollChatToBottom;
+    updateScrollDownBtn();
     wireChatLongPress();
   }
 
