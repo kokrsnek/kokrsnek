@@ -4254,11 +4254,15 @@ async function openChatList(){
         const unread = unreadMap[n] || 0;
         const online = isPresenceOnline(presenceMap[n]);
         const stat = statsMap[n];
-        const statLine = stat ? `<span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;margin-top:1px;">${stat.total} (<span style="color:var(--accent);">${stat.sent}</span>/<span style="color:var(--coral);">${stat.received}</span>)${stat.photos ? ` · 📷${stat.photos}` : ''}${stat.links ? ` · 🔗${stat.links}` : ''}</span>` : '';
+        const statLine = stat ? `<span style="display:flex;align-items:center;gap:5px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;">
+          <span>${stat.total} (<span style="color:var(--accent);">${stat.sent}</span>/<span style="color:var(--coral);">${stat.received}</span>)</span>
+          ${stat.photos ? `<span onclick="event.stopPropagation();openChatPhotos('${n}')" style="cursor:pointer;">· 📷${stat.photos}</span>` : ''}
+          ${stat.links ? `<span onclick="event.stopPropagation();openChatLinks('${n}')" style="cursor:pointer;">· 🔗${stat.links}</span>` : ''}
+        </span>` : '';
         return `
         <button class="chat-user-row" data-name="${n}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-          <span style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-            <span style="display:flex;align-items:center;gap:6px;">${avatarMap[n] || ''} ${n}${online ? onlineDotHTML() : ''}</span>
+          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:2px;min-width:0;">
+            <span style="display:flex;align-items:center;gap:6px;flex:0 0 auto;">${avatarMap[n] || ''} ${n}${online ? onlineDotHTML() : ''}</span>
             ${statLine}
           </span>
           <span style="display:flex;align-items:center;gap:8px;flex:0 0 auto;">
@@ -4276,6 +4280,85 @@ async function openChatList(){
   }catch(e){
     console.error('Chyba při načítání seznamu:', e);
     list.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+}
+
+// Fotky/odkazy jen z jednoho vlákna (viz 📷/🔗 přímo v seznamu "Zprávy") —
+// bere se z minichatu s danou osobou, ne z celé appky.
+async function fetchChatThreadMessages(other){
+  const me = getUserName();
+  if(!me) return [];
+  const threadId = chatThreadId(me, other);
+  const snap = await db.collection('chats').doc(threadId).collection('messages').orderBy('at').get();
+  return snap.docs.map(d => d.data());
+}
+
+async function openChatPhotos(other){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">📷 Fotky s ${other}</div>
+      <div id="chatPhotosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:60vh;overflow-y:auto;"><div style="grid-column:1/-1;color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const grid = document.getElementById('chatPhotosGrid');
+  try{
+    const msgs = await fetchChatThreadMessages(other);
+    const images = msgs.filter(m => m.image).map(m => m.image);
+    if(!images.length){
+      grid.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné fotky</div>';
+      return;
+    }
+    grid.innerHTML = images.map(src => `<img src="${src}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:zoom-in;">`).join('');
+    grid.querySelectorAll('img').forEach(img => {
+      img.onclick = () => openImageLightbox(img.src, images);
+    });
+  }catch(e){
+    console.error('Chyba při načítání fotek z vlákna:', e);
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
+  }
+}
+
+async function openChatLinks(other){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">🔗 Odkazy s ${other}</div>
+      <div id="chatLinksList" style="text-align:left;max-height:55vh;overflow-y:auto;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const listEl = document.getElementById('chatLinksList');
+  try{
+    const msgs = await fetchChatThreadMessages(other);
+    const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,:;!?"')\]])/g;
+    const links = [];
+    msgs.forEach(m => {
+      if(!m.text) return;
+      const found = m.text.match(urlRegex);
+      if(found) found.forEach(url => links.push({ url, from: m.from, at: m.at }));
+    });
+    if(!links.length){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Zatím žádné odkazy</div>';
+      return;
+    }
+    listEl.innerHTML = links.reverse().map(l => {
+      let domain = l.url;
+      try{ domain = new URL(l.url).hostname.replace(/^www\./,''); }catch(e){}
+      const time = l.at ? new Date(l.at).toLocaleString('cs',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="display:block;padding:9px 4px;border-bottom:1px solid var(--line);text-decoration:none;">
+        <div style="font-family:'Inter', sans-serif;font-size:13.5px;font-weight:600;color:var(--ink);">${domain}</div>
+        <div style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);margin-top:2px;">${l.from || ''}${time ? ' · ' + time : ''}</div>
+      </a>`;
+    }).join('');
+  }catch(e){
+    console.error('Chyba při načítání odkazů z vlákna:', e);
+    listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
   }
 }
 
