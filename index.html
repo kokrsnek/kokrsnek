@@ -1021,6 +1021,15 @@ function fmtDateRange(ev){
   return `${fmtDate(ev.start)} – ${fmtDate(endDisplay)}`;
 }
 
+// Datum pro kartu v timeline: u jednodenní akce (celodenní i časové) se
+// před datum přidá zkratka dne v týdnu, ať je hned na první pohled vidět,
+// jestli akce vychází na všední den nebo víkend. Vícedenní akce zůstávají
+// beze dne v týdnu, jako doteď.
+function fmtDateRangeCard(ev){
+  if(!isMultiDay(ev)) return `${DAYS[ev.start.getDay()]} ${fmtDate(ev.start)}`;
+  return fmtDateRange(ev);
+}
+
 function fmtTimeRow(ev){
   // Celodenní akce (bez konkrétního času) nemá smysl zdvojovat datem ve
   // spodním řádku — nahoře (date-row/fmtDateRange) už je vidět. Tenhle
@@ -2689,7 +2698,7 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
     <div class="card" onclick="showEventDetail(${i})" style="cursor:pointer;">
       ${isNow ? `<div onclick="event.stopPropagation();openYearPicker(window._yearsInTimeline,${evYear})" style="font-family:'Inter', sans-serif;font-weight:700;font-size:15px;letter-spacing:0.03em;color:var(--muted);text-align:center;margin-bottom:10px;cursor:pointer;user-select:none;">— ${evYear} —</div>` : ''}
       <div class="eyebrow">${isNow ? '' : `<span class="pip" style="background:${color};"></span>`}${eyebrowText}${countdown}</div>
-      <div class="date-row">${fmtDateRange(ev)}</div>
+      <div class="date-row">${fmtDateRangeCard(ev)}</div>
       ${fmtTimeRow(ev) ? `<div class="time-row">${fmtTimeRow(ev)}</div>` : ''}
       <div class="title-row" id="titleRow_${uid}">${ev.title}</div>
       ${ev.place ? `<div class="place-row">${shortenPlace(ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place)}</div>` : ``}
