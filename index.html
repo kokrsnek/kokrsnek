@@ -3119,6 +3119,53 @@ function linkIconSVG(){
 function micIconSVG(){
   return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>`;
 }
+function forwardIconSVG(){
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>`;
+}
+
+// Přeposlání zprávy (textu i fotky, u hlasovky se přeposílá stejná URL, ne
+// nová kopie) do jiného 1:1 vlákna nebo do "Celá parta". Zpráva si k sobě
+// nese jméno původního autora (viz forwardedFrom), ne aby to vypadalo, že ji
+// napsal ten, kdo přeposlal.
+async function forwardChatMessage(threadId, msgId){
+  const me = getUserName();
+  if(!me) return;
+  let data;
+  try{
+    const snap = await db.collection('chats').doc(threadId).collection('messages').doc(msgId).get();
+    data = snap.data();
+  }catch(e){ console.error('Chyba při načítání zprávy k přeposlání:', e); return; }
+  if(!data) return;
+
+  const names = (await getAllKnownPartyNames()).filter(n => n !== me);
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal"><div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
+      <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">${forwardIconSVG()} Přeposlat</div>
+      <div id="forwardTargetList" style="text-align:left;max-height:50vh;overflow-y:auto;">
+        <button data-target="__party__" style="display:block;width:100%;text-align:left;background:none;border:none;padding:10px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;color:var(--ink);cursor:pointer;">👥 Celá parta</button>
+        ${names.map(n => `<button data-target="${n}" style="display:block;width:100%;text-align:left;background:none;border:none;padding:10px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-weight:600;font-size:14px;color:var(--ink);cursor:pointer;">${n}</button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelectorAll('[data-target]').forEach(btn => {
+    btn.onclick = async () => {
+      const target = btn.dataset.target;
+      const destThreadId = target === '__party__' ? PARTY_THREAD_ID : chatThreadId(me, target);
+      const payload = { from: me, at: new Date().toISOString(), forwardedFrom: data.from || '' };
+      if(data.text) payload.text = data.text;
+      if(data.image) payload.image = data.image;
+      if(data.audio){ payload.audio = data.audio; payload.audioType = data.audioType || ''; payload.audioDuration = data.audioDuration || 0; }
+      try{
+        await db.collection('chats').doc(destThreadId).collection('messages').add(payload);
+        backdrop.remove();
+      }catch(e){ console.error('Chyba při přeposílání zprávy:', e); alert('Nepodařilo se přeposlat.'); }
+    };
+  });
+}
 function bellIconSVG(muted){
   return muted
     ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 3.7A6 6 0 0 1 18 8c0 4.4 1.2 6.6 2 7.7"/><path d="M6 8a6 6 0 0 0 0 .5c0 7-3 9-3 9h14"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M2 2l20 20"/></svg>`
@@ -3740,10 +3787,15 @@ function showWelcome(){
     ['⬇️ Scroll dolů v chatu','Když si v otevřeném vláknu odroluješ výš do historie, vpravo dole se objeví tlačítko, co tě jedním ťuknutím vrátí na poslední zprávu.'],
     ['✅ Přečteno kým (Celá parta)','U skupinových zpráv se u "Přečteno" navíc vypíšou jména těch, kdo zprávu už viděl, ne jen holý čas.'],
     ['🟢 Kdo je online','V seznamu "Zprávy" i v hlavičce otevřeného 1:1 chatu ukazuje zelená tečka u jména, kdo má tohle právě otevřené na obrazovce — do minuty po zavření nebo uzamčení telefonu zmizí.'],
+    ['👀 Náhled poslední zprávy','V seznamu "Zprávy" je pod jménem vidět i o čem byla poslední zpráva (u fotky/hlasovky jen typ), ne jen statistika.'],
+    ['↩️ Rychlá odpověď','Táhni prstem po zprávě v chatu doleva — nad polem pro psaní se objeví, na co odpovídáš, a v odeslané zprávě se ukáže jako citace nad textem.'],
+    ['↪ Přeposlat zprávu','U každé zprávy (i fotky) v chatu je ikonka šipky — přepošle ji do jiného 1:1 vlákna nebo do "Celá parta", s uvedením, od koho původně je.'],
+    ['📝 Rozepsaná zpráva se uloží','Když zavřeš chat s rozepsaným textem, po opětovném otevření tam zůstane — nezmizí.'],
     ['📊 Ankety','V "💬 Zprávy" hned pod "Celá parta" — "+ Nová anketa" založí otázku s libovolným počtem možností a pošle notifikaci celé partě. Klik na možnost = tvůj hlas (jde přehlasovat), pod každou je vidět kdo pro ni hlasoval. Ten, kdo anketu založil, ji může tlačítkem uzavřít — pak už nejde hlasovat a je vidět vítězná možnost.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
+    ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
     ['🌧️ Efekt počasí','Pokud appka zjistí, že u tebe prší nebo sněží (jen s tvým souhlasem k poloze), zobrazí jemný déšť nebo sníh na pozadí.'],
     ['🔔 Notifikace — co všechno appka posílá','Nový lajk, Dojdu/Nedojdu, komentář (i odpověď a emoji reakce na tvůj komentář), nové album fotek nebo seznam nákladů u akce, úplně nová akce v kalendáři, změna data či místa u akce (pokud jsi na ni odpověděl/a), připomínka akce v den konání i 5 dní předem, akce za 3 dny bez odezvy, den po skončení akce poděkování za účast (a pozvánka na další akci) těm, co měli Dojdu, ostatním jen pozvánka na další akci, narozeniny a svátek člena party, sesazení z 1. místa v kvízu, nová anketa, a šťouchnutí/zpráva/reakce z minichatu. Zapíná se zvonečkem nahoře, jde ztlumit i jen po jednotlivých vláknech v minichatu.'],
@@ -4200,6 +4252,7 @@ async function openChatList(){
     const unreadMap = {};
     const lastMsgMap = {};
     const statsMap = {};
+    const previewMap = {};
     const partnerSet = new Set();
     const urlTestRegex = /https?:\/\//;
     messagesSnap.forEach(d => {
@@ -4212,7 +4265,11 @@ async function openChatList(){
       partnerSet.add(other);
       const data = d.data();
       const at = data.at ? new Date(data.at) : new Date(0);
-      if(!lastMsgMap[other] || at > lastMsgMap[other]) lastMsgMap[other] = at;
+      if(!lastMsgMap[other] || at > lastMsgMap[other]){
+        lastMsgMap[other] = at;
+        const body = data.text ? data.text : (data.image ? '📷 Fotka' : (data.audio ? '🎤 Hlasovka' : ''));
+        previewMap[other] = (data.from === me ? 'Ty: ' : '') + body;
+      }
       const stat = statsMap[other] || (statsMap[other] = { total: 0, sent: 0, received: 0, photos: 0, links: 0 });
       stat.total++;
       if(data.from === me) stat.sent++; else stat.received++;
@@ -4259,18 +4316,22 @@ async function openChatList(){
           ${stat.photos ? `<span onclick="event.stopPropagation();openChatPhotos('${n}')" style="cursor:pointer;white-space:nowrap;">📷${stat.photos}</span>` : ''}
           ${stat.links ? `<span onclick="event.stopPropagation();openChatLinks('${n}')" style="cursor:pointer;white-space:nowrap;">🔗${stat.links}</span>` : ''}
         ` : '';
+        const preview = previewMap[n];
         return `
-        <button class="chat-user-row" data-name="${n}" style="display:grid;grid-template-columns:132px 66px 56px 1fr;align-items:center;column-gap:6px;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
-          <span style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${avatarMap[n] || ''} ${n}</span>
-            ${online ? onlineDotHTML() : ''}
+        <button class="chat-user-row" data-name="${n}" style="display:flex;flex-direction:column;align-items:stretch;width:100%;background:none;border:none;padding:11px 4px;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;font-size:14.5px;color:var(--ink);font-weight:600;cursor:pointer;text-align:left;">
+          <span style="display:grid;grid-template-columns:132px 66px 56px 1fr;align-items:center;column-gap:6px;">
+            <span style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${avatarMap[n] || ''} ${n}</span>
+              ${online ? onlineDotHTML() : ''}
+            </span>
+            <span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;">${countHtml}</span>
+            <span style="display:flex;align-items:center;gap:6px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;">${extrasHtml}</span>
+            <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+              ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
+              <span style="color:var(--muted);font-size:16px;">›</span>
+            </span>
           </span>
-          <span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;">${countHtml}</span>
-          <span style="display:flex;align-items:center;gap:6px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);font-weight:500;">${extrasHtml}</span>
-          <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
-            ${unread > 0 ? `<span style="background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">nové ${unread > 9 ? '9+' : unread}</span>` : ''}
-            <span style="color:var(--muted);font-size:16px;">›</span>
-          </span>
+          ${preview ? `<span style="font-family:'Inter', sans-serif;font-size:12px;font-weight:400;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;">${preview}</span>` : ''}
         </button>`;
       }).join('');
     }
@@ -4664,6 +4725,10 @@ function openChatThread(me, other){
       </div>
       <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="flex:0 0 auto;">
+        <div id="chatReplyBar" style="display:none;align-items:center;gap:8px;margin-top:10px;padding:7px 10px;background:var(--surface);border-left:3px solid var(--accent);border-radius:8px;">
+          <span id="chatReplyText" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);"></span>
+          <button id="chatReplyCancelBtn" title="Zrušit odpověď" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;">×</button>
+        </div>
         <div id="chatComposerRow" style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;">
           <button id="chatImageBtn" title="Přidat fotku" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">${cameraIconSVG()}</button>
           <textarea id="chatInput" maxlength="160" placeholder="Napiš…" rows="1" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;resize:none;overflow-y:auto;max-height:110px;line-height:1.3;"></textarea>
@@ -4719,6 +4784,32 @@ function openChatThread(me, other){
   let latestTypingMap = {};
   let chatSearchQuery = '';
   let pinnedMsgId = null;
+  let replyingTo = null;
+
+  // Swipe doleva na zprávě = rychlá odpověď (viz wireChatLongPress). Načte
+  // si zprávu podle id z latestMsgDocs a ukáže lištu nad polem pro psaní
+  // s krátkým náhledem, na co se odpovídá — zrušit jde křížkem nebo se to
+  // samo smaže po odeslání.
+  function startReply(msgId){
+    const doc = latestMsgDocs.find(d => d.id === msgId);
+    if(!doc) return;
+    const data = doc.data();
+    const snippet = (data.text ? data.text : (data.image ? '📷 Fotka' : (data.audio ? '🎤 Hlasovka' : ''))).slice(0, 80);
+    replyingTo = { id: msgId, from: data.from, snippet };
+    const bar = document.getElementById('chatReplyBar');
+    const textEl = document.getElementById('chatReplyText');
+    if(bar && textEl){
+      textEl.textContent = `${data.from}: ${snippet}`;
+      bar.style.display = 'flex';
+    }
+    chatInputEl.focus();
+  }
+  function cancelReply(){
+    replyingTo = null;
+    const bar = document.getElementById('chatReplyBar');
+    if(bar) bar.style.display = 'none';
+  }
+  document.getElementById('chatReplyCancelBtn').onclick = cancelReply;
 
   // Vykreslí zprávy znovu, kdykoliv přijdou nové zprávy NEBO se změní, kdy si
   // druhá strana naposledy otevřela vlákno (viz posluchač na chats/{threadId}
@@ -4770,6 +4861,10 @@ function openChatThread(me, other){
       }
       const editedLabel = data.edited ? ' · upraveno' : '';
       const senderLabel = (isGroup && !mine) ? `<div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:3px;">${data.from}</div>` : '';
+      const replyQuoteHtml = data.replyTo ? `<div onclick="event.stopPropagation();document.querySelector('[data-msg-id=\\'${data.replyTo.id}\\']')?.scrollIntoView({behavior:'smooth',block:'center'})" style="cursor:pointer;border-left:3px solid ${mine?'rgba(255,255,255,0.6)':'var(--accent)'};padding:3px 8px;margin-bottom:5px;opacity:0.85;">
+        <div style="font-size:10.5px;font-weight:700;">${data.replyTo.from}</div>
+        <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${data.replyTo.snippet}</div>
+      </div>` : '';
       const imageHtml = data.image ? `<img src="${data.image}" onclick="openImageLightbox(this.src, getChatGalleryImages())" style="max-width:100%;max-height:220px;border-radius:10px;display:block;cursor:zoom-in;${data.text?'margin-bottom:6px;':''}">` : '';
       // Hlasovky appka nahrává jako obyčejný WAV (viz startRecording/
       // encodeWavBlob) právě proto, aby se vyhnula MediaRecorder formátům,
@@ -4793,13 +4888,15 @@ function openChatThread(me, other){
       }).join('');
       const isPinned = pinnedMsgId === d.id;
       const pinBtn = `<button onclick="toggleChatPin('${threadId}','${d.id}')" title="${isPinned ? 'Odepnout' : 'Připnout'}" style="background:none;border:none;color:${isPinned ? 'var(--accent)' : 'var(--muted)'};cursor:pointer;padding:0;display:inline-flex;align-items:center;">${pinMsgIconSVG(isPinned)}</button>`;
+      const forwardBtn = `<button onclick="forwardChatMessage('${threadId}','${d.id}')" title="Přeposlat" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${forwardIconSVG()}</button>`;
       const editBtn = mine ? `<button onclick="editChatMessage('${threadId}','${d.id}')" title="Upravit zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${editIconSVG()}</button>` : '';
       const deleteBtn = mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${trashIconSVG()}</button>` : '';
+      const forwardedLabel = data.forwardedFrom ? `<div style="font-size:10.5px;font-style:italic;opacity:0.75;margin-bottom:3px;">${forwardIconSVG()} přeposláno od ${data.forwardedFrom}</div>` : '';
       return `<div data-msg-id="${d.id}" style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">
-        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${(data.image||data.audio)?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${imageHtml}${audioHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
+        <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${(data.image||data.audio)?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${forwardedLabel}${replyQuoteHtml}${imageHtml}${audioHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;${mine?'justify-content:flex-end;':''}">
           <span style="text-align:${mine?'right':'left'};">${time}${status}${editedLabel}</span>
-          ${pinBtn}${editBtn}${deleteBtn}
+          ${pinBtn}${forwardBtn}${editBtn}${deleteBtn}
         </div>
         ${reactionsRow ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>` : ''}
       </div>`;
@@ -4825,9 +4922,11 @@ function openChatThread(me, other){
   function wireChatLongPress(){
     msgsEl.querySelectorAll('[data-msg-id]').forEach(el => {
       const msgId = el.dataset.msgId;
-      let pressTimer, longPressed = false, startX = 0, startY = 0;
+      let pressTimer, longPressed = false, startX = 0, startY = 0, dragging = false, dragDx = 0;
       el.addEventListener('touchstart', e => {
         longPressed = false;
+        dragging = false;
+        dragDx = 0;
         const t = e.touches && e.touches[0];
         startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
         pressTimer = setTimeout(() => {
@@ -4836,12 +4935,31 @@ function openChatThread(me, other){
           showChatEmojiPicker(threadId, msgId, el);
         }, 450);
       }, {passive:true});
-      el.addEventListener('touchend', () => clearTimeout(pressTimer));
+      el.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+        if(dragging){
+          el.style.transition = 'transform 0.2s ease';
+          el.style.transform = '';
+          if(dragDx <= -56){
+            if(navigator.vibrate) navigator.vibrate(12);
+            startReply(msgId);
+          }
+          setTimeout(() => { el.style.transition = ''; }, 200);
+        }
+      });
       el.addEventListener('touchmove', e => {
         const t = e.touches && e.touches[0];
         if(!t) return;
         const dx = t.clientX - startX, dy = t.clientY - startY;
         if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
+        // Swipe doleva na zprávě = rychlá odpověď (viz startReply výš).
+        // Reaguje jen na vodorovné tažení, ať to nekoliduje s obyčejným
+        // svislým rolováním historie zpráv.
+        if(dx < -10 && Math.abs(dx) > Math.abs(dy)){
+          dragging = true;
+          dragDx = Math.max(dx, -80);
+          el.style.transform = `translateX(${dragDx}px)`;
+        }
       }, {passive:true});
       el.addEventListener('contextmenu', e => e.preventDefault());
     });
@@ -4982,9 +5100,16 @@ function openChatThread(me, other){
     chatInputEl.style.height = 'auto';
     chatInputEl.style.height = chatInputEl.scrollHeight + 'px';
   };
+  // Rozepsaná zpráva se ukládá do localStorage per vlákno, ať nezmizí, když
+  // se chat zavře (třeba omylem) a otevře znovu — jako u SMS appek.
+  const draftKey = 'kokrsnekChatDraft_' + threadId;
+  const savedDraft = localStorage.getItem(draftKey);
+  if(savedDraft){ chatInputEl.value = savedDraft; autoGrowChatInput(); }
   let lastTypingWriteAt = 0;
   chatInputEl.addEventListener('input', () => {
     autoGrowChatInput();
+    if(chatInputEl.value) localStorage.setItem(draftKey, chatInputEl.value);
+    else localStorage.removeItem(draftKey);
     // Zápis "píšu" je omezený max na jednou za 1.5s, ať se při psaní
     // nezapisuje do Firestore na každé stisknuté písmenko.
     const now = Date.now();
@@ -4999,9 +5124,12 @@ function openChatThread(me, other){
     const text = input.value.trim().slice(0, 160);
     if(!text) return;
     input.value = '';
+    localStorage.removeItem(draftKey);
     autoGrowChatInput();
+    const replyPayload = replyingTo ? { replyTo: replyingTo } : {};
+    cancelReply();
     try{
-      await db.collection('chats').doc(threadId).collection('messages').add({ from: me, text, at: new Date().toISOString() });
+      await db.collection('chats').doc(threadId).collection('messages').add({ from: me, text, at: new Date().toISOString(), ...replyPayload });
     }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
   };
   document.getElementById('chatSendBtn').onclick = send;
@@ -5010,7 +5138,8 @@ function openChatThread(me, other){
   // Fotka do zprávy — vybrané obrázky se zmenší a zkomprimují (stejná funkce
   // jako u přílohy ve zpětné vazbě) a pošlou se jako víc zpráv za sebou (jde
   // vybrat i víc fotek najednou); napsaný text v poli jde jako popisek jen
-  // k té první fotce, zbytek jde bez textu.
+  // k té první fotce, zbytek jde bez textu. Rozjetá odpověď (viz startReply)
+  // se taky přiřadí jen té první fotce ze skupiny.
   const chatImageBtn = document.getElementById('chatImageBtn');
   const chatImageInput = document.getElementById('chatImageInput');
   chatImageBtn.onclick = () => chatImageInput.click();
@@ -5020,16 +5149,20 @@ function openChatThread(me, other){
     chatImageBtn.disabled = true;
     const origIcon = chatImageBtn.innerHTML;
     let text = chatInputEl.value.trim().slice(0, 160);
+    let replyPayload = replyingTo ? { replyTo: replyingTo } : {};
     chatInputEl.value = '';
+    localStorage.removeItem(draftKey);
     autoGrowChatInput();
+    cancelReply();
     for(let i = 0; i < files.length; i++){
       chatImageBtn.textContent = files.length > 1 ? `${i+1}/${files.length}` : '…';
       try{
         const dataUrl = await compressImageSafely(files[i]);
         await db.collection('chats').doc(threadId).collection('messages').add({
-          from: me, text, image: dataUrl, at: new Date().toISOString()
+          from: me, text, image: dataUrl, at: new Date().toISOString(), ...replyPayload
         });
         text = ''; // popisek se přiřadí jen první odeslané fotce
+        replyPayload = {};
       }catch(e){
         console.error('Chyba při odesílání fotky:', e);
         alert('Nepodařilo se odeslat jednu z fotek.');
@@ -6383,8 +6516,10 @@ async function showYearlyExpenseSummary(year){
       <div id="yearSummaryList" style="text-align:left;">
         <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div>
       </div>
+      <button id="exportYearOverviewBtn" style="margin-top:14px;width:100%;background:var(--accent);border:none;color:#12261C;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">⬇ Export docházky + nákladů do XLSX</button>
     </div>`;
   document.body.appendChild(backdrop);
+  document.getElementById('exportYearOverviewBtn').onclick = () => exportYearlyOverviewXlsx(year);
 
   const listEl = document.getElementById('yearSummaryList');
   try{
@@ -6440,6 +6575,85 @@ async function showYearlyExpenseSummary(year){
   }catch(e){
     console.error('Chyba při načítání ročního přehledu nákladů:', e);
     listEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Nepodařilo se načíst přehled.</div>`;
+  }
+}
+
+// Kombinovaný roční export: kolik lidí mělo Jdu + náklady/příspěvky, akce po
+// akci za jeden kalendářní rok, jedna tabulka v XLSX — na rozdíl od
+// exportAttendanceXlsx (ten je za VŠECHNY roky a jen docházka) tohle je
+// jeden konkrétní rok a rovnou i s penězi.
+async function exportYearlyOverviewXlsx(year){
+  const btn = document.getElementById('exportYearOverviewBtn');
+  try{
+    if(btn){ btn.textContent = '⬇ Exportuji…'; btn.disabled = true; }
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js');
+
+    const snap = await db.collection('expensePdfs').get();
+    const rows = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if(!data.eventStart) return;
+      const dt = new Date(data.eventStart);
+      if(dt.getFullYear() !== year) return;
+      const cost = (data.items||[]).reduce((s,it) => s + (Number(it.price)||0), 0);
+      const contrib = (data.contributions||[]).reduce((s,c) => s + (Number(c.amount)||0), 0);
+      rows.push({ key: d.id, title: data.eventTitle || '(bez názvu)', dt, cost, contrib });
+    });
+    rows.sort((a,b) => a.dt - b.dt);
+
+    if(!rows.length){
+      alert('Za rok ' + year + ' zatím nemá žádná akce zadané náklady.');
+      return;
+    }
+
+    // Počet "Jdu" k datu, kdy náklady existují — dotaz na attendees pro
+    // každou akci zvlášť, souběžně (událostí za rok je jen pár desítek).
+    const attendCounts = await Promise.all(rows.map(r =>
+      db.collection('events').doc(r.key).collection('attendees').get().then(s => s.size).catch(() => 0)
+    ));
+    rows.forEach((r, i) => { r.attend = attendCounts[i]; });
+
+    const dateLabel = d => `${DAYS[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    const header = ['Akce', 'Datum', 'Jdu', 'Náklady (Kč)', 'Příspěvky (Kč)', 'Rozdíl (Kč)'];
+    const dataRows = rows.map(r => [r.title, dateLabel(r.dt), r.attend, r.cost, r.contrib, r.cost - r.contrib]);
+    const grandCost = rows.reduce((s,r) => s + r.cost, 0);
+    const grandContrib = rows.reduce((s,r) => s + r.contrib, 0);
+    const totalRow = ['Celkem', '', '', grandCost, grandContrib, grandCost - grandContrib];
+    const aoa = [header, ...dataRows, totalRow];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 7 }, { wch: 13 }, { wch: 14 }, { wch: 12 }];
+    ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+
+    const BORDER = { style: 'thin', color: { rgb: 'D9D9D9' } };
+    const BORDER_ALL = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+    const HEADER_FILL = { patternType: 'solid', fgColor: { rgb: '2F7A56' } };
+    const HEADER_FONT = { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 };
+    const TOTAL_FILL = { patternType: 'solid', fgColor: { rgb: 'E7F3EC' } };
+    const TOTAL_FONT = { bold: true, sz: 11, color: { rgb: '2F7A56' } };
+    const ODD_ROW_FILL = { patternType: 'solid', fgColor: { rgb: 'F7F8F7' } };
+
+    const numRows = aoa.length, numCols = header.length;
+    for(let r = 0; r < numRows; r++){
+      for(let c = 0; c < numCols; c++){
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if(!ws[addr]) ws[addr] = { t: 's', v: '' };
+        const style = { border: BORDER_ALL, alignment: { vertical: 'center', horizontal: c === 0 ? 'left' : 'center', wrapText: true } };
+        if(r === 0){ style.fill = HEADER_FILL; style.font = HEADER_FONT; }
+        else if(r === numRows - 1){ style.fill = TOTAL_FILL; style.font = TOTAL_FONT; }
+        else if((r - 1) % 2 === 1){ style.fill = ODD_ROW_FILL; }
+        ws[addr].s = style;
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rok ' + year);
+    XLSX.writeFile(wb, `kokrsnek-prehled-${year}.xlsx`);
+  }catch(e){
+    console.error('Chyba při exportu ročního přehledu:', e);
+    alert('Export se nepodařil: ' + e.message);
+  }finally{
+    if(btn){ btn.textContent = '⬇ Export docházky + nákladů do XLSX'; btn.disabled = false; }
   }
 }
 
