@@ -3789,7 +3789,7 @@ function showWelcome(){
     ['🟢 Kdo je online','V seznamu "Zprávy" i v hlavičce otevřeného 1:1 chatu ukazuje zelená tečka u jména, kdo má tohle právě otevřené na obrazovce — do minuty po zavření nebo uzamčení telefonu zmizí.'],
     ['👀 Náhled poslední zprávy','V seznamu "Zprávy" je pod jménem vidět i o čem byla poslední zpráva (u fotky/hlasovky jen typ), ne jen statistika.'],
     ['↩️ Rychlá odpověď','Táhni prstem po zprávě v chatu doleva — nad polem pro psaní se objeví, na co odpovídáš, a v odeslané zprávě se ukáže jako citace nad textem.'],
-    ['↪ Přeposlat zprávu','U každé zprávy (i fotky) v chatu je ikonka šipky — přepošle ji do jiného 1:1 vlákna nebo do "Celá parta", s uvedením, od koho původně je.'],
+    ['↪ Přeposlat zprávu','Táhni prstem po zprávě doprava — přepošle ji do jiného 1:1 vlákna nebo do "Celá parta", s uvedením, od koho původně je.'],
     ['📝 Rozepsaná zpráva se uloží','Když zavřeš chat s rozepsaným textem, po opětovném otevření tam zůstane — nezmizí.'],
     ['📊 Ankety','V "💬 Zprávy" hned pod "Celá parta" — "+ Nová anketa" založí otázku s libovolným počtem možností a pošle notifikaci celé partě. Klik na možnost = tvůj hlas (jde přehlasovat), pod každou je vidět kdo pro ni hlasoval. Ten, kdo anketu založil, ji může tlačítkem uzavřít — pak už nejde hlasovat a je vidět vítězná možnost.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
@@ -4887,16 +4887,16 @@ function openChatThread(me, other){
         ">${em}<span style="font-size:9.5px;color:var(--muted);font-family:'Inter', sans-serif;">${users.length}</span></button>`;
       }).join('');
       const isPinned = pinnedMsgId === d.id;
-      const pinBtn = `<button onclick="toggleChatPin('${threadId}','${d.id}')" title="${isPinned ? 'Odepnout' : 'Připnout'}" style="background:none;border:none;color:${isPinned ? 'var(--accent)' : 'var(--muted)'};cursor:pointer;padding:0;display:inline-flex;align-items:center;">${pinMsgIconSVG(isPinned)}</button>`;
-      const forwardBtn = `<button onclick="forwardChatMessage('${threadId}','${d.id}')" title="Přeposlat" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${forwardIconSVG()}</button>`;
-      const editBtn = mine ? `<button onclick="editChatMessage('${threadId}','${d.id}')" title="Upravit zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${editIconSVG()}</button>` : '';
-      const deleteBtn = mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;display:inline-flex;align-items:center;">${trashIconSVG()}</button>` : '';
+      const iconBtnStyle = 'background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;transform:scale(1.5);transform-origin:center;';
+      const pinBtn = `<button onclick="toggleChatPin('${threadId}','${d.id}')" title="${isPinned ? 'Odepnout' : 'Připnout'}" style="${iconBtnStyle}color:${isPinned ? 'var(--accent)' : 'var(--muted)'};">${pinMsgIconSVG(isPinned)}</button>`;
+      const editBtn = mine ? `<button onclick="editChatMessage('${threadId}','${d.id}')" title="Upravit zprávu" style="${iconBtnStyle}color:var(--muted);">${editIconSVG()}</button>` : '';
+      const deleteBtn = mine ? `<button onclick="deleteChatMessage('${threadId}','${d.id}')" title="Smazat zprávu" style="${iconBtnStyle}color:var(--muted);">${trashIconSVG()}</button>` : '';
       const forwardedLabel = data.forwardedFrom ? `<div style="font-size:10.5px;font-style:italic;opacity:0.75;margin-bottom:3px;">${forwardIconSVG()} přeposláno od ${data.forwardedFrom}</div>` : '';
       return `<div data-msg-id="${d.id}" style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">
         <div style="background:${mine?'var(--accent)':'var(--surface)'};color:${mine?'#fff':'var(--ink)'};padding:${(data.image||data.audio)?'6px':'8px 12px'};border-radius:14px;font-size:13.5px;">${senderLabel}${forwardedLabel}${replyQuoteHtml}${imageHtml}${audioHtml}${data.text ? `<div>${linkifyChatText(data.text)}</div>` : ''}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px;${mine?'justify-content:flex-end;':''}">
+        <div style="font-size:15px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:9px;${mine?'justify-content:flex-end;':''}">
           <span style="text-align:${mine?'right':'left'};">${time}${status}${editedLabel}</span>
-          ${pinBtn}${forwardBtn}${editBtn}${deleteBtn}
+          ${pinBtn}${editBtn}${deleteBtn}
         </div>
         ${reactionsRow ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;${mine?'justify-content:flex-end;':''}">${reactionsRow}</div>` : ''}
       </div>`;
@@ -4943,6 +4943,9 @@ function openChatThread(me, other){
           if(dragDx <= -56){
             if(navigator.vibrate) navigator.vibrate(12);
             startReply(msgId);
+          } else if(dragDx >= 56){
+            if(navigator.vibrate) navigator.vibrate(12);
+            forwardChatMessage(threadId, msgId);
           }
           setTimeout(() => { el.style.transition = ''; }, 200);
         }
@@ -4952,12 +4955,13 @@ function openChatThread(me, other){
         if(!t) return;
         const dx = t.clientX - startX, dy = t.clientY - startY;
         if(Math.sqrt(dx*dx + dy*dy) > 15) clearTimeout(pressTimer);
-        // Swipe doleva na zprávě = rychlá odpověď (viz startReply výš).
-        // Reaguje jen na vodorovné tažení, ať to nekoliduje s obyčejným
-        // svislým rolováním historie zpráv.
-        if(dx < -10 && Math.abs(dx) > Math.abs(dy)){
+        // Swipe doleva na zprávě = rychlá odpověď (viz startReply výš),
+        // swipe doprava = přeposlat (viz forwardChatMessage). Reaguje jen
+        // na vodorovné tažení, ať to nekoliduje s obyčejným svislým
+        // rolováním historie zpráv.
+        if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)){
           dragging = true;
-          dragDx = Math.max(dx, -80);
+          dragDx = Math.max(-80, Math.min(80, dx));
           el.style.transform = `translateX(${dragDx}px)`;
         }
       }, {passive:true});
