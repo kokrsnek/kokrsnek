@@ -141,11 +141,26 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('install', (event) => {
   // Hned při instalaci se appka pokusí mít po ruce aspoň nějakou záložní
   // kopii, i kdyby k prvnímu úspěšnému online otevření (viz fetch výš)
-  // ještě vůbec nedošlo.
+  // ještě vůbec nedošlo. Statické soubory jako qr-platba.png se jinak do
+  // cache dostanou, až je appka poprvé sama vyžádá (otevření dané
+  // obrazovky) — to by ale bez předchozího online otevření té KONKRÉTNÍ
+  // obrazovky znamenalo, že offline chybí, i když appka jinak online byla.
+  // Proto se rovnou natvrdo předstáhnou, ať jsou k dispozici od první chvíle.
+  const PRECACHE_URLS = [
+    './index.html',
+    './manifest.json',
+    './qr-platba.png',
+    './icon-192v2.png',
+    './icon-512v2.png',
+    './icon-badge.png'
+  ];
   event.waitUntil(
-    fetch('./index.html', { cache: 'no-store' })
-      .then((res) => caches.open(SHELL_CACHE).then((c) => c.put('./index.html', res)))
-      .catch(() => {})
+    Promise.all([
+      fetch('./index.html', { cache: 'no-store' })
+        .then((res) => caches.open(SHELL_CACHE).then((c) => c.put('./index.html', res)))
+        .catch(() => {}),
+      caches.open(CACHE).then((c) => c.addAll(PRECACHE_URLS.filter((u) => u !== './index.html'))).catch(() => {})
+    ])
   );
   self.skipWaiting();
 });
