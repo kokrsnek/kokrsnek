@@ -49,8 +49,31 @@ self.addEventListener('notificationclick', (event) => {
   else if (bringKey) targetUrl = `./index.html?bring=${encodeURIComponent(bringKey)}`;
   else if (expenseKey) targetUrl = `./index.html?expense=${encodeURIComponent(expenseKey)}`;
 
+  // ZÁLOHA PRO iOS: Safari appku po klepnutí na notifikaci skoro vždycky
+  // "zabitou" na pozadí jen znovu spustí, a přitom dlouhodobě (a bez opravy
+  // od Applu) ignoruje URL předanou přes clients.openWindow()/navigate() —
+  // appka se pak otevře jen na výchozí obrazovce. Proto si servisní
+  // pracovník cílovou akci navíc uloží do IndexedDB, a appka si ji po
+  // startu sama vyzvedne (viz idbGetPendingNav v index.html), místo aby se
+  // spoléhala jen na URL parametr.
+  const idbSetPendingNav = (eventId || chatWith || pollId || bringKey || expenseKey) ? new Promise((resolve) => {
+    try{
+      const req = indexedDB.open('kokrsnekNav', 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('pending'); };
+      req.onsuccess = () => {
+        try{
+          const tx = req.result.transaction('pending', 'readwrite');
+          tx.objectStore('pending').put({ eventId, chatWith, pollId, bringKey, expenseKey, at: Date.now() }, 'latest');
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        }catch(e){ resolve(); }
+      };
+      req.onerror = () => resolve();
+    }catch(e){ resolve(); }
+  }) : Promise.resolve();
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    idbSetPendingNav.then(() => clients.matchAll({ type: 'window', includeUncontrolled: true })).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
           // Appka už běží: pošli jí zprávu (pro případ, že poslouchá) a zkus i tvrdou

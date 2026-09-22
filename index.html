@@ -3009,13 +3009,45 @@ async function syncEventNotifications(events){
   }
 }
 
+// Záložní cesta pro otevření z push notifikace na iOS — viz notificationclick
+// v sw.js: Safari dlouhodobě ignoruje URL předanou přes clients.openWindow()/
+// navigate(), takže si servisní pracovník cílovou akci navíc uloží sem, do
+// IndexedDB, a appka si ji po startu sama vyzvedne (viz níže), místo aby se
+// spoléhala jen na URL parametr (ten pořád funguje jako hlavní cesta, tohle
+// je jen pojistka pro případ, že to Safari po cestě "ztratí").
+function idbGetPendingNav(){
+  return new Promise((resolve) => {
+    try{
+      const req = indexedDB.open('kokrsnekNav', 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('pending'); };
+      req.onsuccess = () => {
+        try{
+          const getReq = req.result.transaction('pending', 'readonly').objectStore('pending').get('latest');
+          getReq.onsuccess = () => resolve(getReq.result || null);
+          getReq.onerror = () => resolve(null);
+        }catch(e){ resolve(null); }
+      };
+      req.onerror = () => resolve(null);
+    }catch(e){ resolve(null); }
+  });
+}
+function idbClearPendingNav(){
+  try{
+    const req = indexedDB.open('kokrsnekNav', 1);
+    req.onsuccess = () => {
+      try{ req.result.transaction('pending', 'readwrite').objectStore('pending').delete('latest'); }catch(e){}
+    };
+  }catch(e){}
+}
+
 let calendarLoaded = false;
-fetchGoogleCalendarEvents().then(() => {
+fetchGoogleCalendarEvents().then(async () => {
   calendarLoaded = true;
   // Otevřeno z push notifikace? V URL je buď ?event=KEY (otevři kartu akce),
   // ?chat=JMÉNO (otevři rovnou dané vlákno v minichatu), ?poll=ID (otevři
   // rovnou danou anketu), nebo ?bring=KEY (otevři rovnou "Kdo co přinese"
   // dané akce).
+  let handled = false;
   try{
     const params = new URLSearchParams(location.search);
     const evKey = params.get('event');
@@ -3024,23 +3056,50 @@ fetchGoogleCalendarEvents().then(() => {
     const bringKey = params.get('bring');
     const expenseKey = params.get('expense');
     if(evKey){
+      handled = true;
       setTimeout(() => openEventByKey(evKey), 100);
       history.replaceState(null, '', location.pathname);
     } else if(chatWith){
       const me = localStorage.getItem('kokrsnekUser');
-      if(me) setTimeout(() => openChatThread(me, chatWith), 100);
+      if(me){ handled = true; setTimeout(() => openChatThread(me, chatWith), 100); }
       history.replaceState(null, '', location.pathname);
     } else if(pollId){
+      handled = true;
       setTimeout(() => openPollDetail(pollId), 100);
       history.replaceState(null, '', location.pathname);
     } else if(bringKey){
+      handled = true;
       setTimeout(() => openBringListByKey(bringKey), 100);
       history.replaceState(null, '', location.pathname);
     } else if(expenseKey){
+      handled = true;
       setTimeout(() => showExpenseReceiptByKey(expenseKey), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
+
+  if(handled || !window.indexedDB) return;
+  // Nic v URL nebylo (typicky iOS, viz komentář u idbGetPendingNav výš) —
+  // zkusit poslední otevřenou notifikaci z IndexedDB. Bere se jen čerstvá
+  // (do 5 minut), ať appka po dnech neschovaná neotevře něco starého.
+  try{
+    const pending = await idbGetPendingNav();
+    if(pending && (Date.now() - pending.at) < 5 * 60 * 1000){
+      idbClearPendingNav();
+      if(pending.eventId){
+        setTimeout(() => openEventByKey(pending.eventId), 100);
+      } else if(pending.chatWith){
+        const me = localStorage.getItem('kokrsnekUser');
+        if(me) setTimeout(() => openChatThread(me, pending.chatWith), 100);
+      } else if(pending.pollId){
+        setTimeout(() => openPollDetail(pending.pollId), 100);
+      } else if(pending.bringKey){
+        setTimeout(() => openBringListByKey(pending.bringKey), 100);
+      } else if(pending.expenseKey){
+        setTimeout(() => showExpenseReceiptByKey(pending.expenseKey), 100);
+      }
+    }
+  }catch(e){ console.error('pending nav error', e); }
 });
 
 
