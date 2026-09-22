@@ -213,6 +213,11 @@ exports.onAttendCreated = onDocumentCreated(
   async (event) => {
     const data = event.data.data();
     if (!data || !data.user) return;
+    // silent:true = appka takhle značí dodatečnou opravu docházky po akci
+    // (viz openAttendeesEditor v index.html), ne živé "Dojdu" — u téhle
+    // notifikace by to jen zbytečně otravovalo partu upozorněním na něco,
+    // co se reálně stalo už dávno.
+    if (data.silent) return;
     const dateStr = formatEventDate(data.eventStart);
     const eventTitle = data.eventTitle || 'akci';
     const tokens = await getTokensExcept(data.user);

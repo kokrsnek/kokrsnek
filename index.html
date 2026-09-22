@@ -2836,7 +2836,6 @@ function renderTimeline(instantScroll = true){
 
   // Roky zastoupené v událostech — globálně pro onclick
   window._yearsInTimeline = [...new Set(orderedIndices.map(i => rawEvents[i].start.getFullYear()))];
-  let lastYear = null;
   let lastMonthKey = null;
 
   orderedIndices.forEach((i) => {
@@ -2846,33 +2845,18 @@ function renderTimeline(instantScroll = true){
     const kind = isNow ? "now" : (isPast ? "past" : "future");
     const evYear = ev.start.getFullYear();
 
-    // Oddělovač roku
-    if(evYear !== lastYear){
-      const yd = document.createElement('div');
-      yd.id = `yr_${evYear}`;
-      yd.style.cssText = 'text-align:center;font-family:\'JetBrains Mono\',monospace;color:var(--muted);padding:14px 0 8px;cursor:pointer;user-select:none;';
-      if(lastYear !== null){
-        yd.innerHTML = `
-          <div style="font-size:18px;letter-spacing:0.15em;">${lastYear}</div>
-          <div style="width:56px;height:1px;background:rgba(120,150,130,0.4);margin:6px auto;"></div>
-          <div style="font-size:18px;letter-spacing:0.15em;">${evYear}</div>
-        `;
-      } else {
-        yd.innerHTML = `<div style="font-size:18px;letter-spacing:0.15em;">— ${evYear} —</div>`;
-      }
-      yd.onclick = () => openYearPicker(window._yearsInTimeline, evYear);
-      app.appendChild(yd);
-      lastYear = evYear;
-    }
-
-    // Sticky nadpis měsíce — přilepí se nahoru, dokud ho nevystrčí další měsíc.
-    // Pod ročním oddělovačem se taky ukáže, ať je hned na první pohled jasné,
-    // v jakém měsíci daná skupina karet je.
+    // Sticky nadpis měsíce — přilepí se nahoru, dokud ho nevystrčí další
+    // měsíc. Dřív tuhle roli (a klikací výběr roku) měl samostatný
+    // "Oddělovač roku" mezi kartami — ten teď nahrazuje tenhle nadpis
+    // (obsahuje měsíc i rok najednou), takže je i klikací stejně jako
+    // býval on.
     const evMonthKey = `${evYear}-${ev.start.getMonth()}`;
     if(evMonthKey !== lastMonthKey){
       const md = document.createElement('div');
       md.className = 'month-sticky';
+      md.style.cursor = 'pointer';
       md.textContent = `${MONTHS_NOM[ev.start.getMonth()]} ${evYear}`;
+      md.onclick = () => openYearPicker(window._yearsInTimeline, evYear);
       app.appendChild(md);
       lastMonthKey = evMonthKey;
     }
@@ -7060,7 +7044,11 @@ async function openAttendeesEditor(evIdx, key){
         const name = chk.dataset.name;
         const ref = db.collection('events').doc(key).collection('attendees').doc(name);
         if(chk.checked){
-          return ref.set({ user: name, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : '' });
+          // silent:true = tohle je dodatečná oprava docházky po akci
+          // (viz openAttendeesEditor), ne živé přihlášení — Cloud Function
+          // onAttendCreated díky tomu pošle notifikaci jen u opravdového
+          // Dojdu, ne při zpětném dopsání někoho do "Zúčastnili se".
+          return ref.set({ user: name, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : '', silent: true });
         }
         return ref.delete().catch(() => {});
       }));
