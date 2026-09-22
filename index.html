@@ -3522,35 +3522,67 @@ function showYearPicker(allYears, currentYear){
 // (ID vlákna je "jméno1__jméno2" — viz chatThreadId()). "Přečteno" se řídí
 // per-vláknovým timestampem v localStorage, nastaveným při zavření vlákna
 // (viz openChatThread -> closeThread()).
-async function updateChatBadge(){
+// --- Sdílená mezipaměť všech zpráv napříč vlákny ---
+// updateChatBadge() a openChatList() dřív pokaždé samy dělaly plný dotaz
+// přes VŠECHNY zprávy ve VŠECH vláknech (collectionGroup('messages').get())
+// — u appky s delší historií (a fotkami uloženými přímo v dokumentu zprávy)
+// to bylo znatelně pomalé, navíc duplicitně (při otevření seznamu, zavření
+// chatu i po startu appky, pokaždé zvlášť). Appka teď drží jeden živý
+// listener, který se stáhne (a pak jen donačítá změny) jen jednou, a
+// všechno ostatní čte z tyhle mezipaměti — druhé a další otevření seznamu
+// "Zprávy" tak nemusí nic stahovat znovu.
+let allMessagesCache = null;
+let allMessagesListenerUnsub = null;
+let allMessagesReadyResolvers = [];
+function ensureAllMessagesListener(){
+  return new Promise((resolve) => {
+    if(allMessagesCache !== null){ resolve(allMessagesCache); return; }
+    allMessagesReadyResolvers.push(resolve);
+    if(allMessagesListenerUnsub) return;
+    allMessagesListenerUnsub = db.collectionGroup('messages').onSnapshot(snap => {
+      allMessagesCache = snap.docs;
+      allMessagesReadyResolvers.forEach(r => r(allMessagesCache));
+      allMessagesReadyResolvers = [];
+      computeAndApplyChatBadge();
+    }, err => {
+      console.error('Chyba při sledování zpráv (badge):', err);
+      allMessagesReadyResolvers.forEach(r => r([]));
+      allMessagesReadyResolvers = [];
+    });
+  });
+}
+
+function computeAndApplyChatBadge(){
   const badge = document.getElementById('chatBadge');
   if(!badge) return;
   const me = localStorage.getItem('kokrsnekUser');
-  if(!me){ badge.style.display = 'none'; return; }
-  try{
-    const snap = await db.collectionGroup('messages').get();
-    let count = 0;
-    snap.forEach(d => {
-      const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
-      if(!threadId) return;
-      const participants = threadId.split('__');
-      // Skupinové vlákno "Celá parta" nemá dvě jména oddělená "__" jako 1:1
-      // vlákna, takže patří všem — u něj se kontrola účastníků přeskakuje.
-      if(threadId !== PARTY_THREAD_ID && !participants.includes(me)) return;
-      const data = d.data();
-      if(data.from === me) return;
-      const seenRaw = localStorage.getItem('kokrsnekChatSeen_' + threadId);
-      const seen = seenRaw ? new Date(seenRaw) : new Date(0);
-      const at = data.at ? new Date(data.at) : new Date(0);
-      if(at > seen) count++;
-    });
-    if(count > 0){
-      badge.textContent = count > 9 ? '9+' : String(count);
-      badge.style.display = 'block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }catch(e){ console.error('Chyba při počítání nepřečtených zpráv:', e); }
+  if(!me || !allMessagesCache){ badge.style.display = 'none'; return; }
+  let count = 0;
+  allMessagesCache.forEach(d => {
+    const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
+    if(!threadId) return;
+    const participants = threadId.split('__');
+    // Skupinové vlákno "Celá parta" nemá dvě jména oddělená "__" jako 1:1
+    // vlákna, takže patří všem — u něj se kontrola účastníků přeskakuje.
+    if(threadId !== PARTY_THREAD_ID && !participants.includes(me)) return;
+    const data = d.data();
+    if(data.from === me) return;
+    const seenRaw = localStorage.getItem('kokrsnekChatSeen_' + threadId);
+    const seen = seenRaw ? new Date(seenRaw) : new Date(0);
+    const at = data.at ? new Date(data.at) : new Date(0);
+    if(at > seen) count++;
+  });
+  if(count > 0){
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function updateChatBadge(){
+  await ensureAllMessagesListener();
+  computeAndApplyChatBadge();
 }
 
 function updateAlbumsBadge(){
@@ -4279,10 +4311,10 @@ async function openChatList(){
 
   const list = document.getElementById('chatUserList');
   try{
-    const [tokensSnap, profilesSnap, messagesSnap, partyMsgsSnap, presenceSnap] = await Promise.all([
+    const [tokensSnap, profilesSnap, messagesDocs, partyMsgsSnap, presenceSnap] = await Promise.all([
       db.collection('pushTokens').get(),
       db.collection('userProfiles').get(),
-      db.collectionGroup('messages').get(),
+      ensureAllMessagesListener(),
       db.collection('chats').doc(PARTY_THREAD_ID).collection('messages').get(),
       db.collection('presence').get()
     ]);
@@ -4314,7 +4346,7 @@ async function openChatList(){
     const previewMap = {};
     const partnerSet = new Set();
     const urlTestRegex = /https?:\/\//;
-    messagesSnap.forEach(d => {
+    messagesDocs.forEach(d => {
       const threadId = d.ref.parent.parent ? d.ref.parent.parent.id : null;
       if(!threadId || threadId === PARTY_THREAD_ID) return;
       const participants = threadId.split('__');
@@ -8174,6 +8206,7 @@ attachLongPress(document.getElementById('homeBtn'), showAttendanceLeaderboard);
 renderTimeline();
 showNamePromptIfNeeded(() => {
   startPresenceHeartbeat();
+  ensureAllMessagesListener();
   if(!localStorage.getItem('welcomeShownOnce')){
     localStorage.setItem('welcomeShownOnce','1');
     setTimeout(showWelcome, 300);
