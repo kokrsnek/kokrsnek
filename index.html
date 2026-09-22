@@ -4723,7 +4723,7 @@ function openChatThread(me, other){
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
         <input id="chatSearchInput" placeholder="Hledat ve zprávách…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 12px;border-radius:var(--radius-sm);outline:none;box-sizing:border-box;">
       </div>
-      <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
+      <div id="chatMessages" style="flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:4px 2px;"></div>
       <div style="flex:0 0 auto;">
         <div id="chatReplyBar" style="display:none;align-items:center;gap:8px;margin-top:10px;padding:7px 10px;background:var(--surface);border-left:3px solid var(--accent);border-radius:8px;">
           <span id="chatReplyText" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);"></span>
@@ -4958,13 +4958,18 @@ function openChatThread(me, other){
         // Swipe doleva na zprávě = rychlá odpověď (viz startReply výš),
         // swipe doprava = přeposlat (viz forwardChatMessage). Reaguje jen
         // na vodorovné tažení, ať to nekoliduje s obyčejným svislým
-        // rolováním historie zpráv.
+        // rolováním historie zpráv. Jakmile appka pozná, že jde o vodorovné
+        // tažení, musí se e.preventDefault() (proto passive:false níže) —
+        // jinak si telefon totéž tažení bere zároveň jako svoje vlastní
+        // vodorovné posouvání stránky a ta se pak trhaně posouvá spolu se
+        // zprávou.
         if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)){
           dragging = true;
           dragDx = Math.max(-80, Math.min(80, dx));
           el.style.transform = `translateX(${dragDx}px)`;
+          e.preventDefault();
         }
-      }, {passive:true});
+      }, {passive:false});
       el.addEventListener('contextmenu', e => e.preventDefault());
     });
   }
