@@ -931,6 +931,20 @@ const storage = firebase.storage();
 const auth = firebase.auth();
 const partyFunctions = firebase.app().functions('us-central1');
 
+// Offline mezipaměť: appka si sama do IndexedDB v telefonu uloží všechno,
+// co kdy z Firestore přečetla (zprávy, komentáře, lajky, Dojdu/Nedojdu,
+// náklady...) — při dalším otevření to naservíruje hned z lokální kopie a
+// na pozadí jen dotáhne, co je nového. Musí se zavolat hned po vytvoření
+// "db" a dřív, než appka udělá první dotaz — jinak persistenci Firestore
+// odmítne zapnout. "failed-precondition" nastane, když appku má člověk
+// otevřenou ve víc kartách/oknech najednou (podporuje to jen jedna
+// najednou) — appka v tom případě jede dál, jen bez offline mezipaměti.
+db.enablePersistence({ synchronizeTabs: false }).catch(err => {
+  if(err.code === 'failed-precondition' || err.code === 'unimplemented'){
+    console.warn('Offline mezipaměť Firestore se nepodařilo zapnout:', err.code);
+  }
+});
+
 // =====================================================
 // BRÁNA S HESLEM PARTY — appka se nedá vůbec používat bez správného hesla.
 // Anonymně se přihlásí do Firebase Auth a teprve po ověření hesla (přes Cloud
@@ -2881,6 +2895,18 @@ const GOOGLE_MAPS_KEY    = "AIzaSyAelwS368dQ1zTDA1ZXNySl5GBoTmJctsI";
 const GOOGLE_CALENDAR_ID = "kokrsnek@gmail.com";
 
 async function fetchGoogleCalendarEvents(instantScroll = true){
+  // Offline/rychlý start: pokud appka kalendář už někdy stáhla, ukáže se
+  // rovnou z lokální mezipaměti (localStorage), ještě než přijde odpověď ze
+  // sítě — a když appka síť nemá vůbec (offline), zůstane aspoň u téhle
+  // poslední známé verze místo prázdné obrazovky.
+  try{
+    const cachedRaw = localStorage.getItem('kokrsnekCalendarCache');
+    if(cachedRaw){
+      const cachedItems = JSON.parse(cachedRaw);
+      if(Array.isArray(cachedItems) && cachedItems.length) applyCalendarItems(cachedItems, instantScroll);
+    }
+  }catch(e){ console.error('Chyba při čtení mezipaměti kalendáře:', e); }
+
   // status removed
   try{
     let allItems = [];
@@ -2904,50 +2930,59 @@ async function fetchGoogleCalendarEvents(instantScroll = true){
 
     if(!allItems.length){ return; }
 
-    rawEvents = allItems.map(it => {
-      const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
-      let end = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
-      // Pojistka: pokud se datum konce z nějakého důvodu nepodařilo rozparsovat (Invalid Date),
-      // porovnání `end >= now` by pak bylo VŽDY false a appka by si spletla "aktuální" událost
-      // s tou úplně poslední v celém kalendáři. Radši spadneme zpět na datum začátku.
-      if(isNaN(end.getTime())) end = new Date(start);
-      let photoAlbum = null;
-      let driveFiles = [];
-      if(it.attachments){
-        const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
-        if(p) photoAlbum = p.fileUrl;
-        // Všechny přílohy z Google Drive
-        driveFiles = it.attachments
-          .filter(a => a.fileUrl && !(/photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl)))
-          .map(a => ({
-            url: a.fileUrl,
-            title: a.title || 'Soubor',
-            mime: a.mimeType || '',
-            icon: a.iconLink || ''
-          }));
-      }
-      if(!photoAlbum && it.description){
-        const clean = it.description.replace(/<[^>]+>/g, ' ');
-        const m = clean.match(/https?:\/\/photos(?:\.app)?\.goo\.gl\/[^\s"'<>]+|https?:\/\/photos\.google\.com\/[^\s"'<>]+/);
-        if(m) photoAlbum = m[0].replace(/&amp;/g,'&');
-      }
-      const title = (it.summary||'(bez názvu)').trim();
-      if(!photoAlbum){
-        const key = Object.keys(PHOTO_ALBUMS).find(k => k.trim().toLowerCase() === title.toLowerCase());
-        if(key) photoAlbum = PHOTO_ALBUMS[key];
-      }
-      const updated = it.updated ? new Date(it.updated) : null;
-      return { start, end, title, place: it.location||'', photoAlbum, driveFiles, updated, raw: it };
-    }).filter(ev => !isNaN(ev.start.getTime())).sort((a,b)=>a.start-b.start);
-    renderTimeline(instantScroll);
-    updateAlbumsBadge();
-    updateChatBadge();
-    setTimeout(checkAnniversaries, 1500);
-    setTimeout(checkBirthdaysAndNamedays, 2000);
-    setTimeout(checkWeatherEffect, 2500);
-    syncEventNotifications(rawEvents);
+    applyCalendarItems(allItems, instantScroll);
+    // Mezipaměť se přepisuje, jen když se stažení opravdu povedlo — offline
+    // pokus by jinak přepsal poslední známá (funkční) data prázdnem.
+    try{ localStorage.setItem('kokrsnekCalendarCache', JSON.stringify(allItems)); }catch(e){ /* localStorage může být plný — appka běží dál i bez mezipaměti */ }
   }catch(e){
+    // Appka je offline (nebo jiná chyba sítě) — zůstane u toho, co se
+    // případně stihlo zobrazit z mezipaměti výš.
   }
+}
+
+function applyCalendarItems(allItems, instantScroll){
+  rawEvents = allItems.map(it => {
+    const start = new Date(it.start.dateTime || it.start.date+'T00:00:00');
+    let end = new Date((it.end&&(it.end.dateTime||it.end.date)) ? (it.end.dateTime||it.end.date+'T00:00:00') : start);
+    // Pojistka: pokud se datum konce z nějakého důvodu nepodařilo rozparsovat (Invalid Date),
+    // porovnání `end >= now` by pak bylo VŽDY false a appka by si spletla "aktuální" událost
+    // s tou úplně poslední v celém kalendáři. Radši spadneme zpět na datum začátku.
+    if(isNaN(end.getTime())) end = new Date(start);
+    let photoAlbum = null;
+    let driveFiles = [];
+    if(it.attachments){
+      const p = it.attachments.find(a => /photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl||''));
+      if(p) photoAlbum = p.fileUrl;
+      // Všechny přílohy z Google Drive
+      driveFiles = it.attachments
+        .filter(a => a.fileUrl && !(/photos\.google\.com|photos\.app\.goo\.gl/.test(a.fileUrl)))
+        .map(a => ({
+          url: a.fileUrl,
+          title: a.title || 'Soubor',
+          mime: a.mimeType || '',
+          icon: a.iconLink || ''
+        }));
+    }
+    if(!photoAlbum && it.description){
+      const clean = it.description.replace(/<[^>]+>/g, ' ');
+      const m = clean.match(/https?:\/\/photos(?:\.app)?\.goo\.gl\/[^\s"'<>]+|https?:\/\/photos\.google\.com\/[^\s"'<>]+/);
+      if(m) photoAlbum = m[0].replace(/&amp;/g,'&');
+    }
+    const title = (it.summary||'(bez názvu)').trim();
+    if(!photoAlbum){
+      const key = Object.keys(PHOTO_ALBUMS).find(k => k.trim().toLowerCase() === title.toLowerCase());
+      if(key) photoAlbum = PHOTO_ALBUMS[key];
+    }
+    const updated = it.updated ? new Date(it.updated) : null;
+    return { start, end, title, place: it.location||'', photoAlbum, driveFiles, updated, raw: it };
+  }).filter(ev => !isNaN(ev.start.getTime())).sort((a,b)=>a.start-b.start);
+  renderTimeline(instantScroll);
+  updateAlbumsBadge();
+  updateChatBadge();
+  setTimeout(checkAnniversaries, 1500);
+  setTimeout(checkBirthdaysAndNamedays, 2000);
+  setTimeout(checkWeatherEffect, 2500);
+  syncEventNotifications(rawEvents);
 }
 
 // Zjednoduší text na porovnání bez diakritiky (pro hledání "náklady" v názvu přílohy).

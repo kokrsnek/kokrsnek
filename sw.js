@@ -8,6 +8,13 @@
 // myslel, že se notifikace nezobrazila včas, a sám navíc přidal vlastní
 // prázdnou "záložní" notifikaci → chodily tak dvě najednou.
 const CACHE = 'kokrsnek-static-v1';
+// Appka HTML schválně obchází běžnou prohlížečovou cache (cache: 'no-store',
+// viz níže) kvůli aktuálnosti po nasazení oprav. To ale zároveň znamená, že
+// appka bez síťového spojení vůbec nenaběhne — prohlížeč/telefon by ukázal
+// svoji vlastní chybovou hlášku místo appky. SHELL_CACHE je nezávislá
+// záložní kopie: při každém úspěšném (online) načtení appky se přepíše tou
+// nejčerstvější verzí, a použije se JEN když síťový dotaz na appku selže.
+const SHELL_CACHE = 'kokrsnek-shell-v1';
 
 self.addEventListener('push', (event) => {
   let raw = {};
@@ -107,7 +114,15 @@ self.addEventListener('fetch', (event) => {
   const isHTML = event.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/';
 
   if (isHTML) {
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(SHELL_CACHE).then((c) => c.put('./index.html', clone));
+          return res;
+        })
+        .catch(() => caches.match('./index.html').then((cached) => cached || caches.match(event.request)))
+    );
     return;
   }
 
@@ -123,11 +138,21 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (event) => {
+  // Hned při instalaci se appka pokusí mít po ruce aspoň nějakou záložní
+  // kopii, i kdyby k prvnímu úspěšnému online otevření (viz fetch výš)
+  // ještě vůbec nedošlo.
+  event.waitUntil(
+    fetch('./index.html', { cache: 'no-store' })
+      .then((res) => caches.open(SHELL_CACHE).then((c) => c.put('./index.html', res)))
+      .catch(() => {})
+  );
+  self.skipWaiting();
+});
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== SHELL_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
