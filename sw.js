@@ -141,15 +141,16 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('install', (event) => {
   // Hned při instalaci se appka pokusí mít po ruce aspoň nějakou záložní
   // kopii, i kdyby k prvnímu úspěšnému online otevření (viz fetch výš)
-  // ještě vůbec nedošlo. Statické soubory jako qr-platba.png se jinak do
-  // cache dostanou, až je appka poprvé sama vyžádá (otevření dané
-  // obrazovky) — to by ale bez předchozího online otevření té KONKRÉTNÍ
-  // obrazovky znamenalo, že offline chybí, i když appka jinak online byla.
-  // Proto se rovnou natvrdo předstáhnou, ať jsou k dispozici od první chvíle.
+  // ještě vůbec nedošlo. Statické soubory se jinak do cache dostanou, až
+  // je appka poprvé sama vyžádá (otevření dané obrazovky) — to by ale bez
+  // předchozího online otevření té KONKRÉTNÍ obrazovky znamenalo, že
+  // offline chybí, i když appka jinak online byla. Proto se rovnou natvrdo
+  // předstáhnou, ať jsou k dispozici od první chvíle. (QR kód pro platbu
+  // už tu záměrně není — je teď vložený přímo do appky jako base64, ne
+  // jako samostatný soubor, takže žádné předstahování nepotřebuje.)
   const PRECACHE_URLS = [
     './index.html',
     './manifest.json',
-    './qr-platba.png',
     './icon-192v2.png',
     './icon-512v2.png',
     './icon-badge.png'
