@@ -6544,19 +6544,22 @@ function openExpenseEditor(key, ev, existingItems, existingContributions){
 // písmenka (diakritika mizela/rozjížděla se) a appka žádné PDF soubor
 // stejně nepotřebovala — stačí náhled, ne něco k odeslání/vytištění mimo appku.
 //
-// plus/mínus = celkové náklady mínus součet příspěvků (může vyjít i záporně,
-// když se vybere víc, než kolik akce stála — zobrazí se to prostě se znaménkem).
+// plus/mínus = součet příspěvků mínus celkové náklady (víc příspěvků než
+// nákladů = plus, víc nákladů než příspěvků = mínus).
 function showExpenseReceipt(key, ev, items, contributions){
   contributions = contributions || [];
   const total = items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
   const totalContrib = contributions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const balance = total - totalContrib;
+  // plus/mínus obráceně, než by se čekalo od "náklady mínus příspěvky":
+  // víc příspěvků než nákladů = plus (v plusu), víc nákladů než příspěvků
+  // = mínus (v mínusu) — tak, jak by se na to dívala parta, ne účetní.
+  const balance = totalContrib - total;
   const dateStr = ev.start ? `${DAYS_FULL[ev.start.getDay()]} ${ev.start.getDate()}.${ev.start.getMonth()+1}.${ev.start.getFullYear()}` : '';
   const rowsHtml = items.map(it => `
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-family:'Inter', sans-serif;">
       <span style="flex:1;font-size:13.5px;color:var(--ink);">${it.name}</span>
       <span style="font-size:12px;color:var(--muted);min-width:46px;text-align:right;">${it.qty || '—'}</span>
-      <span style="font-size:13.5px;font-weight:600;color:var(--ink);min-width:64px;text-align:right;">${it.price} Kč</span>
+      <span style="font-size:13.5px;font-weight:600;color:var(--coral);min-width:64px;text-align:right;">${it.price} Kč</span>
     </div>
   `).join('');
   const contribHtml = contributions.length ? contributions.map(c => `
@@ -6580,15 +6583,18 @@ function showExpenseReceipt(key, ev, items, contributions){
       <div style="text-align:left;">${rowsHtml}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">celkové náklady</span>
-        <span style="font-size:20px;font-weight:700;color:var(--ink);">${total} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:var(--coral);">${total} Kč</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:'Inter', sans-serif;">
+        <span style="font-size:13px;color:var(--ink);">přispěli celkem</span>
+        <span style="font-size:20px;font-weight:700;color:var(--accent);">${totalContrib} Kč</span>
       </div>
       <div style="margin-top:10px;font-family:'Inter', sans-serif;text-align:left;">
-        <div style="font-size:13px;color:var(--ink);margin-bottom:2px;">přispěli</div>
         ${contribHtml}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
-        <span style="font-size:20px;font-weight:700;color:var(--ink);">${balance} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:#2F6FED;">${balance} Kč</span>
       </div>
       <img src="${QR_PLATBA_DATA_URI}" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;">
       <div style="font-family:'Inter', sans-serif;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.7;">
