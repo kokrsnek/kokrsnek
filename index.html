@@ -5269,7 +5269,10 @@ function openChatThread(me, other){
     }catch(e){ console.error('Chyba při odesílání zprávy:', e); }
   };
   document.getElementById('chatSendBtn').onclick = send;
-  chatInputEl.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+  // Enter v poli pro psaní teď dělá jen nový řádek (běžné výchozí chování
+  // textarea) — odeslání jde jen přes tlačítko "Odeslat". Dřív Enter rovnou
+  // odesílal (a nový řádek šel jen přes Shift+Enter), což se snadno pletlo
+  // s omylem odeslanou nedopsanou zprávou.
 
   // Fotka do zprávy — vybrané obrázky se zmenší a zkomprimují (stejná funkce
   // jako u přílohy ve zpětné vazbě) a pošlou se jako víc zpráv za sebou (jde
