@@ -5647,7 +5647,7 @@ function showPayment(eventTitle){
       + '<button class="ev-modal-close" onclick="this.closest(\'.ev-modal-backdrop\').remove()">×</button>'
       + '<div class="ev-modal-title" style="margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:6px;">' + moneyIconSVG() + ' Příspěvek na akci</div>'
       + '<div style="font-family:\'Inter\', sans-serif;font-size:12.5px;color:var(--muted);margin-bottom:14px;">' + (eventTitle||'') + '</div>'
-      + '<a href="' + qrUrl + '" target="_blank" rel="noopener" download="qr-platba.png">'
+      + '<a href="' + qrUrl + '" download="qr-platba.png">'
       + '<img src="' + qrUrl + '" style="width:220px;height:220px;border-radius:var(--radius-md);background:#fff;padding:4px;cursor:pointer;">'
       + '</a>'
       + '<div style="font-family:\'Inter\', sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Klikni pro uložení QR kódu</div>'
@@ -6596,7 +6596,7 @@ function showExpenseReceipt(key, ev, items, contributions){
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
         <span style="font-size:20px;font-weight:700;color:#2F6FED;">${balance} Kč</span>
       </div>
-      <a href="${QR_PLATBA_DATA_URI}" target="_blank" rel="noopener" download="qr-platba.png"><img src="${QR_PLATBA_DATA_URI}" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;cursor:pointer;"></a>
+      <a href="${QR_PLATBA_DATA_URI}" download="qr-platba.png"><img src="${QR_PLATBA_DATA_URI}" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;cursor:pointer;"></a>
       <div style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Klikni pro uložení QR kódu</div>
       <div style="font-family:'Inter', sans-serif;font-weight:500;font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.7;">
         KoKrŠNeK – 1518140045/3030<br>Díky za příspěvek
