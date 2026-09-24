@@ -6562,10 +6562,13 @@ function showExpenseReceipt(key, ev, items, contributions){
   `).join('');
   const contribHtml = contributions.length ? contributions.map(c => `
     <div style="display:flex;justify-content:space-between;align-items:center;font-family:'Inter', sans-serif;padding:4px 0;">
-      <span style="font-size:13.5px;color:var(--accent);">${c.name}</span>
-      <span style="font-size:13.5px;font-weight:600;color:var(--accent);">${c.amount} Kč</span>
+      <span style="font-size:13.5px;color:#2F6FED;">${c.name}</span>
+      <span style="font-size:13.5px;font-weight:600;color:#2F6FED;">${c.amount} Kč</span>
     </div>
   `).join('') : `<div style="font-size:12.5px;color:var(--muted);text-align:left;">zatím nikdo</div>`;
+  // plus = víc příspěvků než nákladů (zeleně), mínus = víc nákladů než
+  // příspěvků (červeně) — barva jde podle skutečného znaménka, ne napevno.
+  const balanceColor = balance >= 0 ? 'var(--accent)' : 'var(--coral)';
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
@@ -6585,14 +6588,14 @@ function showExpenseReceipt(key, ev, items, contributions){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">přispěli celkem</span>
-        <span style="font-size:20px;font-weight:700;color:var(--accent);">${totalContrib} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:#2F6FED;">${totalContrib} Kč</span>
       </div>
       <div style="margin-top:10px;font-family:'Inter', sans-serif;text-align:left;">
         ${contribHtml}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
-        <span style="font-size:20px;font-weight:700;color:#2F6FED;">${balance} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:${balanceColor};">${balance} Kč</span>
       </div>
       <img src="${QR_PLATBA_DATA_URI}" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;-webkit-touch-callout:default;">
       <div style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Podrž prst na QR kódu pro uložení</div>
