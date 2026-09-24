@@ -1959,6 +1959,9 @@ function showEventDetail(idx){
   
   const color = getEventColor(ev);
   const isFuture = ev.start > now;
+  // Check-in "Jsem na místě" se ukazuje jen v den konání akce (nebo dokud
+  // ještě probíhá) — nemá smysl u akce za měsíc ani u té z loňska.
+  const isEventDay = now.toDateString() === ev.start.toDateString() || (now >= ev.start && now <= ev.end);
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = (e) => { if(e.target===backdrop) backdrop.remove(); };
@@ -2008,6 +2011,15 @@ function showEventDetail(idx){
           flex:1;background:var(--surface);border:1px solid var(--line);
           color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13.5px;
           padding:10px;border-radius:var(--radius-sm);cursor:pointer;">👎 Nedojdu</button>
+      </div>` : ''}
+      ${isEventDay ? `<div id="checkinSection_${idx}" style="margin-top:8px;">
+        <button id="checkinBtn_${idx}" onclick="toggleCheckin(${idx})" style="
+          width:100%;background:var(--surface);border:1.5px solid var(--line);
+          color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:14px;
+          padding:12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+        ">${pinIconSVG()}Jsem na místě</button>
+        <div id="checkinNote_${idx}" style="display:none;align-items:center;justify-content:center;gap:5px;text-align:center;margin-top:6px;font-family:'Inter', sans-serif;font-size:12px;font-weight:600;color:var(--accent);"></div>
+        <div id="checkinList_${idx}" style="margin-top:10px;"></div>
       </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:${isFuture ? '8px' : '16px'};">
         <button id="likeBtn_${idx}" onclick="toggleLike(${idx})" style="
@@ -2151,6 +2163,7 @@ function showEventDetail(idx){
   refreshLikes(idx, fbKey);
   refreshComments(idx, fbKey);
   refreshAttendance(idx, fbKey, isFuture);
+  if(isEventDay) wireCheckinSection(idx, fbKey, ev);
   if(!isFuture) wireExpenseBtn(idx, fbKey, ev);
   if(!isFuture) wireBroughtBtn(idx, fbKey, ev);
   if(isFuture) wireBringBtn(idx, fbKey, ev);
@@ -3921,6 +3934,7 @@ function showWelcome(){
     ['📊 Ankety','V "💬 Zprávy" hned pod "Celá parta" — "+ Nová anketa" založí otázku s libovolným počtem možností a pošle notifikaci celé partě. Klik na možnost = tvůj hlas (jde přehlasovat), pod každou je vidět kdo pro ni hlasoval. Ten, kdo anketu založil, ji může tlačítkem uzavřít — pak už nejde hlasovat a je vidět vítězná možnost.'],
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
+    ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -5694,6 +5708,28 @@ function showPayment(eventTitle){
 // chvíli přihlásit/odhlásit RŮZNÉ položky bez vzájemného přepsání.
 // =====================================================
 
+function pinIconSVG(){
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>`;
+}
+function checkIconSVG(){
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M5 12l4 4 10-10"/></svg>`;
+}
+
+// Vzdálenost dvou GPS bodů v metrech (Haversinova formule) — používá se u
+// check-inu "Jsem na místě" k porovnání polohy telefonu s místem akce.
+function haversineDistanceMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+// V dosahu 250 m od známého místa akce = appka to bere jako "opravdu tam je"
+// — GPS na chatě/louce v přírodě běžně kolísá o desítky metrů, tak je
+// potřeba rezerva, ne přesný bod.
+const CHECKIN_VERIFY_RADIUS_M = 250;
+
 function bringIconSVG(){
   return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>`;
 }
@@ -5730,6 +5766,100 @@ async function refreshBringBtnCount(idx, key){
       countEl.innerHTML = ` ${snap.size} (<span style="color:var(--accent);">${taken}</span>/<span style="color:var(--coral);">${free}</span>)`;
     }
   }catch(e){ console.error('Chyba při načítání počtu položek:', e); }
+}
+
+// --- Check-in "Jsem na místě" ---
+// Ukazuje se jen v den akce (viz isEventDay ve showEventDetail). Při stisku
+// appka zkusí ověřit polohu telefonu vůči známým souřadnicím místa (viz
+// getPlaceCoords/SEARCH_KNOWN_PLACES) — pokud sedí do 250 m, check-in se
+// označí jako "ověřeno polohou". Pokud appka souřadnice místa vůbec nezná,
+// nebo telefon polohu neposkytne/odmítne, check-in i tak proběhne — jen bez
+// toho razítka. Nikoho to neblokuje, je to jen doplněk k tomu, že člověk
+// sám potvrdí, že dorazil.
+async function wireCheckinSection(idx, key, ev){
+  const btn = document.getElementById('checkinBtn_'+idx);
+  const listEl = document.getElementById('checkinList_'+idx);
+  const noteEl = document.getElementById('checkinNote_'+idx);
+  if(!btn || !listEl) return;
+  const me = getUserName();
+  if(!me) return;
+
+  async function refresh(){
+    try{
+      const snap = await db.collection('events').doc(key).collection('checkins').get();
+      const mine = snap.docs.find(d => d.id === me);
+      if(mine){
+        btn.style.background = 'var(--accent)';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = '#fff';
+        btn.innerHTML = checkIconSVG() + 'Jsem na místě';
+        if(mine.data().verified){
+          noteEl.style.display = 'flex';
+          noteEl.innerHTML = pinIconSVG().replace('width="16" height="16"','width="12" height="12"') + 'ověřeno polohou';
+        } else {
+          noteEl.style.display = 'none';
+        }
+      } else {
+        btn.style.background = 'var(--surface)';
+        btn.style.borderColor = 'var(--line)';
+        btn.style.color = 'var(--ink)';
+        btn.innerHTML = pinIconSVG() + 'Jsem na místě';
+        noteEl.style.display = 'none';
+      }
+      if(snap.empty){
+        listEl.innerHTML = '';
+      } else {
+        const rows = snap.docs.map(d => `
+          <span style="display:inline-flex;align-items:center;gap:4px;font-family:'Inter', sans-serif;font-size:13px;font-weight:600;color:var(--ink);">
+            ${d.id}${d.data().verified ? pinIconSVG().replace('width="16" height="16"','width="12" height="12"').replace('currentColor','var(--accent)') : ''}
+          </span>
+        `).join('');
+        listEl.innerHTML = `<div class="ev-modal-label" style="margin-bottom:6px;">Kdo je na místě</div><div style="display:flex;flex-wrap:wrap;gap:10px;">${rows}</div>`;
+      }
+    }catch(e){ console.error('Chyba při načítání check-inů:', e); }
+  }
+  btn.dataset.refresh = 'ok';
+  window['_checkinRefresh_'+idx] = refresh;
+  refresh();
+}
+
+async function toggleCheckin(idx){
+  const ev = rawEvents[idx];
+  const key = getEventKey(ev);
+  const me = getUserName();
+  if(!me) return;
+  const btn = document.getElementById('checkinBtn_'+idx);
+  const ref = db.collection('events').doc(key).collection('checkins').doc(me);
+  const refresh = window['_checkinRefresh_'+idx];
+  try{
+    const existing = await ref.get();
+    if(existing.exists){
+      await ref.delete();
+      if(refresh) refresh();
+      return;
+    }
+    if(btn) btn.disabled = true;
+    const coordsStr = getPlaceCoords(ev.place || '');
+    let verified = false;
+    if(coordsStr){
+      const [placeLat, placeLng] = coordsStr.split(',').map(Number);
+      try{
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, maximumAge: 60000 });
+        });
+        const dist = haversineDistanceMeters(pos.coords.latitude, pos.coords.longitude, placeLat, placeLng);
+        verified = dist <= CHECKIN_VERIFY_RADIUS_M;
+      }catch(e){
+        // Bez povolení/signálu polohy appka check-in prostě zapíše bez
+        // ověření — nikoho to neblokuje.
+      }
+    }
+    await ref.set({ at: new Date().toISOString(), verified });
+  }catch(e){
+    console.error('Chyba při check-inu:', e);
+  }
+  if(btn) btn.disabled = false;
+  if(refresh) refresh();
 }
 
 async function wireBringBtn(idx, key, ev){
