@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RZ Scanner — Přehled</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<!-- Star webPRNT SDK — viz komentář v index.html, stejné soubory v /js/ -->
+<script src="StarWebPrintBuilder.js" onerror="console.warn('Star webPRNT SDK nenalezen — tlačítko Tisk nebude funkční.')"></script>
+<script src="StarWebPrintTrader.js" onerror="console.warn('Star webPRNT SDK nenalezen — tlačítko Tisk nebude funkční.')"></script>
+<style>
+  :root{
+    --asphalt:#0A0C10;
+    --asphalt-2:#14171D;
+    --asphalt-3:#1D2129;
+    --ink:#111214;
+    --amber:#FFB020;
+    --amber-dim:#7A5713;
+    --text:#ECEDEF;
+    --muted:#8B92A0;
+    --good:#33D399;
+    --bad:#FF6058;
+    --line:#262B33;
+  }
+  /* Stejný skrytý světlý režim jako v index.html — volba se přebírá přes
+     localStorage (rzTheme), gesto se ovládá jen na úvodní obrazovce
+     appky, tady se jen respektuje. */
+  html.light-theme{
+    --asphalt:#F4F5F7;
+    --asphalt-2:#FFFFFF;
+    --asphalt-3:#E7E9ED;
+    --text:#14171D;
+    --muted:#5B6270;
+    --line:#D8DBE0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow-x:hidden; max-width:100vw;}
+  body{
+    margin:0; background:var(--asphalt); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  #app{min-height:100%; display:flex; flex-direction:column; overflow-x:hidden;}
+  .screen{position:fixed; inset:0; display:none; flex-direction:column; overflow-x:hidden;}
+  .screen.active{display:flex;}
+
+  h1,h2{font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:.02em; margin:0;}
+
+  .btn{
+    padding:12px 20px; border-radius:14px; font-size:14.5px; font-weight:600;
+    border:none; cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{background:var(--amber); color:#241a00;}
+  .btn-ghost{background:transparent; border:1.5px solid var(--line); color:var(--text);}
+  .submit-note{margin-top:10px; text-align:center; font-size:12.5px; font-family:'Roboto Mono',monospace; display:none;}
+  .submit-note.ok{color:var(--good);}
+  .submit-note.err{color:var(--bad);}
+  .btn:active{transform:scale(.97);}
+  .btn[disabled]{opacity:.5; pointer-events:none;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{align-items:center; justify-content:center; padding:32px;}
+  #loginScreen .login-box{width:100%; max-width:340px;}
+  #loginScreen h1{font-size:22px; text-transform:uppercase; margin-bottom:6px;}
+  #loginScreen p.hint{color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 24px;}
+  .field{background:var(--asphalt-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:14px;}
+  .field label{display:block; font-size:10.5px; color:var(--muted); font-family:'Roboto Mono',monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px;}
+  .field input{width:100%; background:transparent; border:none; color:var(--text); font-size:15px; font-family:'Inter',sans-serif; padding:2px 0; outline:none;}
+  #loginError{color:var(--bad); font-size:12.5px; margin:10px 0 0; display:none; line-height:1.4;}
+
+  /* ---------- LIST ---------- */
+  #listScreen{overflow:hidden;}
+  .list-top{
+    display:flex; align-items:center; justify-content:center;
+    padding:calc(env(safe-area-inset-top,0px) + 18px) 18px 14px; background:var(--asphalt-2);
+    border-bottom:1px solid var(--line);
+  }
+  .list-top h1{
+    font-size:17px; text-transform:uppercase; text-align:center;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  .list-bottom-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 14px);
+    background:var(--asphalt-2); border-top:1px solid var(--line);
+  }
+  .list-bottom-btn{
+    flex:1 1 0; padding:12px 10px; border-radius:10px; font-family:'Inter',sans-serif;
+    font-weight:600; font-size:14px; cursor:pointer; text-decoration:none; text-align:center;
+    border:1.5px solid var(--line); color:var(--text); background:transparent;
+  }
+  .list-bottom-btn.print{color:#5B8DEF; border-color:#5B8DEF;}
+  .list-bottom-btn.resolve{color:var(--good); border-color:var(--good);}
+  .list-bottom-btn.resolve[disabled]{background:var(--good); color:#0A0C10; opacity:1;}
+  .list-bottom-btn.back{background:var(--amber); border-color:var(--amber); color:#241a00;}
+  .list-bottom-btn:active{transform:scale(.96);}
+  .detail-fixed-bottom{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:var(--asphalt-2); border-top:1px solid var(--line);
+  }
+  .detail-fixed-bottom .list-bottom-bar{
+    position:static; background:transparent; border-top:none;
+  }
+  .detail-fixed-bottom .submit-note{margin:10px 18px 0;}
+  .search-row{padding:14px 18px 0;}
+  .search-row input{
+    width:100%; background:var(--asphalt-2); border:1px solid var(--line); border-radius:12px;
+    padding:11px 14px; color:var(--text); font-size:14.5px; font-family:inherit; outline:none;
+  }
+  #listBody{flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 80px);}
+  .list-empty{text-align:center; color:var(--muted); font-size:13.5px; margin-top:60px; line-height:1.6;}
+  .record-item{
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; margin-bottom:12px; cursor:pointer;
+  }
+  .record-item:active{transform:scale(.98);}
+  .record-item.resolved{opacity:.5;}
+  .record-notice-number{font-family:'Roboto Mono',monospace; font-size:10.5px; color:var(--muted); letter-spacing:.04em; margin-bottom:4px;}
+  .record-plate-row{display:flex; align-items:center; gap:10px;}
+  .record-plate{font-family:'Oswald',sans-serif; font-weight:600; font-size:19px; letter-spacing:.05em;}
+  .record-resolved-badge{font-size:11px; font-weight:700; color:var(--bad); text-transform:uppercase; letter-spacing:.05em;}
+  .record-meta{font-family:'Roboto Mono',monospace; font-size:11px; color:var(--muted); margin-top:4px; letter-spacing:.03em; overflow-wrap:anywhere;}
+  .record-offense{font-size:13px; color:var(--text); margin-top:8px; line-height:1.4; overflow-wrap:anywhere;}
+  .record-submitted{font-size:11px; color:var(--muted); margin-top:6px; overflow-wrap:anywhere;}
+  .record-officer{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  /* ---------- DETAIL ---------- */
+  #detailScreen{background:#111;}
+  .detail-top{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 14px; background:var(--asphalt-2);
+    border-bottom:1px solid var(--line);
+  }
+  .detail-top span{font-size:18px !important; letter-spacing:.08em;}
+  #detailPreviewWrap{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:#3a3a3a; padding:22px 16px 170px;}
+
+  /* ---------- NOTICE CARD (same look used in the app's own preview) ---------- */
+  .notice-card{
+    background:#ffffff; color:#141414; border-radius:14px; padding:30px 22px 26px;
+    font-family:'Inter',sans-serif; text-align:center; max-width:440px; margin:0 auto;
+  }
+  .notice-title{font-family:'Oswald',sans-serif; font-weight:700; font-size:26px; letter-spacing:.03em; margin:0 0 4px; text-transform:uppercase;}
+  .notice-subtitle{color:#777; font-size:12.5px; margin:0 0 18px;}
+  .notice-number{color:#666; font-size:11px; letter-spacing:.03em; margin:-10px 0 18px; font-weight:800;}
+  .notice-officer{font-weight:600; font-size:11px; color:#555; margin-bottom:4px;}
+  .notice-label{color:#999; font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px;}
+  .notice-platebox{
+    display:inline-block; border:1.6px solid #181818; border-radius:10px;
+    padding:12px 26px; font-family:'Oswald',sans-serif; font-weight:700; font-size:30px;
+    letter-spacing:.04em; margin-bottom:16px;
+  }
+  .notice-datetime{font-size:15.5px; margin-bottom:20px; color:#222;}
+  .notice-section{margin-bottom:16px;}
+  .notice-heading{font-weight:700; font-size:12px; display:inline-block; border-bottom:1.5px solid #181818; padding-bottom:3px; margin-bottom:8px;}
+  .notice-address{font-size:14.5px; color:#333;}
+  .notice-offense-label{font-size:13.5px; color:#333; line-height:1.45;}
+  .notice-offense-ref{font-size:12px; color:#555; margin-top:4px;}
+  .notice-instructions{margin-top:18px; padding-top:14px; border-top:1px solid #eee; font-size:11.5px; line-height:1.55; color:#333; text-align:center;}
+  .notice-instructions b{font-weight:700;}
+  .notice-instructions .heading-caps{font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin:10px 0 6px;}
+  .notice-footer{margin-top:22px; padding-top:14px; border-top:1px solid #eee;}
+  .notice-footer .authority{font-weight:700; font-size:10px; color:#555;}
+  .notice-footer .authority-addr{font-size:9.5px; color:#999; margin-top:2px;}
+  .notice-footer .authority-phone{font-size:9.5px; color:#999; margin-top:2px;}
+  .notice-footer .generated-by{font-size:9.5px; color:#aaa; margin-top:10px;}
+
+  .photo-toggle-row{text-align:center; margin-top:20px;}
+  .notice-photo-wrap{margin-top:14px; display:none; max-width:440px; margin-left:auto; margin-right:auto;}
+  .notice-photo-wrap.open{display:block;}
+  .photo-item{margin-bottom:20px;}
+  .photo-item:last-child{margin-bottom:0;}
+  .photo-item img{width:100%; border-radius:12px; display:block;}
+  .photo-item a.download-link, .photo-item button.download-link{
+    display:block; width:100%; text-align:center; margin-top:8px; font-size:12.5px;
+    color:var(--text); text-decoration:underline; background:none; border:none;
+    font-family:inherit; cursor:pointer; padding:6px 0;
+  }
+</style>
+<script>
+  // Stejné obnovení uloženého motivu jako v index.html, ať přehled hned
+  // po otevření sedí na tom, co bylo naposledy zvoleno.
+  try{
+    if(localStorage.getItem('rzTheme') === 'light'){
+      document.documentElement.classList.add('light-theme');
+    }
+  }catch(e){}
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="screen active">
+    <div class="login-box">
+      <h1>RZ Scanner</h1>
+      <p class="hint">Přehled odeslaných přestupků. Přihlaste se svým účtem.</p>
+      <div class="field"><label>E-mail</label><input type="email" id="loginEmail" autocapitalize="off" autocomplete="username"></div>
+      <div class="field"><label>Heslo</label><input type="password" id="loginPassword" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="loginSubmitBtn" style="width:100%;">Přihlásit se</button>
+      <div id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div id="listScreen" class="screen">
+    <div class="list-top">
+      <h1 id="listTitle">Přehled přestupků</h1>
+    </div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Hledat podle RZ nebo ulice…" autocomplete="off">
+    </div>
+    <div id="listBody">
+      <div class="list-empty" id="listStatus">Načítám…</div>
+    </div>
+    <div class="list-bottom-bar">
+      <a href="https://kokrsnek.github.io/RZ---scanner/index.html" class="list-bottom-btn back">Zpět</a>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div id="detailScreen" class="screen">
+    <div class="detail-top">
+      <span style="font-family:'Roboto Mono',monospace; font-size:12px; color:var(--muted); letter-spacing:.05em;" id="detailPlateLabel">DETAIL</span>
+    </div>
+    <div id="detailPreviewWrap">
+      <div id="noticeCardContainer"></div>
+      <div class="photo-toggle-row" id="photoToggleRow" style="display:none;">
+        <button class="btn btn-ghost" id="photoToggleBtn">Foto</button>
+      </div>
+      <div class="notice-photo-wrap" id="photoWrap">
+        <div id="photoGallery"></div>
+      </div>
+    </div>
+    <div class="detail-fixed-bottom">
+      <div class="submit-note" id="detailNote"></div>
+      <div class="list-bottom-bar">
+        <button class="list-bottom-btn print" id="printBtn" title="Vytisknout">Tisk</button>
+        <button class="list-bottom-btn resolve" id="resolveBtn">Vyřízeno</button>
+        <button class="list-bottom-btn back" id="detailCloseBtn">Zpět</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const screens = {
+    login: document.getElementById('loginScreen'),
+    list: document.getElementById('listScreen'),
+    detail: document.getElementById('detailScreen'),
+  };
+  function show(name){
+    Object.values(screens).forEach(s=>s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- Firebase ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBdkI1JIe7cj9EUlzUr2HLGw__abu647bo",
+    authDomain: "rzscanner-9e0ed.firebaseapp.com",
+    projectId: "rzscanner-9e0ed",
+    storageBucket: "rzscanner-9e0ed.firebasestorage.app",
+    messagingSenderId: "881625178698",
+    appId: "1:881625178698:web:e5d87c9c4dda3bf166bcb3",
+    measurementId: "G-0V2HSNXW2L"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let allRecords = [];
+
+  // ---------- Auth ----------
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      show('list');
+      loadRecords();
+    } else {
+      show('login');
+    }
+  });
+
+  document.getElementById('loginSubmitBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    if(!email || !password){
+      errEl.textContent = 'Vyplňte e-mail i heslo.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const btn = document.getElementById('loginSubmitBtn');
+    btn.disabled = true;
+    try{
+      await auth.signInWithEmailAndPassword(email, password);
+      document.getElementById('loginPassword').value = '';
+    }catch(e){
+      errEl.textContent = 'Přihlášení se nezdařilo — zkontrolujte e-mail a heslo.';
+      errEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('loginSubmitBtn').click();
+  });
+
+  // Skrytý odhlašovací gesto: podržení nadpisu "Přehled přestupků" 4 s.
+  // Žádné tlačítko odhlášení v UI záměrně není — appka je sdílená mezi
+  // strážníky na jednom telefonu, takže odhlášení nemá být na první pohled
+  // dostupné/omylem stisknutelné.
+  (function setupHiddenLogout(){
+    const titleEl = document.getElementById('listTitle');
+    if(!titleEl) return;
+    let holdTimer = null;
+    function start(){
+      cancel();
+      holdTimer = setTimeout(()=>{ auth.signOut(); }, 4000);
+    }
+    function cancel(){
+      if(holdTimer){ clearTimeout(holdTimer); holdTimer = null; }
+    }
+    titleEl.addEventListener('touchstart', start, { passive: true });
+    titleEl.addEventListener('touchend', cancel);
+    titleEl.addEventListener('touchcancel', cancel);
+    titleEl.addEventListener('mousedown', start);
+    titleEl.addEventListener('mouseup', cancel);
+    titleEl.addEventListener('mouseleave', cancel);
+  })();
+
+  // ---------- List ----------
+  async function loadRecords(){
+    const statusEl = document.getElementById('listStatus');
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Načítám…';
+    const t0 = performance.now();
+    try{
+      const snap = await db.collection('prestupky').orderBy('createdAt', 'desc').limit(500).get();
+      const t1 = performance.now();
+      allRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Temporary diagnostics — helps pin down whether the slowness is the
+      // network fetch itself or something else, and whether older records
+      // still carrying inline photos (from before photos moved to a
+      // subcollection) are the culprit.
+      let legacyPhotoBytes = 0, legacyCount = 0;
+      allRecords.forEach(r=>{
+        if(r.photos && r.photos.length){
+          legacyCount++;
+          legacyPhotoBytes += r.photos.reduce((s,p)=> s + (p ? p.length : 0), 0);
+        } else if(r.photoBase64){
+          legacyCount++;
+          legacyPhotoBytes += r.photoBase64.length;
+        }
+      });
+      const totalKB = Math.round(JSON.stringify(snap.docs.map(d=>d.data())).length / 1024);
+      const legacyKB = Math.round(legacyPhotoBytes / 1024);
+      console.log('[diagnostika] fetch:', Math.round(t1-t0), 'ms, počet záznamů:', allRecords.length,
+        ', celková velikost payloadu:', totalKB, 'KB, z toho staré vložené fotky:', legacyKB, 'KB v', legacyCount, 'záznamech');
+
+      renderList(document.getElementById('searchInput').value);
+
+      const t2 = performance.now();
+      const diag = document.createElement('div');
+      diag.style.cssText = 'text-align:center; color:var(--muted); font-size:10.5px; font-family:monospace; margin-top:14px; opacity:.7; overflow-wrap:anywhere;';
+      diag.textContent = 'Diagnostika: fetch ' + Math.round(t1-t0) + ' ms, render ' + Math.round(t2-t1) + ' ms, ' +
+        allRecords.length + ' záznamů, ' + totalKB + ' KB celkem (' + legacyKB + ' KB staré fotky v ' + legacyCount + ' záznamech)';
+      document.getElementById('listBody').appendChild(diag);
+    }catch(e){
+      console.error('Načtení přehledu selhalo:', e);
+      statusEl.textContent = 'Načtení se nezdařilo (' + (e && e.message ? e.message : 'chyba sítě') + ').';
+      statusEl.style.display = 'block';
+    }
+  }
+
+  function formatCreatedAt(ts){
+    if(!ts || !ts.toDate) return '';
+    const d = ts.toDate();
+    const pad = n => String(n).padStart(2,'0');
+    return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function formatDateCz(iso){
+    if(!iso) return '—';
+    const parts = iso.split('-');
+    if(parts.length !== 3) return iso;
+    const [y, m, d] = parts.map(Number);
+    if(!y || !m || !d) return iso;
+    return d + '. ' + m + '. ' + y;
+  }
+
+  function escapeHtml(s){
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function buildNoticeHtml(record){
+    const addressBlock = record.address ? `
+      <div class="notice-section">
+        <div class="notice-heading">Místo přestupku</div>
+        <div class="notice-address">${escapeHtml(record.address)}</div>
+      </div>` : '';
+    const offenseBlock = record.offenseLabel ? `
+      <div class="notice-section">
+        <div class="notice-heading">Právní kvalifikace přestupku</div>
+        <div class="notice-offense-label">${escapeHtml(record.offenseLabel)}</div>
+        ${record.offenseCitation ? `<div class="notice-offense-ref">${escapeHtml(record.offenseCitation)}</div>` : ''}
+      </div>` : '';
+    const numberBlock = record.noticeNumber ? `
+      <div class="notice-number"><b>Č. j.: ${escapeHtml(record.noticeNumber)}</b></div>` : '';
+    const officerBlock = record.officerName ? `
+      <div class="notice-officer">str. ${escapeHtml(record.officerName)}</div>` : '';
+    return `
+      <div class="notice-card">
+        <div class="notice-title">Výzva</div>
+        <div class="notice-subtitle">pro nepřítomného pachatele přestupku</div>
+        ${numberBlock}
+        <div class="notice-label">Registrační značka</div>
+        <div class="notice-platebox">${escapeHtml(record.plate || '')}</div>
+        <div class="notice-datetime">Datum: ${escapeHtml(formatDateCz(record.date))}&nbsp;&nbsp;&nbsp;Čas: ${escapeHtml(record.time || '—')}</div>
+        ${addressBlock}
+        ${offenseBlock}
+        <div class="notice-instructions">
+          Dostavte se proto ve vlastním zájmu, <b>a to neprodleně</b> na Městskou policii Blansko, Sadová 2. Tuto výzvu vezměte s sebou.
+          <span class="heading-caps">Poučení</span>
+          Dle § 11/odst. 1 a 2, zák. 553/1991 Sb., o obecní policii je osoba povinna výzvě vyhovět. Nedostavíte-li se bez dostatečné omluvy, můžete být dle § 11/odst. 8 výše uvedeného zákona předveden(a) nebo může být přestupek oznámen příslušnému správnímu orgánu k projednání.
+        </div>
+        <div class="notice-footer">
+          ${officerBlock}
+          <div class="authority">Městská policie Blansko</div>
+          <div class="authority-addr">Sadová 149/2, 678 01 Blansko</div>
+          <div class="authority-phone">Tel.: 775 859 486, 516 418 418</div>
+          <div class="generated-by">Vygenerováno aplikací RZ Scanner</div>
+        </div>
+      </div>`;
+  }
+
+  function setDetailNote(text, kind){
+    const note = document.getElementById('detailNote');
+    note.textContent = text;
+    note.className = 'submit-note' + (kind ? ' ' + kind : '');
+    note.style.display = text ? 'block' : 'none';
+  }
+
+  // ---------- Tisk na Bluetooth tiskárnu (Star SM-T300i / WSP-i350) ----------
+  // Stejná logika jako v index.html — appka musí být otevřená v appce
+  // "Star webPRNT Browser", tiskárna se vybírá jednou v iOS Nastavení →
+  // Star webPRNT, ne tady v kódu. Viz podrobný komentář v index.html.
+  // Služební čísla strážníků — na vytištěné výzvě (fyzicky vydávané) se
+  // z bezpečnostních důvodů posílá jen služební číslo, ne celé jméno.
+  // Jméno zůstává beze změny v appce samotné (přehled, detail) i na
+  // vygenerované HTML kartě výzvy — mění se jen text, co jde do tiskárny.
+  const OFFICER_BADGE_NUMBERS = {
+    'Adámek Jaroslav': '995',
+    'Grénar Martin': '1774',
+    'Havel Radek': '1794',
+    'Hlaváček Michal': '177',
+    'Hofman Radek': '1744',
+    'Chalupa Martin': '1781',
+    'Juračka Lukáš': '1048',
+    'Liška Michal': '2053',
+    'Menšík Jaroslav': '202',
+    'Parolek Antonín': '611',
+    'Přikryl Miroslav': '1996',
+    'Sehnal Petr': '182',
+    'Šenk Kamil': '723',
+    'Škvařil Libor': '1564',
+    'Tesař Libor': '188',
+    'Tóth Ondřej': '2401',
+    'Tóth Pavel': '775',
+    'Vašíček Zdeněk': '1255',
+  };
+
+  function officerPrintLabel(officerName){
+    const badge = OFFICER_BADGE_NUMBERS[officerName];
+    return badge ? ('str. ' + badge) : ('str. ' + officerName);
+  }
+
+  function buildStarPrintRequest(record){
+    const builder = new StarWebPrintBuilder();
+    let req = '';
+
+    req += builder.createInitializationElement();
+    req += builder.createAlignmentElement({ position: 'center' });
+
+    req += builder.createTextElement({ data: 'VÝZVA\n', width: 2, height: 2, emphasis: true });
+    req += builder.createTextElement({ data: 'pro nepřítomného pachatele přestupku\n' });
+    if(record.noticeNumber){
+      req += builder.createTextElement({ data: 'Č. j.: ' + record.noticeNumber + '\n', emphasis: true });
+    }
+    req += builder.createTextElement({ data: '\nREGISTRAČNÍ ZNAČKA\n' });
+    req += builder.createTextElement({ data: (record.plate || '') + '\n', width: 3, height: 3, emphasis: true });
+    req += builder.createRuledLineElement({ thickness: 'thin', width: 384 });
+    req += builder.createTextElement({
+      data: 'Datum: ' + formatDateCz(record.date) + '   Čas: ' + (record.time || '—') + '\n\n'
+    });
+
+    req += builder.createTextElement({ data: 'Místo přestupku\n', emphasis: true });
+    req += builder.createTextElement({ data: (record.address || '') + '\n\n' });
+
+    req += builder.createTextElement({ data: 'Právní kvalifikace přestupku\n', emphasis: true });
+    if(record.offenseLabel) req += builder.createTextElement({ data: record.offenseLabel + '\n' });
+    if(record.offenseCitation) req += builder.createTextElement({ data: record.offenseCitation + '\n' });
+    req += builder.createTextElement({ data: '\n' });
+
+    req += builder.createTextElement({
+      data: 'Dostavte se proto ve vlastním zájmu, a to neprodleně na Městskou policii ' +
+            'Blansko, Sadová 2. Tuto výzvu vezměte s sebou.\n\n'
+    });
+    req += builder.createTextElement({ data: 'POUČENÍ\n', emphasis: true });
+    req += builder.createTextElement({
+      data: 'Dle § 11/odst. 1 a 2, zák. 553/1991 Sb., o obecní policii je osoba povinna ' +
+            'výzvě vyhovět. Nedostavíte-li se bez dostatečné omluvy, můžete být dle ' +
+            '§ 11/odst. 8 výše uvedeného zákona předveden(a) nebo může být přestupek ' +
+            'oznámen příslušnému správnímu orgánu k projednání.\n\n'
+    });
+
+    if(record.officerName){
+      req += builder.createTextElement({ data: officerPrintLabel(record.officerName) + '\n', emphasis: true });
+    }
+    req += builder.createTextElement({ data: 'Městská policie Blansko\n', emphasis: true });
+    req += builder.createTextElement({ data: 'Sadová 149/2, 678 01 Blansko\n' });
+    req += builder.createTextElement({ data: 'Tel.: 775 859 486, 516 418 418\n' });
+
+    req += builder.createFeedElement({ unit: 40 });
+    req += builder.createCutPaperElement({ feed: false });
+
+    return req;
+  }
+
+  // Vrací Promise<boolean> — true jen když tiskárna potvrdí úspěšný tisk.
+  // Díky tomu může volající (tlačítko Tisk i potvrzovací dialog u tlačítka
+  // zpět) čekat na výsledek a reagovat na něj (např. teprve po úspěchu
+  // opustit obrazovku detailu).
+  function printViaStarWebPRNT(record){
+    return new Promise((resolve)=>{
+      if(typeof StarWebPrintBuilder === 'undefined' || typeof StarWebPrintTrader === 'undefined'){
+        setDetailNote('Tisk funguje jen v appce "Star webPRNT Browser" (ne v běžném Safari). ' +
+          'Otevři v ní tuto stejnou adresu a zkus to znovu.', 'err');
+        resolve(false);
+        return;
+      }
+      setDetailNote('Tisknu…', '');
+      try{
+        const request = buildStarPrintRequest(record);
+        const trader = new StarWebPrintTrader({ url: 'https://localhost/StarWebPRNT/SendMessage' });
+        trader.onReceive = function(response){
+          const ok = !!(response && (response.traderSuccess === true || response.success === true));
+          const detail = response
+            ? ' [traderSuccess:' + response.traderSuccess + ' traderCode:' + response.traderCode +
+              ' traderStatus:' + response.traderStatus + ' status:' + response.status +
+              (response.responseText ? ' text:' + response.responseText : '') + ']'
+            : '';
+          setDetailNote((ok ? '✓ Vytištěno' : 'Tiskárna nahlásila chybu.') + detail, ok ? 'ok' : 'err');
+          if(ok) currentRecordPrinted = true;
+          resolve(ok);
+        };
+        trader.onError = function(error){
+          const detail = error
+            ? ' (status: ' + error.status + (error.responseText ? ', ' + error.responseText : '') + ')'
+            : '';
+          setDetailNote('Tisk se nezdařil' + detail + '.', 'err');
+          resolve(false);
+        };
+        trader.sendMessage({ request: request });
+      }catch(e){
+        setDetailNote('Tisk se nezdařil (' + e.message + ').', 'err');
+        resolve(false);
+      }
+    });
+  }
+
+  function renderList(filterText){
+    const container = document.getElementById('listBody');
+    const statusEl = document.getElementById('listStatus');
+    const q = (filterText || '').trim().toLowerCase();
+
+    const filtered = !q ? allRecords : allRecords.filter(r=>
+      (r.plate || '').toLowerCase().includes(q) ||
+      (r.address || '').toLowerCase().includes(q) ||
+      (r.noticeNumber || '').toLowerCase().includes(q) ||
+      (r.officerName || '').toLowerCase().includes(q)
+    );
+
+    container.innerHTML = '';
+    if(allRecords.length === 0){
+      statusEl.textContent = 'Zatím žádné odeslané přestupky.';
+      container.appendChild(statusEl);
+      return;
+    }
+    if(filtered.length === 0){
+      statusEl.textContent = 'Žádná shoda pro „' + filterText + '“.';
+      container.appendChild(statusEl);
+      return;
+    }
+
+    filtered.forEach(r=>{
+      const item = document.createElement('div');
+      item.className = 'record-item' + (r.resolved ? ' resolved' : '');
+
+      if(r.noticeNumber){
+        const num = document.createElement('div');
+        num.className = 'record-notice-number';
+        num.textContent = r.noticeNumber;
+        item.appendChild(num);
+      }
+
+      const plateRow = document.createElement('div');
+      plateRow.className = 'record-plate-row';
+
+      const plate = document.createElement('div');
+      plate.className = 'record-plate';
+      plate.textContent = r.plate || 'NEZNÁMÁ SPZ';
+      plateRow.appendChild(plate);
+
+      if(r.resolved){
+        const badge = document.createElement('div');
+        badge.className = 'record-resolved-badge';
+        badge.textContent = 'Dořešeno';
+        plateRow.appendChild(badge);
+      }
+      item.appendChild(plateRow);
+
+      const meta = document.createElement('div');
+      meta.className = 'record-meta';
+      meta.textContent = (r.date || '') + ' · ' + (r.time || '') + ' · ' + (r.address || '');
+      item.appendChild(meta);
+
+      if(r.offenseLabel){
+        const off = document.createElement('div');
+        off.className = 'record-offense';
+        off.textContent = r.offenseLabel;
+        item.appendChild(off);
+      }
+
+      const sub = document.createElement('div');
+      sub.className = 'record-submitted';
+      sub.textContent = 'Odesláno ' + formatCreatedAt(r.createdAt) + (r.submittedBy ? ' · ' + r.submittedBy : '');
+      item.appendChild(sub);
+
+      if(r.officerName){
+        const officer = document.createElement('div');
+        officer.className = 'record-officer';
+        officer.textContent = 'str. ' + r.officerName;
+        item.appendChild(officer);
+      }
+
+      item.addEventListener('click', ()=> openDetail(r));
+      container.appendChild(item);
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e)=> renderList(e.target.value));
+
+  // ---------- Detail ----------
+  let currentDetailRecord = null;
+  let currentRecordPrinted = false;
+
+  // Ukládá skutečnou fotku (ne screenshot obrazovky) do Fotek. Atribut
+  // "download" na <a href="data:..."> je na iOS Safari (obzvlášť v appce
+  // přidané na plochu) nespolehlivý — tap na něj místo staženého souboru
+  // často jen zobrazí obrázek a to, co se pak reálně uloží do Fotek, je
+  // screenshot aktuální obrazovky. Nativní sdílecí okno (Web Share API se
+  // skutečným File objektem) ukládá spolehlivě přímo fotku; když ho telefon
+  // nepodporuje, otevřeme fotku v nové kartě, odkud jde uložit podržením prstu.
+  async function shareOrOpenPhoto(dataUrl, filename){
+    try{
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file] });
+        return;
+      }
+    }catch(e){
+      // Uživatel sdílení zrušil, nebo API není k dispozici — zkusíme fallback.
+    }
+    window.open(dataUrl, '_blank');
+  }
+
+  function renderPhotoGallery(record, photos, mime){
+    const gallery = document.getElementById('photoGallery');
+    gallery.innerHTML = '';
+    photos.forEach((b64, idx)=>{
+      const dataUrl = 'data:' + mime + ';base64,' + b64;
+      const filename = (record.plate || 'prestupek') + '_' + (idx + 1) + '.jpg';
+      const item = document.createElement('div');
+      item.className = 'photo-item';
+
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.alt = 'Fotodokumentace';
+      item.appendChild(img);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'download-link';
+      btn.textContent = 'Uložit fotku' + (photos.length > 1 ? ' ' + (idx + 1) : '');
+      btn.addEventListener('click', ()=> shareOrOpenPhoto(dataUrl, filename));
+      item.appendChild(btn);
+
+      gallery.appendChild(item);
+    });
+  }
+
+  function openDetail(record){
+    currentDetailRecord = record;
+    document.getElementById('detailPlateLabel').textContent = record.plate || 'DETAIL';
+    document.getElementById('noticeCardContainer').innerHTML = buildNoticeHtml(record);
+
+    const photoToggleRow = document.getElementById('photoToggleRow');
+    const photoToggleBtn = document.getElementById('photoToggleBtn');
+    const photoWrap = document.getElementById('photoWrap');
+    document.getElementById('photoGallery').innerHTML = '';
+    photoWrap.classList.remove('open');
+    photoToggleBtn.textContent = 'Foto';
+    photoToggleBtn.disabled = false;
+
+    // Older records still keep photos inline on the main document; newer
+    // ones only have a `hasPhotos` flag and the actual bytes live in a
+    // subcollection, fetched lazily below when "Foto" is tapped — this is
+    // what keeps opening a record (and loading the list before it) fast.
+    const legacyPhotos = record.photos && record.photos.length ? record.photos
+      : (record.photoBase64 ? [record.photoBase64] : []);
+
+    if(record._resolvedPhotos){
+      // Fotky už byly v této session jednou staženy (ze subkolekce nebo
+      // starého formátu) — obnovíme je z cache místo opětovného fetchování
+      // a místo prázdné galerie po návratu do detailu.
+      renderPhotoGallery(record, record._resolvedPhotos, record._resolvedMime || 'image/jpeg');
+      photoToggleBtn.textContent = 'Foto' + (record._resolvedPhotos.length > 1 ? ' (' + record._resolvedPhotos.length + ')' : '');
+      photoToggleRow.style.display = 'block';
+      photoWrap.classList.add('open');
+    } else if(legacyPhotos.length){
+      record._resolvedPhotos = legacyPhotos;
+      record._resolvedMime = record.photoMime || 'image/jpeg';
+      renderPhotoGallery(record, legacyPhotos, record._resolvedMime);
+      photoToggleBtn.textContent = 'Foto' + (legacyPhotos.length > 1 ? ' (' + legacyPhotos.length + ')' : '');
+      photoToggleRow.style.display = 'block';
+      photoWrap.classList.add('open');
+    } else if(record.hasPhotos){
+      // Appka teď fotky rovnou dotáhne a zobrazí, místo aby čekala na
+      // klepnutí na "Foto" — stačí tedy jen zavolat stejnou logiku, kterou
+      // by jinak spustil klik na tlačítko.
+      photoToggleRow.style.display = 'block';
+      loadAndShowPhotos(record);
+    } else {
+      photoToggleRow.style.display = 'none';
+    }
+
+    updateResolveBtn(record);
+    setDetailNote('', '');
+    currentRecordPrinted = false;
+
+    show('detail');
+  }
+
+  function updateResolveBtn(record){
+    const btn = document.getElementById('resolveBtn');
+    if(record.resolved){
+      btn.textContent = '✓ Vyřízeno';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'Vyřízeno';
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    if(currentDetailRecord) printViaStarWebPRNT(currentDetailRecord);
+  });
+
+  document.getElementById('resolveBtn').addEventListener('click', async ()=>{
+    const record = currentDetailRecord;
+    if(!record || record.resolved) return;
+    const btn = document.getElementById('resolveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Ukládám…';
+    try{
+      // Shortens this record's Firestore TTL from the default 90 days
+      // (set when it was created) to 60 days from now — the "expireAt"
+      // field is what the TTL policy actually watches, so updating it is
+      // enough; no need to move the document anywhere.
+      const expireAt = firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 60*24*60*60*1000));
+      await db.collection('prestupky').doc(record.id).update({
+        resolved: true,
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        expireAt: expireAt
+      });
+      record.resolved = true;
+      updateResolveBtn(record);
+      renderList(document.getElementById('searchInput').value);
+    }catch(e){
+      console.error('Označení jako dořešeno selhalo:', e);
+      btn.disabled = false;
+      btn.textContent = 'Vyřízeno (chyba, zkuste znovu)';
+    }
+  });
+
+  // Sdílená logika stažení fotek ze subkolekce — volá ji jak automatické
+  // otevření detailu (viz openDetail), tak ruční klik na tlačítko "Foto"
+  // (např. po chybě, kdy je potřeba zkusit znovu).
+  async function loadAndShowPhotos(record){
+    const photoWrap = document.getElementById('photoWrap');
+    const photoToggleBtn = document.getElementById('photoToggleBtn');
+    photoToggleBtn.disabled = true;
+    photoToggleBtn.textContent = 'Načítám…';
+    try{
+      const doc = await db.collection('prestupky').doc(record.id).collection('data').doc('photos').get();
+      const data = doc.exists ? doc.data() : null;
+      const photos = (data && data.photos) || [];
+      const mime = (data && data.photoMime) || 'image/jpeg';
+      record._resolvedPhotos = photos;
+      record._resolvedMime = mime;
+      renderPhotoGallery(record, photos, mime);
+      photoToggleBtn.textContent = 'Foto' + (photos.length > 1 ? ' (' + photos.length + ')' : '');
+      photoToggleBtn.disabled = false;
+      photoWrap.classList.add('open');
+    }catch(e){
+      console.error('Načtení fotek selhalo:', e);
+      photoToggleBtn.textContent = 'Foto (chyba)';
+      photoToggleBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('photoToggleBtn').addEventListener('click', async ()=>{
+    const record = currentDetailRecord;
+    if(!record) return;
+    const photoWrap = document.getElementById('photoWrap');
+
+    if(record._resolvedPhotos){
+      photoWrap.classList.toggle('open');
+      return;
+    }
+
+    await loadAndShowPhotos(record);
+  });
+
+  document.getElementById('detailCloseBtn').addEventListener('click', ()=>{
+    show('list');
+  });
+
+})();
+</script>
+</body>
+</html>
