@@ -6952,7 +6952,7 @@ async function refreshAttendance(evIdx, key, isFuture){
         // display:block, ať se dá stisknout kdekoliv na šířku, ne jen na
         // těch pár pixelech textu.
         const attendedValStyle = 'cursor:pointer;display:block;padding:6px 8px;margin:-6px -8px;border-radius:8px;';
-        parts.push(`<div class="ev-modal-label">Zúčastnili se</div><div id="attendedNamesVal_${evIdx}" class="ev-modal-value" style="${attendedValStyle}">${attendNames.length ? attendNames.join(', ') : '— (podrž pro úpravu)'}</div>`);
+        parts.push(`<div class="ev-modal-label">Zúčastnili se</div><div id="attendedNamesVal_${evIdx}" class="ev-modal-value" style="${attendedValStyle}">${attendNames.length ? attendNames.join(', ') : '—'}</div>`);
         if(!declineSnap.empty){
           const names = declineSnap.docs.map(d => d.id).join(', ');
           parts.push(`<div class="ev-modal-label">Nedorazili</div><div class="ev-modal-value" style="cursor:pointer;" onclick="showDecliners(${evIdx}, window['evKey_'+${evIdx}])">${names}</div>`);
