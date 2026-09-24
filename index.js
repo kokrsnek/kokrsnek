@@ -229,6 +229,31 @@ exports.onAttendCreated = onDocumentCreated(
   }
 );
 
+// --- 2b) Check-in "Jsem na místě" -------------------------------------------
+// Na rozdíl od "Dojdu" (jde všem) tahle notifikace chodí jen lidem, co u
+// dané akce sami mají "Jdu" — komu je jedno, jestli akce vůbec je, ho
+// nezajímá ani to, že už tam někdo dorazil.
+exports.onCheckinCreated = onDocumentCreated(
+  'events/{eventId}/checkins/{userId}',
+  async (event) => {
+    const checkedInUser = event.params.userId;
+    const data = event.data.data();
+    if (!data) return;
+    const attendeesSnap = await db.collection('events').doc(event.params.eventId).collection('attendees').get();
+    const attendeeNames = [];
+    attendeesSnap.forEach((doc) => { if (doc.id !== checkedInUser) attendeeNames.push(doc.id); });
+    if (!attendeeNames.length) return;
+    const dateStr = formatEventDate(data.eventStart);
+    const eventTitle = data.eventTitle || 'akci';
+    const tokens = await getTokensForMany(attendeeNames);
+    await sendToTokens(tokens, {
+      title: `📍 ${checkedInUser} je na místě`,
+      body: `„${eventTitle}“${dateStr ? `\n${dateStr}` : ''}`,
+      eventId: event.params.eventId,
+    });
+  }
+);
+
 // --- 3) Nové "Nedojdu" --------------------------------------------------------
 
 exports.onDeclineCreated = onDocumentCreated(

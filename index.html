@@ -3965,7 +3965,7 @@ function showWelcome(){
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
-    ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! Lidi. Jsem tu." — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
+    ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -5885,7 +5885,7 @@ async function toggleCheckin(idx){
         // ověření — nikoho to neblokuje.
       }
     }
-    await ref.set({ at: new Date().toISOString(), verified });
+    await ref.set({ at: new Date().toISOString(), verified, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
   }catch(e){
     console.error('Chyba při check-inu:', e);
   }
@@ -5946,14 +5946,14 @@ function showWelcomeCheckinModal(ev, key){
       <div style="font-size:38px;margin-bottom:8px;">👋</div>
       <div class="ev-modal-title" style="margin-bottom:6px;">Vítej na ${ev.title}!</div>
       <div style="font-family:'Inter', sans-serif;font-size:14px;color:var(--muted);margin-bottom:22px;">Dobře se bav.</div>
-      <button id="welcomeCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:15px;padding:13px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Lidi. Jsem tu.</button>
+      <button id="welcomeCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:15px;padding:13px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}KoKrŠNeci! 🤩 Jsem tu.💪</button>
     </div>`;
   document.body.appendChild(backdrop);
   document.getElementById('welcomeCheckinBtn').onclick = async () => {
     const me = getUserName();
     if(me){
       try{
-        await db.collection('events').doc(key).collection('checkins').doc(me).set({ at: new Date().toISOString(), verified: true });
+        await db.collection('events').doc(key).collection('checkins').doc(me).set({ at: new Date().toISOString(), verified: true, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
       }catch(e){ console.error('Chyba při uvítacím check-inu:', e); }
     }
     backdrop.remove();
