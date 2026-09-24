@@ -4821,6 +4821,9 @@ function openChatThread(me, other){
     document.removeEventListener('visibilitychange', onVisibilityChange);
     backdrop.remove();
     updateChatBadge();
+    // Zavření konkrétního vlákna vrací zpátky do seznamu "Zprávy", ne na
+    // domovskou časovou osu — stejně jako to dělá WhatsApp a spol.
+    openChatList();
   };
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) closeThread(); };
