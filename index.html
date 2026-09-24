@@ -3956,7 +3956,7 @@ function showWelcome(){
     ['🔗 Klikatelné odkazy v chatu','Pošli v minichatu odkaz (http/https) a automaticky se změní na klikatelnou "chipku" s doménou, co se otevře v nové kartě.'],
     ['⬇️ Scroll dolů v chatu','Když si v otevřeném vláknu odroluješ výš do historie, vpravo dole se objeví tlačítko, co tě jedním ťuknutím vrátí na poslední zprávu.'],
     ['✅ Přečteno kým (Celá parta)','U skupinových zpráv se u "Přečteno" navíc vypíšou jména těch, kdo zprávu už viděl, ne jen holý čas.'],
-    ['🟢 Kdo je online','V seznamu "Zprávy" i v hlavičce otevřeného 1:1 chatu ukazuje zelená tečka u jména, kdo má tohle právě otevřené na obrazovce — do minuty po zavření nebo uzamčení telefonu zmizí.'],
+    ['🟢 Kdo je online','V seznamu "Zprávy" i v hlavičce otevřeného 1:1 chatu ukazuje zelená tečka u jména, kdo má tohle právě otevřené na obrazovce — do minuty po zavření nebo uzamčení telefonu zmizí. Když zrovna online není, pod jménem v chatu se místo tečky ukáže "naposledy aktivní…".'],
     ['👀 Náhled poslední zprávy','V seznamu "Zprávy" je pod jménem vidět i o čem byla poslední zpráva (u fotky/hlasovky jen typ), ne jen statistika.'],
     ['↩️ Rychlá odpověď','Táhni prstem po zprávě v chatu doleva — nad polem pro psaní se objeví, na co odpovídáš, a v odeslané zprávě se ukáže jako citace nad textem.'],
     ['↪ Přeposlat zprávu','Táhni prstem po zprávě doprava — přepošle ji do jiného 1:1 vlákna nebo do "Celá parta", s uvedením, od koho původně je.'],
@@ -4165,6 +4165,24 @@ function startPresenceHeartbeat(){
 // i hlavičku otevřeného vlákna, ať vypadá všude stejně.
 function onlineDotHTML(){
   return `<span title="Online" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#34C759;box-shadow:0 0 0 2px var(--bg2);flex:0 0 auto;"></span>`;
+}
+
+// "Naposledy aktivní ..." pod jménem v hlavičce 1:1 chatu — používá stejná
+// data jako zelená tečka (presence/{jméno}.lastActive), jen když člověk
+// zrovna online NENÍ.
+function formatLastSeen(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+  if(diffMin < 1) return 'naposledy aktivní právě teď';
+  if(diffMin < 60) return `naposledy aktivní před ${diffMin} min`;
+  const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const today = new Date();
+  if(d.toDateString() === today.toDateString()) return `naposledy aktivní dnes v ${time}`;
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  if(d.toDateString() === yesterday.toDateString()) return `naposledy aktivní včera v ${time}`;
+  return `naposledy aktivní ${d.getDate()}.${d.getMonth()+1}. v ${time}`;
 }
 
 // Seznam VŠECH, koho appka o partě ví — sjednocení userProfiles (kdo si
@@ -4893,6 +4911,7 @@ function openChatThread(me, other){
         <span style="padding:0 64px;">${isGroup ? '👥 Celá parta' : `<span id="chatThreadAvatar">👤</span> ${other} <span id="chatThreadPresenceDot" style="display:none;"></span>`}</span>
         ${!isGroup ? `<button id="chatThreadPokeBtn" title="Hipnout" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">👊</button>` : ''}
       </div>
+      ${!isGroup ? `<div id="chatThreadLastSeen" style="flex:0 0 auto;text-align:center;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);min-height:14px;margin:0 0 4px;"></div>` : ''}
       <div id="chatTypingIndicator" style="flex:0 0 auto;text-align:center;font-size:11px;color:var(--accent);min-height:14px;margin:0 0 8px;font-family:'Inter', sans-serif;"></div>
       <div id="chatPinnedBanner" style="display:none;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 10px;margin-bottom:8px;cursor:pointer;"></div>
       <div id="chatSearchRow" style="display:none;flex:0 0 auto;margin-bottom:8px;">
@@ -4931,11 +4950,14 @@ function openChatThread(me, other){
     // Živě aktualizovaná tečka podle presence/{other} — reaguje hned, jak
     // druhá strana appku zavře/otevře, ne jen při otevření vlákna.
     const presenceDotEl = document.getElementById('chatThreadPresenceDot');
+    const lastSeenEl = document.getElementById('chatThreadLastSeen');
     if(presenceDotEl) presenceDotEl.innerHTML = onlineDotHTML();
     activeChatPresenceUnsub = db.collection('presence').doc(other).onSnapshot(snap => {
       if(!presenceDotEl) return;
-      const online = isPresenceOnline(snap.data() && snap.data().lastActive);
+      const lastActive = snap.data() && snap.data().lastActive;
+      const online = isPresenceOnline(lastActive);
       presenceDotEl.style.display = online ? 'inline-block' : 'none';
+      if(lastSeenEl) lastSeenEl.textContent = online ? '' : formatLastSeen(lastActive);
     }, err => console.error('Chyba při sledování online stavu:', err));
     const chatPokeBtn = document.getElementById('chatThreadPokeBtn');
     if(chatPokeBtn) chatPokeBtn.onclick = () => sendPoke(other, chatPokeBtn);
