@@ -6595,7 +6595,7 @@ function showExpenseReceipt(key, ev, items, contributions){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:18px;font-family:'Inter', sans-serif;">
         <span style="font-size:13px;color:var(--ink);">plus/mínus</span>
-        <span style="font-size:20px;font-weight:700;color:${balanceColor};">${balance} Kč</span>
+        <span style="font-size:20px;font-weight:700;color:${balanceColor};">${balance > 0 ? '+' : ''}${balance} Kč</span>
       </div>
       <img src="${QR_PLATBA_DATA_URI}" style="width:150px;height:150px;border-radius:var(--radius-md);background:#fff;padding:4px;-webkit-touch-callout:default;">
       <div style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);margin-top:6px;">Podrž prst na QR kódu pro uložení</div>
