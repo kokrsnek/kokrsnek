@@ -3143,6 +3143,14 @@ fetchGoogleCalendarEvents().then(async () => {
     }
   }catch(e){ console.error('deep-link error', e); }
 
+  // Appka je otevřená a víme kde — pokud zrovna dnes probíhá/začíná akce,
+  // jejíž místo appka zná (viz getPlaceCoords), a poloha telefonu s ní
+  // sedí, appka rovnou nabídne uvítací check-in, ať to člověk nemusí
+  // hledat sám v detailu akce. Nic se neděje, pokud appka souřadnice místa
+  // nezná, telefon polohu neposkytne/odmítne, nebo dotyčný už check-in
+  // udělal — v žádném z těch případů se nic nevyskočí.
+  maybeShowWelcomeCheckin();
+
   if(handled || !window.indexedDB) return;
   // Nic v URL nebylo (typicky iOS, viz komentář u idbGetPendingNav výš) —
   // zkusit poslední otevřenou notifikaci z IndexedDB. Bere se jen čerstvá
@@ -3957,6 +3965,7 @@ function showWelcome(){
     ['👊 Hipnutí','Ikonka 👊 pošle dané osobě rovnou upozornění "do tebe hipl(a)" — najdeš ji u nadpisu v "historii aktivity osoby" (klikni na jakékoliv jméno) i v hlavičce minichatu s ní.'],
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
+    ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! Lidi. Jsem tu." — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -5882,6 +5891,73 @@ async function toggleCheckin(idx){
   }
   if(btn) btn.disabled = false;
   if(refresh) refresh();
+}
+
+// --- Uvítací check-in při otevření appky ---
+// Když appka po startu pozná, že dnes probíhá/začíná akce s appce známým
+// místem (viz getPlaceCoords) a poloha telefonu s ním sedí, rovnou nabídne
+// check-in — člověk ho tak nemusí hledat v detailu akce. Ptá se appky na
+// polohu jen jednou za den na akci, ať to neotravuje při každém dalším
+// otevření appky.
+async function maybeShowWelcomeCheckin(){
+  const me = localStorage.getItem('kokrsnekUser');
+  if(!me || !navigator.geolocation || !rawEvents || !rawEvents.length) return;
+  const candidate = rawEvents.find(ev => {
+    const sameDay = now.toDateString() === ev.start.toDateString();
+    const ongoing = now >= ev.start && now <= ev.end;
+    return (sameDay || ongoing) && getPlaceCoords(ev.place || '');
+  });
+  if(!candidate) return;
+  const key = getEventKey(candidate);
+  const seenFlag = 'kokrsnekWelcomeSeen_' + key + '_' + now.toDateString();
+  if(localStorage.getItem(seenFlag)) return;
+  try{
+    const already = await db.collection('events').doc(key).collection('checkins').doc(me).get();
+    if(already.exists) return; // check-in už dřív proběhl (třeba ručně) — appka se neptá znovu
+  }catch(e){ return; }
+  const coordsStr = getPlaceCoords(candidate.place || '');
+  const [placeLat, placeLng] = coordsStr.split(',').map(Number);
+  try{
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, maximumAge: 60000 });
+    });
+    const dist = haversineDistanceMeters(pos.coords.latitude, pos.coords.longitude, placeLat, placeLng);
+    // Příznak "dnes už appka zkoušela" se ukládá, jen když se uvítání
+    // opravdu zobrazilo — ne po každém pokusu. Kdyby se ukládal vždycky,
+    // ranní kontrola "mimo dosah" by zablokovala i večerní správnou (na
+    // místě), protože appka by si myslela, že dnešek u téhle akce už
+    // "odbavila".
+    if(dist <= CHECKIN_VERIFY_RADIUS_M){
+      localStorage.setItem(seenFlag, '1');
+      showWelcomeCheckinModal(candidate, key);
+    }
+  }catch(e){
+    // Bez povolení/signálu polohy appka mlčí — nikoho neotravuje chybovou hláškou.
+  }
+}
+
+function showWelcomeCheckinModal(ev, key){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ev-modal-backdrop';
+  backdrop.onclick = e => { if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = `
+    <div class="ev-modal" style="text-align:center;">
+      <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+      <div style="font-size:38px;margin-bottom:8px;">👋</div>
+      <div class="ev-modal-title" style="margin-bottom:6px;">Vítej na ${ev.title}!</div>
+      <div style="font-family:'Inter', sans-serif;font-size:14px;color:var(--muted);margin-bottom:22px;">Dobře se bav.</div>
+      <button id="welcomeCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:15px;padding:13px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Lidi. Jsem tu.</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.getElementById('welcomeCheckinBtn').onclick = async () => {
+    const me = getUserName();
+    if(me){
+      try{
+        await db.collection('events').doc(key).collection('checkins').doc(me).set({ at: new Date().toISOString(), verified: true });
+      }catch(e){ console.error('Chyba při uvítacím check-inu:', e); }
+    }
+    backdrop.remove();
+  };
 }
 
 async function wireBringBtn(idx, key, ev){
