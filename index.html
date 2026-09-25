@@ -7135,6 +7135,30 @@ async function refreshLikes(evIdx, key){
   }catch(e){ console.error('likes error',e); }
 }
 
+// Potvrzovací okno, když člověk mění existující odpověď (Jdu → Nedojdu nebo
+// naopak) — jen "Ano/Ne", ať se nikdo omylem nepřehodí. Odvolání vlastní
+// odpovědi (druhý klik na to samé tlačítko) se přes tohle nevede, to jde
+// rovnou beze ptaní.
+function confirmAttendanceChange(){
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ev-modal-backdrop';
+    backdrop.onclick = e => { if(e.target===backdrop){ backdrop.remove(); resolve(false); } };
+    backdrop.innerHTML = `
+      <div class="ev-modal" style="text-align:center;">
+        <div class="sheet-grabber-down" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
+        <div class="ev-modal-title" style="margin-bottom:20px;">Upravit účast?</div>
+        <div style="display:flex;gap:10px;">
+          <button id="attendConfirmNo" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;">Ne</button>
+          <button id="attendConfirmYes" style="flex:1;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;">Ano</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    document.getElementById('attendConfirmNo').onclick = () => { backdrop.remove(); resolve(false); };
+    document.getElementById('attendConfirmYes').onclick = () => { backdrop.remove(); resolve(true); };
+  });
+}
+
 async function toggleAttend(evIdx){
   try{
     const ev = rawEvents[evIdx];
@@ -7145,6 +7169,11 @@ async function toggleAttend(evIdx){
     const declineRef = db.collection('events').doc(key).collection('declines').doc(user);
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
+      const declineSnap = await declineRef.get();
+      if(declineSnap.exists){
+        const ok = await confirmAttendanceChange();
+        if(!ok) return;
+      }
       await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
       try{ await declineRef.delete(); }catch(e){}
       try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
@@ -7163,6 +7192,11 @@ async function toggleDecline(evIdx){
     const attendRef = db.collection('events').doc(key).collection('attendees').doc(user);
     const snap = await ref.get();
     if(snap.exists){ await ref.delete(); } else {
+      const attendSnap = await attendRef.get();
+      if(attendSnap.exists){
+        const ok = await confirmAttendanceChange();
+        if(!ok) return;
+      }
       await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
       try{ await attendRef.delete(); }catch(e){}
       try{ sendNotification('decline', user, ev?.title || ''); }catch(emailErr){}
