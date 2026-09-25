@@ -132,10 +132,6 @@
     border-color:rgba(62,143,104,0.9);
     background:rgba(62,143,104,0.2);
   }
-  #globalCheckinBtn::before{
-    background:var(--accent);
-    border-color:var(--accent);
-  }
   #notifBtn.connected::before{
     border-color:rgba(62,143,104,0.9);
     background:rgba(62,143,104,0.2);
@@ -859,10 +855,6 @@
     font-size:10px; font-weight:700; line-height:17px; text-align:center;
     box-shadow:0 0 0 2px var(--bg);
   "></span>
-</button>
-
-<button class="search-btn" id="globalCheckinBtn" aria-label="Kde jsi? — check-in mimo akce" style="position:fixed;top:env(safe-area-inset-top,12px);left:12px;bottom:auto;z-index:25;width:50px;height:50px;background:var(--accent);border:none;box-shadow:var(--shadow-sm);" onclick="openPlaceCheckinScreen()">
-  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
 </button>
 
 <button class="search-btn" id="themeToggleBtn" aria-label="Přepnout světlý/tmavý režim" style="position:fixed;top:env(safe-area-inset-top,12px);right:12px;bottom:auto;z-index:25;width:38px;height:38px;" onclick="toggleTheme()">
@@ -3974,7 +3966,6 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Velké zelené tlačítko vlevo nahoře — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka se pokusí sama uhodnout název místa podle polohy telefonu, jde si to ale před odesláním přepsat. Jde přidat i krátká poznámka. Dole na stejné obrazovce je vidět, kde všude byla nedávno celá parta.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -5916,7 +5907,7 @@ async function toggleCheckin(idx){
         // ověření — nikoho to neblokuje.
       }
     }
-    await ref.set({ at: new Date().toISOString(), verified, user: me, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
+    await ref.set({ at: new Date().toISOString(), verified, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
   }catch(e){
     console.error('Chyba při check-inu:', e);
   }
@@ -5984,160 +5975,11 @@ function showWelcomeCheckinModal(ev, key){
     const me = getUserName();
     if(me){
       try{
-        await db.collection('events').doc(key).collection('checkins').doc(me).set({ at: new Date().toISOString(), verified: true, user: me, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
+        await db.collection('events').doc(key).collection('checkins').doc(me).set({ at: new Date().toISOString(), verified: true, eventTitle: ev.title || '', eventStart: ev.start ? ev.start.toISOString() : '' });
       }catch(e){ console.error('Chyba při uvítacím check-inu:', e); }
     }
     backdrop.remove();
   };
-}
-
-// --- "Kde jsi?" — volný check-in mimo konkrétní akci ---
-// Na rozdíl od check-inu u akce appka tady předem nezná, kam polohu
-// porovnávat — člověk může být kdekoliv (dovolená, nový podnik...). Appka
-// se GPS polohu pokusí sama přeložit na název místa (zpětné geokódování
-// přes Google Maps), ale je to jen odhad — než se odešle, jde si to přepsat.
-// Nezávislé na check-inu u akce — vlastní Firestore kolekce, vlastní
-// obrazovka, otevírá se novým tlačítkem vlevo nahoře.
-let placeCheckinsUnsub = null;
-
-async function reverseGeocodePlace(lat, lng){
-  try{
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}&language=cs`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data.status !== 'OK' || !data.results || !data.results.length) return '';
-    // Radši výsledek, co appka pozná jako konkrétní podnik/místo
-    // (point_of_interest/establishment), ne jen ulici nebo město.
-    const poi = data.results.find(r => r.types && (r.types.includes('point_of_interest') || r.types.includes('establishment')));
-    return (poi || data.results[0]).formatted_address || '';
-  }catch(e){
-    console.error('Chyba při zjišťování názvu místa:', e);
-    return '';
-  }
-}
-
-function openPlaceCheckinScreen(){
-  const me = getUserName();
-  if(!me) return;
-  const backdrop = document.createElement('div');
-  backdrop.className = 'ev-modal-backdrop';
-  backdrop.onclick = e => { if(e.target===backdrop) closePlaceCheckinScreen(backdrop); };
-  backdrop.innerHTML = `
-    <div class="ev-modal" style="text-align:center;max-height:92vh;">
-      <div class="sheet-grabber-down" onclick="closePlaceCheckinScreen(this.closest('.ev-modal-backdrop'))" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
-      <div class="ev-modal-title" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;">${pinIconSVG()} Kde jsi?</div>
-      <button id="startPlaceCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Nový check-in</button>
-      <div id="placeCheckinForm" style="display:none;text-align:left;margin-top:14px;"></div>
-      <div style="height:1px;background:var(--line);margin:20px 0 14px;"></div>
-      <div id="placeCheckinFeed" style="text-align:left;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
-    </div>`;
-  document.body.appendChild(backdrop);
-  document.getElementById('startPlaceCheckinBtn').onclick = beginPlaceCheckinForm;
-  wirePlaceCheckinFeed();
-}
-
-function closePlaceCheckinScreen(backdrop){
-  if(placeCheckinsUnsub){ placeCheckinsUnsub(); placeCheckinsUnsub = null; }
-  backdrop.remove();
-}
-
-async function beginPlaceCheckinForm(){
-  const btn = document.getElementById('startPlaceCheckinBtn');
-  const formEl = document.getElementById('placeCheckinForm');
-  btn.style.display = 'none';
-  formEl.style.display = 'block';
-  formEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:8px;">Zjišťuju, kde jsi…</div>`;
-
-  let guess = '';
-  let coords = null;
-  if(navigator.geolocation){
-    try{
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, maximumAge: 60000 });
-      });
-      coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      guess = await reverseGeocodePlace(coords.lat, coords.lng);
-    }catch(e){
-      // Bez povolení/signálu appka nechá pole prázdné, jde vyplnit ručně.
-    }
-  }
-
-  formEl.innerHTML = `
-    <label style="display:block;font-family:'Inter', sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Kde jsi</label>
-    <input id="placeCheckinPlace" type="text" value="${guess.replace(/"/g,'&quot;')}" placeholder="Napiš, kde jsi…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:12px;">
-    <label style="display:block;font-family:'Inter', sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Poznámka (nepovinné)</label>
-    <textarea id="placeCheckinNote" maxlength="120" rows="2" placeholder="Třeba doporučení pro ostatní…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);resize:none;margin-bottom:12px;"></textarea>
-    <div style="display:flex;gap:8px;">
-      <button id="cancelPlaceCheckinBtn" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">Zrušit</button>
-      <button id="submitPlaceCheckinBtn" style="flex:1;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
-    </div>
-  `;
-  document.getElementById('cancelPlaceCheckinBtn').onclick = () => {
-    formEl.style.display = 'none';
-    formEl.innerHTML = '';
-    btn.style.display = 'flex';
-  };
-  document.getElementById('submitPlaceCheckinBtn').onclick = () => submitPlaceCheckin(coords);
-}
-
-async function submitPlaceCheckin(coords){
-  const me = getUserName();
-  if(!me) return;
-  const placeInput = document.getElementById('placeCheckinPlace');
-  const noteInput = document.getElementById('placeCheckinNote');
-  const place = (placeInput.value || '').trim();
-  if(!place){ placeInput.focus(); return; }
-  const submitBtn = document.getElementById('submitPlaceCheckinBtn');
-  submitBtn.disabled = true;
-  try{
-    await db.collection('placeCheckins').add({
-      user: me,
-      place,
-      note: (noteInput.value || '').trim(),
-      lat: coords ? coords.lat : null,
-      lng: coords ? coords.lng : null,
-      at: new Date().toISOString()
-    });
-    const formEl = document.getElementById('placeCheckinForm');
-    const btn = document.getElementById('startPlaceCheckinBtn');
-    if(formEl){ formEl.style.display = 'none'; formEl.innerHTML = ''; }
-    if(btn) btn.style.display = 'flex';
-  }catch(e){
-    console.error('Chyba při odesílání check-inu:', e);
-    alert('Nepodařilo se odeslat.');
-  }
-  submitBtn.disabled = false;
-}
-
-function wirePlaceCheckinFeed(){
-  const feedEl = document.getElementById('placeCheckinFeed');
-  if(!feedEl) return;
-  placeCheckinsUnsub = db.collection('placeCheckins').orderBy('at', 'desc').limit(50).onSnapshot(snap => {
-    if(snap.empty){
-      feedEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Zatím nikdo nikde nebyl.</div>`;
-      return;
-    }
-    feedEl.innerHTML = snap.docs.map(d => {
-      const c = d.data();
-      const mapsUrl = (c.lat && c.lng) ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : null;
-      const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '');
-      return `
-        <div style="padding:10px 0;border-bottom:1px solid var(--line);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-            <span style="font-family:'Inter', sans-serif;font-weight:700;font-size:13.5px;color:var(--ink);">${c.user}</span>
-            <span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${when}</span>
-          </div>
-          <div style="font-family:'Inter', sans-serif;font-size:13.5px;color:var(--ink);margin-top:2px;">
-            ${mapsUrl ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;">${pinIconSVG().replace('width="16" height="16"','width="12" height="12"')} ${c.place}</a>` : c.place}
-          </div>
-          ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${c.note}“</div>` : ''}
-        </div>
-      `;
-    }).join('');
-  }, err => {
-    console.error('Chyba při načítání check-inů:', err);
-    feedEl.innerHTML = `<div style="color:var(--coral);font-size:12.5px;text-align:center;padding:12px;">Nepodařilo se načíst.</div>`;
-  });
 }
 
 async function wireBringBtn(idx, key, ev){
