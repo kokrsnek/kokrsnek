@@ -7168,12 +7168,15 @@ async function toggleAttend(evIdx){
     const ref = db.collection('events').doc(key).collection('attendees').doc(user);
     const declineRef = db.collection('events').doc(key).collection('declines').doc(user);
     const snap = await ref.get();
+    const declineSnap = await declineRef.get();
+    // Potvrzení se ptá při JAKÉKOLIV změně existující odpovědi — ať se
+    // přehazuje na opačnou, nebo se ta stávající jen odvolává (druhý klik
+    // na to samé tlačítko). Jen úplně první odpověď u akce jde bez ptaní.
+    if(snap.exists || declineSnap.exists){
+      const ok = await confirmAttendanceChange();
+      if(!ok) return;
+    }
     if(snap.exists){ await ref.delete(); } else {
-      const declineSnap = await declineRef.get();
-      if(declineSnap.exists){
-        const ok = await confirmAttendanceChange();
-        if(!ok) return;
-      }
       await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
       try{ await declineRef.delete(); }catch(e){}
       try{ sendNotification('attend', user, ev?.title || ''); }catch(emailErr){}
@@ -7191,12 +7194,12 @@ async function toggleDecline(evIdx){
     const ref = db.collection('events').doc(key).collection('declines').doc(user);
     const attendRef = db.collection('events').doc(key).collection('attendees').doc(user);
     const snap = await ref.get();
+    const attendSnap = await attendRef.get();
+    if(snap.exists || attendSnap.exists){
+      const ok = await confirmAttendanceChange();
+      if(!ok) return;
+    }
     if(snap.exists){ await ref.delete(); } else {
-      const attendSnap = await attendRef.get();
-      if(attendSnap.exists){
-        const ok = await confirmAttendanceChange();
-        if(!ok) return;
-      }
       await ref.set({user, at: new Date(), eventTitle: ev?.title || '', eventStart: ev?.start ? ev.start.toISOString() : ''});
       try{ await attendRef.delete(); }catch(e){}
       try{ sendNotification('decline', user, ev?.title || ''); }catch(emailErr){}
