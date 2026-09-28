@@ -114,6 +114,10 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  // Dlaždice mapy (OpenStreetMap, obrazovka "Kde jsi?") se do cache nedávají —
+  // jsou to cizí "opaque" odpovědi, které by se v úložišti počítaly s velkou
+  // rezervou a rychle by ho zaplnily. Prohlížeč si je řeší sám.
+  if (url.hostname === 'tile.openstreetmap.org') return;
   const isHTML = event.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/';
 
   if (isHTML) {

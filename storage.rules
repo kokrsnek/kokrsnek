@@ -13,5 +13,10 @@ service firebase.storage {
     match /chatAudio/{threadId}/{fileName} {
       allow read, write: if isPartyMember();
     }
+
+    // Fotky ke check-inům "Kde jsi?" — cesta placeCheckinPhotos/{checkinId}/{soubor}.
+    match /placeCheckinPhotos/{checkinId}/{fileName} {
+      allow read, write: if isPartyMember();
+    }
   }
 }
