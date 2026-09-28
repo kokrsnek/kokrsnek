@@ -390,7 +390,8 @@ exports.onPhotoAlbumAdded = onDocumentCreated(
     snap.forEach((doc) => { if (doc.data().token) tokens.push(doc.data().token); });
     await sendToTokens(tokens, {
       title: '📷 Nové album fotek',
-      body: `„${eventTitle}“${dateStr ? `\n${dateStr}` : ''}`,
+      // Třetí řádek vyzývá, ať každý do alba nahraje i své fotky.
+      body: `„${eventTitle}“${dateStr ? `\n${dateStr}` : ''}\nPřidej do alba fotky`,
       eventId: event.params.eventId,
     });
   }
@@ -1180,7 +1181,7 @@ exports.verifyPartyPassword = onCall({ region: 'us-central1' }, async (request) 
 // a NESMÍ být omezený na HTTP referrer (doménu appky) — server-to-server
 // volání odsud žádný referrer neposílá. Nejčistší je samostatný klíč jen pro
 // server, omezený pouze na "Places API (New)" (viz postup v chatu).
-const GOOGLE_PLACES_API_KEY = 'AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo';
+const GOOGLE_PLACES_API_KEY = 'AIzaSyDeofqkGdpnddE-fwghJGpp-JBN6wJUJUg';
 
 exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
   const lat = request.data && request.data.lat;
