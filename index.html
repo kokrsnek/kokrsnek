@@ -6114,6 +6114,7 @@ function openPlaceCheckinScreen(){
   document.body.appendChild(backdrop);
   // S vysunutou klávesnicí se okno zmenší na viditelnou část (stejně jako
   // v chatu), ať formulář a lišta nezajedou pod klávesnici.
+  const feedElForFit = document.getElementById('placeCheckinFeed');
   if(window.visualViewport){
     placeCheckinFitHandler = () => {
       const vv = window.visualViewport;
@@ -6121,6 +6122,10 @@ function openPlaceCheckinScreen(){
       backdrop.style.top = vv.offsetTop + 'px';
       backdrop.style.bottom = 'auto';
       if(placeScreen.map) placeScreen.map.invalidateSize();
+      const a = document.activeElement;
+      if(a && a.dataset && a.dataset.commentInput && feedElForFit && feedElForFit.contains(a)){
+        requestAnimationFrame(() => revealPlaceCommentBox(a.dataset.commentInput));
+      }
     };
     placeCheckinFitHandler();
     window.visualViewport.addEventListener('resize', placeCheckinFitHandler);
@@ -6136,6 +6141,13 @@ function openPlaceCheckinScreen(){
   // reakce, komentáře, chat). Enter v poli komentáře komentář odešle.
   const feedEl = document.getElementById('placeCheckinFeed');
   feedEl.onclick = handlePlaceFeedClick;
+  // Klepnutí do pole komentáře: klávesnice se vysouvá postupně, tak se pole
+  // dorovná několikrát, dokud se okno nezmenší.
+  feedEl.addEventListener('focusin', e => {
+    const id = e.target && e.target.dataset && e.target.dataset.commentInput;
+    if(!id) return;
+    [0, 300, 600].forEach(ms => setTimeout(() => revealPlaceCommentBox(id), ms));
+  });
   feedEl.onkeydown = (e) => {
     if(e.key === 'Enter' && e.target.dataset && e.target.dataset.commentInput){
       e.preventDefault();
@@ -6683,11 +6695,30 @@ async function togglePlaceReaction(id, kind, emoji){
   }catch(e){ console.error('Chyba při reakci na check-in:', e); }
 }
 
+// Posune seznam check-inů tak, aby bylo vidět pole pro komentář u daného
+// check-inu i s tlačítkem Odeslat (po rozbalení komentářů, po jejich
+// načtení a po vysunutí klávesnice).
+function revealPlaceCommentBox(id){
+  const feedEl = document.getElementById('placeCheckinFeed');
+  if(!feedEl || !id) return;
+  const input = feedEl.querySelector(`[data-comment-input="${id}"]`);
+  if(!input) return;
+  const box = input.parentElement || input;
+  const fr = feedEl.getBoundingClientRect(), br = box.getBoundingClientRect();
+  if(br.bottom > fr.bottom - 8) feedEl.scrollTop += br.bottom - fr.bottom + 12;
+  else if(br.top < fr.top + 8) feedEl.scrollTop -= fr.top - br.top + 12;
+}
+
 function subscribePlaceComments(id){
   if(placeScreen.commentUnsubs[id]) return;
   placeScreen.commentUnsubs[id] = db.collection('placeCheckins').doc(id).collection('comments').orderBy('at', 'asc').onSnapshot(snap => {
     placeScreen.comments[id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     refreshPlaceViews(true);
+    // Po načtení komentářů se rámeček zvětší — pole se znovu posune do obrazovky.
+    if(placeScreen.revealCommentsFor === id){
+      placeScreen.revealCommentsFor = null;
+      requestAnimationFrame(() => revealPlaceCommentBox(id));
+    }
   }, err => console.error('Chyba při načítání komentářů:', err));
 }
 
@@ -6697,9 +6728,11 @@ function toggleComments(id){
     if(placeScreen.commentUnsubs[id]){ placeScreen.commentUnsubs[id](); delete placeScreen.commentUnsubs[id]; }
   } else {
     placeScreen.openComments.add(id);
+    placeScreen.revealCommentsFor = id;
     subscribePlaceComments(id);
   }
   refreshPlaceViews(true);
+  if(placeScreen.openComments.has(id)) requestAnimationFrame(() => revealPlaceCommentBox(id));
 }
 
 async function sendPlaceComment(id){
