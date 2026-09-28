@@ -3985,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Aplikace podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s avatarem a jménem, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Klepnutím na check-in se otevře jeho detail: větší fotka, malá mapa místa, reakce a všechny komentáře s polem pro nový komentář dole (šipkou vlevo nahoře zpět). Na mapě se detail otevře tlačítkem Zobrazit check-in v bublině u pinu. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. U cizích check-inů jde zmáčknout Přijdu taky / Jsem poblíž, dát emoji reakci, napsat komentář nebo rovnou soukromou zprávu autorovi (tlačítko Napsat); autor dostane notifikaci. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Aplikace podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s avatarem a jménem, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Klepnutím na check-in se otevře jeho detail: větší fotka, malá mapa místa, reakce a všechny komentáře s polem pro nový komentář dole (šipkou vlevo nahoře zpět). Na mapě se detail otevře tlačítkem Zobrazit check-in v bublině u pinu. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. U cizích check-inů jde zmáčknout Přijdu taky / Jsem poblíž, dát emoji reakci, napsat komentář nebo rovnou soukromou zprávu autorovi (tlačítko Zpráva do chatu). Kdo přijde nebo je poblíž, ukáže dlouhé podržení tlačítka Přijdu taky / Jsem poblíž; autor dostane notifikaci. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -6152,6 +6152,7 @@ function openPlaceCheckinScreen(){
     }, () => {}, { timeout: 6000, maximumAge: 300000 });
   }
 
+  wirePlaceNamesLongPress(feedEl);
   wirePlaceCheckinMute(me);
   wirePlaceCheckinFeed();
 }
@@ -6322,6 +6323,7 @@ function wirePlaceCheckinMute(me){
 
 function closePlaceCheckinScreen(backdrop){
   closePlaceCheckinDetail();
+  hidePlaceNamesBubble();
   if(placeCheckinsUnsub){ placeCheckinsUnsub(); placeCheckinsUnsub = null; }
   if(placeCheckinMuteUnsub){ placeCheckinMuteUnsub(); placeCheckinMuteUnsub = null; }
   if(placeCheckinFitHandler && window.visualViewport){
@@ -6581,8 +6583,7 @@ function renderPlaceCheckinForm(opts){
       }
       closeForm();
       refreshPlaceViews(false);
-      const feedEl = document.getElementById('placeCheckinFeed');
-      if(feedEl && !isEdit) feedEl.scrollTop = feedEl.scrollHeight;
+      if(!isEdit) scrollPlaceFeedToEnd();
     }catch(e){
       console.error('Chyba při ukládání check-inu:', e);
       alert('Nepodařilo se uložit.');
@@ -6757,7 +6758,7 @@ function writeToPlaceAuthor(userName, place){
 // ---- Reakce a komentáře — stejné v seznamu i v detailu check-inu ----
 const PLACE_ICON_BTN = "background:none;border:none;color:var(--muted);cursor:pointer;padding:3px 4px;display:inline-flex;";
 function placeChipStyle(active, clickable){
-  return `background:${active ? 'var(--accent)' : 'var(--surface)'};color:${active ? '#fff' : 'var(--ink)'};border:1px solid ${active ? 'var(--accent)' : 'var(--line)'};border-radius:100px;padding:5px 11px;font-family:'Inter', sans-serif;font-size:12.5px;font-weight:600;${clickable ? 'cursor:pointer;' : 'cursor:default;'}`;
+  return `background:${active ? 'var(--accent)' : 'var(--surface)'};color:${active ? '#fff' : 'var(--ink)'};border:1px solid ${active ? 'var(--accent)' : 'var(--line)'};border-radius:100px;padding:5px 11px;font-family:'Inter', sans-serif;font-size:12.5px;font-weight:600;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;${clickable ? 'cursor:pointer;' : 'cursor:default;'}`;
 }
 
 // V detailu jsou komentáře vidět pořád, tak tam čip 💬 chybí.
@@ -6770,11 +6771,11 @@ function placeReactionsHtml(c, opts){
   const myEmoji = emojis[me];
   const chips = [];
   if(!mine){
-    chips.push(`<button data-act="coming" data-id="${c.id}" style="${chip(coming.includes(me), true)}">Přijdu taky${coming.length ? ' · ' + coming.length : ''}</button>`);
-    chips.push(`<button data-act="near" data-id="${c.id}" style="${chip(near.includes(me), true)}">Jsem poblíž${near.length ? ' · ' + near.length : ''}</button>`);
+    chips.push(`<button data-act="coming" data-names="coming" data-id="${c.id}" style="${chip(coming.includes(me), true)}">Přijdu taky${coming.length ? ' · ' + coming.length : ''}</button>`);
+    chips.push(`<button data-act="near" data-names="near" data-id="${c.id}" style="${chip(near.includes(me), true)}">Jsem poblíž${near.length ? ' · ' + near.length : ''}</button>`);
   } else {
-    if(coming.length) chips.push(`<span style="${chip(false, false)}">Přijdou · ${coming.length}</span>`);
-    if(near.length) chips.push(`<span style="${chip(false, false)}">Poblíž · ${near.length}</span>`);
+    if(coming.length) chips.push(`<span data-names="coming" data-id="${c.id}" style="${chip(false, false)}">Přijdou · ${coming.length}</span>`);
+    if(near.length) chips.push(`<span data-names="near" data-id="${c.id}" style="${chip(false, false)}">Poblíž · ${near.length}</span>`);
   }
   Object.keys(groups).forEach(em => {
     const mineHere = myEmoji === em;
@@ -6788,15 +6789,11 @@ function placeReactionsHtml(c, opts){
     const cCount = c.commentCount || 0;
     chips.push(`<button data-act="comments" data-id="${c.id}" style="${chip(placeScreen.openComments.has(c.id), true)}">💬${cCount ? ' ' + cCount : ''}</button>`);
   }
-  if(!mine) chips.push(`<button data-act="chat" data-user="${placeEsc(c.user)}" data-place="${placeEsc(c.place)}" style="${chip(false, true)}">Napsat</button>`);
+  if(!mine) chips.push(`<button data-act="chat" data-user="${placeEsc(c.user)}" data-place="${placeEsc(c.place)}" style="${chip(false, true)}">Zpráva do chatu</button>`);
 
   const pickerHtml = (!mine && placeScreen.emojiPickerFor === c.id)
     ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${PLACE_QUICK_EMOJIS.map(em => `<button data-act="emoji" data-id="${c.id}" data-emoji="${placeEsc(em)}" style="background:var(--surface);border:1px solid var(--line);border-radius:100px;padding:5px 10px;font-size:18px;line-height:1;cursor:pointer;">${em}</button>`).join('')}</div>` : '';
-  const namesParts = [];
-  if(coming.length) namesParts.push('Přijdou: ' + coming.map(placeEsc).join(', '));
-  if(near.length) namesParts.push('Poblíž: ' + near.map(placeEsc).join(', '));
-  const namesHtml = namesParts.length ? `<div style="font-family:'Inter', sans-serif;font-size:11.5px;color:var(--muted);margin-top:5px;">${namesParts.join(' · ')}</div>` : '';
-  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${chips.join('')}</div>${pickerHtml}${namesHtml}`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${chips.join('')}</div>${pickerHtml}`;
 }
 
 function placeCommentRowsHtml(c){
@@ -6853,6 +6850,7 @@ function openPlaceCheckinDetail(id){
 
   const modal = backdrop.querySelector('.ev-modal');
   modal.onclick = handlePlaceFeedClick;
+  wirePlaceNamesLongPress(modal);
   backdrop.querySelector('#pdBackBtn').onclick = closePlaceCheckinDetail;
   backdrop.querySelector('#pdCommentInput').onkeydown = (e) => {
     if(e.key === 'Enter'){ e.preventDefault(); sendPlaceComment(id); }
@@ -6882,6 +6880,7 @@ function openPlaceCheckinDetail(id){
 }
 
 function closePlaceCheckinDetail(){
+  hidePlaceNamesBubble();
   if(!placeDetail.backdrop) return;
   const id = placeDetail.id;
   if(placeDetail.fit && window.visualViewport){
@@ -6989,8 +6988,89 @@ async function initPlaceDetailMap(c){
   setTimeout(() => { try{ map.invalidateSize(); }catch(e){} }, 60);
 }
 
+// ---- Kdo přijde / kdo je poblíž: jména po dlouhém podržení čipu ----
+// Krátké klepnutí reakci přepne jako dřív, podržení (0,5 s) jen ukáže
+// bublinu se jmény. Na počítači totéž pravým tlačítkem myši.
+let placeSuppressClick = false;
+function wirePlaceNamesLongPress(root){
+  let timer = null, sx = 0, sy = 0;
+  const cancel = () => { if(timer){ clearTimeout(timer); timer = null; } };
+  root.addEventListener('touchstart', e => {
+    placeSuppressClick = false;
+    const t = e.target.closest('[data-names]');
+    if(!t) return;
+    const p = e.touches && e.touches[0];
+    sx = p ? p.clientX : 0; sy = p ? p.clientY : 0;
+    const kind = t.dataset.names, id = t.dataset.id, rect = t.getBoundingClientRect();
+    cancel();
+    timer = setTimeout(() => {
+      timer = null;
+      placeSuppressClick = true;
+      if(navigator.vibrate) navigator.vibrate(15);
+      showPlaceNamesBubble(kind, id, rect);
+    }, 500);
+  }, { passive: true });
+  root.addEventListener('touchmove', e => {
+    const p = e.touches && e.touches[0];
+    if(p && Math.hypot(p.clientX - sx, p.clientY - sy) > 10) cancel();
+  }, { passive: true });
+  root.addEventListener('touchend', cancel);
+  root.addEventListener('touchcancel', cancel);
+  root.addEventListener('contextmenu', e => {
+    const t = e.target.closest('[data-names]');
+    if(!t) return;
+    e.preventDefault();
+    showPlaceNamesBubble(t.dataset.names, t.dataset.id, t.getBoundingClientRect());
+  });
+}
+
+function hidePlaceNamesBubble(){
+  const el = document.getElementById('placeNamesBubble');
+  if(el) el.remove();
+}
+
+function showPlaceNamesBubble(kind, id, rect){
+  hidePlaceNamesBubble();
+  const c = placeAllDocs().find(x => x.id === id);
+  if(!c) return;
+  const names = c[kind] || [];
+  const el = document.createElement('div');
+  el.id = 'placeNamesBubble';
+  el.style.cssText = "position:fixed;z-index:95;max-width:260px;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.45);font-family:'Inter', sans-serif;font-size:13px;line-height:1.4;color:var(--ink);text-align:left;";
+  el.innerHTML = `<div style="font-weight:700;margin-bottom:2px;">${kind === 'coming' ? 'Přijdou' : 'Poblíž'}</div>`
+    + (names.length ? names.map(placeEsc).join(', ') : `<span style="color:var(--muted);">Zatím nikdo</span>`);
+  document.body.appendChild(el);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
+  let top = rect.top - h - 8;
+  if(top < 8) top = rect.bottom + 8;
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+  // Zavře se dalším dotykem kdekoliv.
+  setTimeout(() => {
+    document.addEventListener('touchstart', hidePlaceNamesBubble, { once: true, capture: true });
+    document.addEventListener('mousedown', hidePlaceNamesBubble, { once: true, capture: true });
+  }, 0);
+}
+
+// Po odeslání nového check-inu drží seznam dole ještě chvíli, než se
+// dokreslí živá data a náhledy fotek, ať je nový check-in opravdu vidět.
+function scrollPlaceFeedToEnd(){
+  placeScreen.stickBottomUntil = Date.now() + 2000;
+  const go = () => {
+    const f = document.getElementById('placeCheckinFeed');
+    if(f && Date.now() < (placeScreen.stickBottomUntil || 0)) f.scrollTop = f.scrollHeight;
+  };
+  go();
+  requestAnimationFrame(go);
+  setTimeout(go, 250);
+  setTimeout(go, 800);
+  setTimeout(go, 1600);
+}
+
 // Jedna obsluha pro seznam i pro detail check-inu.
 function handlePlaceFeedClick(e){
+  if(placeSuppressClick){ placeSuppressClick = false; return; }
   const t = e.target.closest('[data-act]');
   if(!t) return;
   const feedEl = document.getElementById('placeCheckinFeed');
@@ -7063,12 +7143,16 @@ function renderPlaceFeedList(){
     return `
       <div data-act="detail" data-id="${c.id}" style="padding:12px 0;cursor:pointer;${idx > 0 ? 'border-top:1px solid var(--line);' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-          <div style="flex:1;min-width:0;font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span style="font-weight:700;">${placeEsc(c.user)}</span> je v ${placeHtml}</div>
-          <span style="display:inline-flex;align-items:center;gap:2px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;padding-top:3px;">${placeEsc(when)}${actions}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span style="font-weight:700;">${placeEsc(c.user)}</span> je v ${placeHtml}</div>
+            ${distHtml}
+            ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
+          </div>
+          <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <span style="display:inline-flex;align-items:center;gap:2px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;padding-top:3px;">${placeEsc(when)}${actions}</span>
+            ${c.photo ? `<img data-act="photo" data-src="${placeEsc(c.photo)}" src="${placeEsc(c.photo)}" loading="lazy" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:zoom-in;background:var(--surface);">` : ''}
+          </div>
         </div>
-        ${distHtml}
-        ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
-        ${c.photo ? `<img data-act="photo" data-src="${placeEsc(c.photo)}" src="${placeEsc(c.photo)}" loading="lazy" style="display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px;cursor:zoom-in;">` : ''}
         ${socialHtml}${commentsHtml}
       </div>`;
   }).join('');
@@ -7110,7 +7194,7 @@ function wirePlaceCheckinFeed(){
     renderPlaceDetail();
     if(placeScreen.view === 'map'){ renderPlaceMap(); return; }
     renderPlaceFeedList();
-    if(firstRender || nearBottom) feedEl.scrollTop = feedEl.scrollHeight;
+    if(firstRender || nearBottom || Date.now() < (placeScreen.stickBottomUntil || 0)) feedEl.scrollTop = feedEl.scrollHeight;
     firstRender = false;
   }, err => {
     console.error('Chyba při načítání check-inů:', err);
