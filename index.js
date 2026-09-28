@@ -236,9 +236,15 @@ exports.onAttendCreated = onDocumentCreated(
 exports.onCheckinCreated = onDocumentCreated(
   'events/{eventId}/checkins/{userId}',
   async (event) => {
-    const checkedInUser = event.params.userId;
     const data = event.data.data();
     if (!data) return;
+    // Jméno se bere z OBSAHU dokumentu (data.user), ne z cesty dokumentu
+    // (event.params.userId) — Cloud Functions 2. generace umí cestu se
+    // znaky s háčky/čárkami (Š, ř, ě...) špatně dekódovat (např. "Šuraj"
+    // se pak v notifikaci objevilo jako "Å uraj"). Obsah dokumentu tenhle
+    // problém nemá, appka ho zapisuje jako běžný UTF-8 text.
+    const checkedInUser = data.user || event.params.userId;
+    if (!checkedInUser) return;
     const attendeesSnap = await db.collection('events').doc(event.params.eventId).collection('attendees').get();
     const attendeeNames = [];
     attendeesSnap.forEach((doc) => { if (doc.id !== checkedInUser) attendeeNames.push(doc.id); });
@@ -1161,4 +1167,56 @@ exports.verifyPartyPassword = onCall({ region: 'us-central1' }, async (request) 
   }
   await getAuth().setCustomUserClaims(uid, { partyMember: true });
   return { ok: true };
+});
+
+// --- Návrhy míst v okolí pro "Kde jsi?" (viz openPlaceCheckinScreen v index.html) ---
+// Google Places na rozdíl od Geocoding API neumí odpovídat prohlížeči
+// napřímo (nemá CORS hlavičky) — appka proto musí zavolat tuhle funkci
+// (běží na serveru, CORS se ho netýká) místo Googlu přímo.
+// Používá se Places API (New) — starší "Legacy" verze (place/nearbysearch/json)
+// je oficiálně zastaralá a na nových projektech/klíčích vrací REQUEST_DENIED.
+// DŮLEŽITÉ: klíč níže musí mít v Google Cloud Console zapnuté "Places API (New)"
+// a NESMÍ být omezený na HTTP referrer (doménu appky) — server-to-server
+// volání odsud žádný referrer neposílá. Nejčistší je samostatný klíč jen pro
+// server, omezený pouze na "Places API (New)" (viz postup v chatu).
+const GOOGLE_PLACES_API_KEY = 'AIzaSyA0OiRZIoYf3uSQMWksV-gvUCFX_GnzSzo';
+
+exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
+  const lat = request.data && request.data.lat;
+  const lng = request.data && request.data.lng;
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    throw new HttpsError('invalid-argument', 'Chybí souřadnice.');
+  }
+  let data;
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.displayName,places.shortFormattedAddress,places.location',
+      },
+      body: JSON.stringify({
+        locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 150.0 } },
+        maxResultCount: 8,
+        rankPreference: 'DISTANCE',
+        languageCode: 'cs',
+      }),
+    });
+    data = await res.json();
+    if (!res.ok) {
+      const msg = (data && data.error && data.error.message) || ('HTTP ' + res.status);
+      throw new HttpsError('internal', 'Google Places: ' + msg);
+    }
+  } catch (e) {
+    if (e instanceof HttpsError) throw e;
+    throw new HttpsError('unavailable', 'Google Places se nepodařilo kontaktovat.');
+  }
+  const results = (data.places || []).map((p) => ({
+    name: (p.displayName && p.displayName.text) || '',
+    vicinity: p.shortFormattedAddress || '',
+    lat: (p.location && p.location.latitude) || lat,
+    lng: (p.location && p.location.longitude) || lng,
+  })).filter((r) => r.name);
+  return { results };
 });
