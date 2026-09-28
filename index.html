@@ -3985,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s iniciálou, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s avatarem a iniciálou, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -6211,24 +6211,39 @@ async function renderPlaceMap(){
   const map = placeScreen.map;
   map.invalidateSize();
   const me = placeScreen.me, pos = placeScreen.pos;
-  placeScreen.markerLayer.clearLayers();
   const withCoords = placeAllDocs().filter(c => typeof c.lat === 'number' && typeof c.lng === 'number');
+  // Avatary (emoji) lidí z pinů — z paměti, jen kdo ještě chybí, se dotáhne.
+  const avatars = {};
+  await Promise.all([...new Set(withCoords.map(c => c.user))].map(async n => { avatars[n] = (await getAvatarCached(n)) || ''; }));
+  // Během načítání avatarů se obrazovka mohla zavřít nebo přepnout na seznam.
+  if(placeScreen.view !== 'map' || !placeScreen.markerLayer || !document.getElementById('placeCheckinMap')) return;
+  placeScreen.markerLayer.clearLayers();
   const emptyEl = document.getElementById('placeMapEmpty');
   if(emptyEl) emptyEl.style.display = withCoords.length ? 'none' : 'block';
   const bounds = [];
   withCoords.slice().reverse().forEach((c, i) => {
     const initial = (c.user || '?').trim().charAt(0).toUpperCase();
+    const avatar = avatars[c.user] || '';
     const recent = (Date.now() - new Date(c.at).getTime()) < 24 * 3600 * 1000;
+    const pinColor = recent ? '#3E8F68' : '#8A8496';
+    // Pin s avatarem uprostřed a iniciálou v malém kolečku v rohu. Kdo avatar
+    // nemá, dostane v pinu velkou iniciálu (a kolečko se nekreslí).
+    const inner = avatar
+      ? `<span style="transform:rotate(45deg);font-size:19px;line-height:1;">${placeEsc(avatar)}</span>`
+      : `<span style="transform:rotate(45deg);color:#fff;font:700 15px Inter,sans-serif;">${placeEsc(initial)}</span>`;
+    const badge = avatar
+      ? `<div style="position:absolute;right:-7px;top:-7px;width:17px;height:17px;border-radius:50%;background:#fff;color:${pinColor};border:1.5px solid ${pinColor};display:flex;align-items:center;justify-content:center;font:800 10px Inter,sans-serif;box-sizing:border-box;">${placeEsc(initial)}</div>`
+      : '';
     const icon = L.divIcon({
       className: '',
-      html: `<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${recent ? '#3E8F68' : '#8A8496'};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);color:#fff;font:700 13px Inter,sans-serif;">${placeEsc(initial)}</span></div>`,
-      iconSize: [30, 30], iconAnchor: [15, 36], popupAnchor: [0, -34]
+      html: `<div style="position:relative;width:38px;height:38px;"><div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${pinColor};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;box-sizing:border-box;">${inner}</div>${badge}</div>`,
+      iconSize: [38, 38], iconAnchor: [19, 46], popupAnchor: [0, -44]
     });
     const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '');
     let dist = '';
     if(pos && c.user !== me) dist = ' · ' + formatPlaceDistance(haversineDistanceMeters(pos.lat, pos.lng, c.lat, c.lng));
     const popup = `<div style="font-family:'Inter',sans-serif;color:#242229;min-width:150px;">
-        <b>${placeEsc(c.user)}</b> je v ${placeEsc(c.place)}
+        ${avatar ? placeEsc(avatar) + ' ' : ''}<b>${placeEsc(c.user)}</b> je v ${placeEsc(c.place)}
         ${c.note ? `<div style="font-style:italic;color:#5b5663;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
         <div style="color:#837E8A;font-size:12px;margin-top:3px;">${placeEsc(when + dist)}</div>
         ${c.photo ? `<img src="${placeEsc(c.photo)}" style="display:block;width:100%;max-width:200px;border-radius:8px;margin-top:6px;">` : ''}
