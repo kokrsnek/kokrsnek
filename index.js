@@ -1278,3 +1278,76 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
     });
   }
 );
+
+// --- Reakce a komentáře u volného check-inu — notifikace autorovi ------------
+// Reakce (Přijdu taky / Jsem poblíž / emoji) se zapisují přímo do dokumentu
+// check-inu (pole coming, near a mapa emojis), komentáře do podkolekce
+// comments. Autor dostane notifikaci o každé nové reakci a komentáři. Platí
+// pro ně stejný zvoneček jako pro check-iny (settings/placeCheckins) i
+// testovací režim TEST_CHECKIN_ONLY_USER.
+
+/** Tokeny autora check-inu; prázdné, když reagoval sám autor nebo má ztlumený zvoneček check-inů. */
+async function getPlaceCheckinAuthorTokens(authorName, reactorName) {
+  const author = normName(authorName);
+  if (!author || author === normName(reactorName)) return [];
+  const settingsDoc = await db.collection('settings').doc('placeCheckins').get();
+  const mutedMap = (settingsDoc.exists && settingsDoc.data().muted) || {};
+  const muted = new Set(Object.keys(mutedMap).filter((n) => mutedMap[n]).map(normName));
+  if (muted.has(author)) return [];
+  const snap = await db.collection('pushTokens').get();
+  const tokens = [];
+  snap.forEach((doc) => {
+    const d = doc.data();
+    if (d.token && normName(d.user) === author) tokens.push(d.token);
+  });
+  return keepOnlyTestUserTokens(tokens);
+}
+
+exports.onPlaceCheckinReacted = onDocumentUpdated(
+  'placeCheckins/{checkinId}',
+  async (event) => {
+    const before = event.data.before.data() || {};
+    const after = event.data.after.data() || {};
+    if (!after.user || !after.place) return;
+    const added = [];
+    const newNames = (a, b) => (a || []).filter((n) => !(b || []).includes(n));
+    newNames(after.coming, before.coming).forEach((n) => added.push({ who: n, kind: 'coming' }));
+    newNames(after.near, before.near).forEach((n) => added.push({ who: n, kind: 'near' }));
+    const bE = before.emojis || {};
+    const aE = after.emojis || {};
+    Object.keys(aE).forEach((n) => {
+      if (aE[n] && aE[n] !== bE[n]) added.push({ who: n, kind: 'emoji', emoji: aE[n] });
+    });
+    for (const r of added) {
+      const tokens = await getPlaceCheckinAuthorTokens(after.user, r.who);
+      if (!tokens.length) continue;
+      let title;
+      if (r.kind === 'coming') title = `👋 ${r.who}: Přijdu taky`;
+      else if (r.kind === 'near') title = `📍 ${r.who}: Jsem poblíž`;
+      else title = `${r.emoji} ${r.who} reagoval na tvůj check-in`;
+      await sendToTokens(tokens, {
+        title,
+        body: `Tvůj check-in: ${after.place}`,
+        openPlaces: '1',
+      });
+    }
+  }
+);
+
+exports.onPlaceCheckinCommentCreated = onDocumentCreated(
+  'placeCheckins/{checkinId}/comments/{commentId}',
+  async (event) => {
+    const cm = event.data.data();
+    if (!cm || !cm.user || !cm.text) return;
+    const parent = await db.collection('placeCheckins').doc(event.params.checkinId).get();
+    if (!parent.exists) return;
+    const p = parent.data();
+    const tokens = await getPlaceCheckinAuthorTokens(p.user, cm.user);
+    if (!tokens.length) return;
+    await sendToTokens(tokens, {
+      title: `💬 ${cm.user} komentoval tvůj check-in`,
+      body: `${cm.text}\n(${p.place})`,
+      openPlaces: '1',
+    });
+  }
+);

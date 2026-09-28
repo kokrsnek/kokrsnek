@@ -3985,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s avatarem a jménem, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Seznam / Mapa (piny s avatarem a jménem, zeleně ty z posledních 24 hodin). U cizích check-inů je vidět, jak daleko jsou od tebe. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. U cizích check-inů jde zmáčknout Přijdu taky / Jsem poblíž, dát emoji reakci, napsat komentář nebo rovnou soukromou zprávu autorovi (tlačítko Napsat); autor dostane notifikaci. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -6043,7 +6043,7 @@ function formatPlaceDistance(m){
 // Stav otevřené obrazovky. "live" je posledních 50 (živý posluchač), "older"
 // jsou starší, co se dotáhly tlačítkem "Načíst starší".
 const PLACE_PAGE_SIZE = 50;
-const placeScreen = { me:null, live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true };
+const placeScreen = { me:null, live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true, emojiPickerFor:null, openComments:new Set(), commentUnsubs:{}, comments:{} };
 
 function placeAllDocs(){
   const byId = new Map();
@@ -6086,7 +6086,7 @@ let placeCheckinFitHandler = null;
 function openPlaceCheckinScreen(){
   const me = getUserName();
   if(!me) return;
-  Object.assign(placeScreen, { me, live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true });
+  Object.assign(placeScreen, { me, live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true, emojiPickerFor:null, openComments:new Set(), commentUnsubs:{}, comments:{} });
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) closePlaceCheckinScreen(backdrop); };
@@ -6132,16 +6132,15 @@ function openPlaceCheckinScreen(){
   document.getElementById('placeViewMapBtn').onclick = () => setPlaceView('map');
   stylePlaceViewButtons();
 
-  // Jedno delegované klepnutí na celý seznam (mazání, úprava, fotka, starší).
+  // Jedno delegované klepnutí na celý seznam (mazání, úprava, fotka, starší,
+  // reakce, komentáře, chat). Enter v poli komentáře komentář odešle.
   const feedEl = document.getElementById('placeCheckinFeed');
-  feedEl.onclick = (e) => {
-    const t = e.target.closest('[data-act]');
-    if(!t) return;
-    const act = t.dataset.act;
-    if(act === 'delete') deletePlaceCheckin(t.dataset.id);
-    else if(act === 'edit') beginEditPlaceCheckin(t.dataset.id);
-    else if(act === 'older') loadOlderPlaceCheckins();
-    else if(act === 'photo') openImageLightbox(t.dataset.src, feedEl._photos);
+  feedEl.onclick = handlePlaceFeedClick;
+  feedEl.onkeydown = (e) => {
+    if(e.key === 'Enter' && e.target.dataset && e.target.dataset.commentInput){
+      e.preventDefault();
+      sendPlaceComment(e.target.dataset.commentInput);
+    }
   };
 
   // Poloha telefonu jen kvůli "1,2 km od tebe" — když ji telefon nedá,
@@ -6315,7 +6314,8 @@ function closePlaceCheckinScreen(backdrop){
     placeCheckinFitHandler = null;
   }
   if(placeScreen.map){ try{ placeScreen.map.remove(); }catch(e){} }
-  Object.assign(placeScreen, { map:null, markerLayer:null, posMarker:null });
+  Object.values(placeScreen.commentUnsubs).forEach(u => { try{ u(); }catch(e){} });
+  Object.assign(placeScreen, { map:null, markerLayer:null, posMarker:null, commentUnsubs:{}, comments:{}, openComments:new Set(), emojiPickerFor:null });
   backdrop.remove();
 }
 
@@ -6588,6 +6588,13 @@ async function deletePlaceCheckin(id){
     const snap = await ref.get();
     if(!snap.exists || snap.data().user !== me) return;
     const photoPath = snap.data().photoPath || '';
+    // Podkolekce (komentáře) se s dokumentem sama nesmaže, tak ji uklidíme.
+    try{
+      const cs = await ref.collection('comments').get();
+      if(!cs.empty){ const b = db.batch(); cs.forEach(d => b.delete(d.ref)); await b.commit(); }
+    }catch(e){ console.error('Chyba při mazání komentářů:', e); }
+    if(placeScreen.commentUnsubs[id]){ placeScreen.commentUnsubs[id](); delete placeScreen.commentUnsubs[id]; }
+    placeScreen.openComments.delete(id);
     await ref.delete();
     if(photoPath) storage.ref(photoPath).delete().catch(() => {});
     placeScreen.older = placeScreen.older.filter(d => d.id !== id);
@@ -6619,6 +6626,133 @@ async function loadOlderPlaceCheckins(){
   }
 }
 
+// ---- Interakce s check-iny: "Přijdu taky", "Jsem poblíž", emoji, komentáře, chat ----
+// Reakce (coming/near = pole jmen, emojis = mapa jméno -> emoji) se ukládají
+// přímo do dokumentu check-inu, takže je živý posluchač seznamu roznese
+// všem hned. Komentáře jsou v podkolekci comments, počet v poli commentCount.
+// Každou reakci a komentář dostane autor jako notifikaci (Cloud Functions
+// onPlaceCheckinReacted a onPlaceCheckinCommentCreated).
+const PLACE_QUICK_EMOJIS = ['👍', '🍺', '❤️', '😂', '🔥', '👀'];
+
+// Upraví dokument v lokálních datech (u starších, co nemají živý posluchač,
+// je to jediný způsob, jak se změna hned ukáže).
+function patchPlaceDoc(id, fn){
+  placeScreen.live = placeScreen.live.map(d => d.id === id ? fn(d) : d);
+  placeScreen.older = placeScreen.older.map(d => d.id === id ? fn(d) : d);
+}
+
+async function togglePlaceReaction(id, kind, emoji){
+  const me = placeScreen.me;
+  const d = placeAllDocs().find(x => x.id === id);
+  if(!me || !d || d.user === me) return;
+  const ref = db.collection('placeCheckins').doc(id);
+  const FV = firebase.firestore.FieldValue;
+  try{
+    if(kind === 'coming' || kind === 'near'){
+      const has = (d[kind] || []).includes(me);
+      patchPlaceDoc(id, x => ({ ...x, [kind]: has ? (x[kind] || []).filter(n => n !== me) : [...(x[kind] || []), me] }));
+      refreshPlaceViews(true);
+      await ref.update({ [kind]: has ? FV.arrayRemove(me) : FV.arrayUnion(me) });
+    } else {
+      const cur = (d.emojis || {})[me];
+      patchPlaceDoc(id, x => { const e = { ...(x.emojis || {}) }; if(cur === emoji) delete e[me]; else e[me] = emoji; return { ...x, emojis: e }; });
+      placeScreen.emojiPickerFor = null;
+      refreshPlaceViews(true);
+      const fp = new firebase.firestore.FieldPath('emojis', me);
+      if(cur === emoji) await ref.update(fp, FV.delete());
+      else await ref.update(fp, emoji);
+    }
+  }catch(e){ console.error('Chyba při reakci na check-in:', e); }
+}
+
+function subscribePlaceComments(id){
+  if(placeScreen.commentUnsubs[id]) return;
+  placeScreen.commentUnsubs[id] = db.collection('placeCheckins').doc(id).collection('comments').orderBy('at', 'asc').onSnapshot(snap => {
+    placeScreen.comments[id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    refreshPlaceViews(true);
+  }, err => console.error('Chyba při načítání komentářů:', err));
+}
+
+function toggleComments(id){
+  if(placeScreen.openComments.has(id)){
+    placeScreen.openComments.delete(id);
+    if(placeScreen.commentUnsubs[id]){ placeScreen.commentUnsubs[id](); delete placeScreen.commentUnsubs[id]; }
+  } else {
+    placeScreen.openComments.add(id);
+    subscribePlaceComments(id);
+  }
+  refreshPlaceViews(true);
+}
+
+async function sendPlaceComment(id){
+  const me = placeScreen.me;
+  const feedEl = document.getElementById('placeCheckinFeed');
+  const input = feedEl && feedEl.querySelector(`[data-comment-input="${id}"]`);
+  if(!me || !input) return;
+  const text = (input.value || '').trim().slice(0, 300);
+  if(!text) return;
+  input.value = '';
+  try{
+    const ref = db.collection('placeCheckins').doc(id);
+    const batch = db.batch();
+    batch.set(ref.collection('comments').doc(), { user: me, text, at: new Date().toISOString() });
+    batch.update(ref, { commentCount: firebase.firestore.FieldValue.increment(1) });
+    await batch.commit();
+    patchPlaceDoc(id, x => ({ ...x, commentCount: (x.commentCount || 0) + 1 }));
+  }catch(e){
+    console.error('Chyba při odeslání komentáře:', e);
+    input.value = text;
+    alert('Komentář se nepodařilo odeslat.');
+  }
+}
+
+async function deletePlaceComment(id, cid){
+  const me = placeScreen.me;
+  const list = placeScreen.comments[id] || [];
+  const cm = list.find(x => x.id === cid);
+  if(!me || !cm || cm.user !== me) return;
+  if(!confirm('Smazat komentář?')) return;
+  try{
+    const ref = db.collection('placeCheckins').doc(id);
+    const batch = db.batch();
+    batch.delete(ref.collection('comments').doc(cid));
+    batch.update(ref, { commentCount: firebase.firestore.FieldValue.increment(-1) });
+    await batch.commit();
+    patchPlaceDoc(id, x => ({ ...x, commentCount: Math.max(0, (x.commentCount || 0) - 1) }));
+    refreshPlaceViews(true);
+  }catch(e){ console.error('Chyba při mazání komentáře:', e); }
+}
+
+// "Napsat" — otevře 1:1 chat s autorem a připraví rozepsanou zprávu, která
+// se na check-in odkazuje (dá se přepsat nebo smazat).
+function writeToPlaceAuthor(userName, place){
+  const me = placeScreen.me;
+  if(!me || !userName || userName === me) return;
+  try{
+    const key = 'kokrsnekChatDraft_' + chatThreadId(me, userName);
+    if(!localStorage.getItem(key)) localStorage.setItem(key, `K tvému check-inu (${place}): `);
+  }catch(e){}
+  openChatThread(me, userName);
+}
+
+function handlePlaceFeedClick(e){
+  const t = e.target.closest('[data-act]');
+  if(!t) return;
+  const feedEl = document.getElementById('placeCheckinFeed');
+  const act = t.dataset.act, id = t.dataset.id;
+  if(act === 'delete') deletePlaceCheckin(id);
+  else if(act === 'edit') beginEditPlaceCheckin(id);
+  else if(act === 'older') loadOlderPlaceCheckins();
+  else if(act === 'photo') openImageLightbox(t.dataset.src, feedEl._photos);
+  else if(act === 'coming' || act === 'near') togglePlaceReaction(id, act);
+  else if(act === 'emoji') togglePlaceReaction(id, 'emoji', t.dataset.emoji);
+  else if(act === 'emojipicker'){ placeScreen.emojiPickerFor = (placeScreen.emojiPickerFor === id) ? null : id; refreshPlaceViews(true); }
+  else if(act === 'comments') toggleComments(id);
+  else if(act === 'sendcomment') sendPlaceComment(id);
+  else if(act === 'delcomment') deletePlaceComment(id, t.dataset.cid);
+  else if(act === 'chat') writeToPlaceAuthor(t.dataset.user, t.dataset.place);
+}
+
 function renderPlaceFeedList(){
   const feedEl = document.getElementById('placeCheckinFeed');
   if(!feedEl) return;
@@ -6628,11 +6762,18 @@ function renderPlaceFeedList(){
     feedEl._photos = [];
     return;
   }
+  // Rozepsané komentáře a zaměření pole přežijí překreslení seznamu.
+  const drafts = {};
+  feedEl.querySelectorAll('[data-comment-input]').forEach(i => { drafts[i.dataset.commentInput] = i.value; });
+  const activeEl = document.activeElement;
+  const activeId = (activeEl && activeEl.dataset && activeEl.dataset.commentInput) || null;
+
   const me = placeScreen.me, pos = placeScreen.pos;
   const ordered = docs.slice().reverse(); // nejstarší nahoře, nejnovější dole
   feedEl._photos = ordered.filter(c => c.photo).map(c => c.photo);
   const hasMore = placeScreen.live.length >= PLACE_PAGE_SIZE && !placeScreen.olderExhausted;
   const iconBtn = "background:none;border:none;color:var(--muted);cursor:pointer;padding:3px 4px;display:inline-flex;";
+  const chip = (active, clickable) => `background:${active ? 'var(--accent)' : 'var(--surface)'};color:${active ? '#fff' : 'var(--ink)'};border:1px solid ${active ? 'var(--accent)' : 'var(--line)'};border-radius:100px;padding:5px 11px;font-family:'Inter', sans-serif;font-size:12.5px;font-weight:600;${clickable ? 'cursor:pointer;' : 'cursor:default;'}`;
   const items = ordered.map((c, idx) => {
     const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number';
     const mapsUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : null;
@@ -6645,6 +6786,60 @@ function renderPlaceFeedList(){
       ? `<div style="font-family:'Inter', sans-serif;font-size:11.5px;color:var(--muted);margin-top:2px;">${placeEsc(formatPlaceDistance(haversineDistanceMeters(pos.lat, pos.lng, c.lat, c.lng)))}</div>` : '';
     const actions = mine
       ? `<button data-act="edit" data-id="${c.id}" title="Upravit" style="${iconBtn}">${editIconSVG()}</button><button data-act="delete" data-id="${c.id}" title="Smazat" style="${iconBtn}">${trashIconSVG()}</button>` : '';
+
+    // --- reakce ---
+    const coming = c.coming || [], near = c.near || [], emojis = c.emojis || {};
+    const groups = {};
+    Object.keys(emojis).forEach(n => { if(emojis[n]) (groups[emojis[n]] = groups[emojis[n]] || []).push(n); });
+    const myEmoji = emojis[me];
+    const chips = [];
+    if(!mine){
+      chips.push(`<button data-act="coming" data-id="${c.id}" style="${chip(coming.includes(me), true)}">Přijdu taky${coming.length ? ' · ' + coming.length : ''}</button>`);
+      chips.push(`<button data-act="near" data-id="${c.id}" style="${chip(near.includes(me), true)}">Jsem poblíž${near.length ? ' · ' + near.length : ''}</button>`);
+    } else {
+      if(coming.length) chips.push(`<span style="${chip(false, false)}">Přijdou · ${coming.length}</span>`);
+      if(near.length) chips.push(`<span style="${chip(false, false)}">Poblíž · ${near.length}</span>`);
+    }
+    Object.keys(groups).forEach(em => {
+      const mineHere = myEmoji === em;
+      const label = `${placeEsc(em)} ${groups[em].length}`;
+      chips.push(mine
+        ? `<span title="${placeEsc(groups[em].join(', '))}" style="${chip(false, false)}">${label}</span>`
+        : `<button data-act="emoji" data-id="${c.id}" data-emoji="${placeEsc(em)}" title="${placeEsc(groups[em].join(', '))}" style="${chip(mineHere, true)}">${label}</button>`);
+    });
+    if(!mine) chips.push(`<button data-act="emojipicker" data-id="${c.id}" title="Přidat reakci" style="${chip(false, true)}">😀 +</button>`);
+    const cCount = c.commentCount || 0;
+    chips.push(`<button data-act="comments" data-id="${c.id}" style="${chip(placeScreen.openComments.has(c.id), true)}">💬${cCount ? ' ' + cCount : ''}</button>`);
+    if(!mine) chips.push(`<button data-act="chat" data-user="${placeEsc(c.user)}" data-place="${placeEsc(c.place)}" style="${chip(false, true)}">Napsat</button>`);
+
+    const pickerHtml = (!mine && placeScreen.emojiPickerFor === c.id)
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${PLACE_QUICK_EMOJIS.map(em => `<button data-act="emoji" data-id="${c.id}" data-emoji="${placeEsc(em)}" style="background:var(--surface);border:1px solid var(--line);border-radius:100px;padding:5px 10px;font-size:18px;line-height:1;cursor:pointer;">${em}</button>`).join('')}</div>` : '';
+    const namesParts = [];
+    if(coming.length) namesParts.push('Přijdou: ' + coming.map(placeEsc).join(', '));
+    if(near.length) namesParts.push('Poblíž: ' + near.map(placeEsc).join(', '));
+    const namesHtml = namesParts.length ? `<div style="font-family:'Inter', sans-serif;font-size:11.5px;color:var(--muted);margin-top:5px;">${namesParts.join(' · ')}</div>` : '';
+
+    // --- komentáře ---
+    let commentsHtml = '';
+    if(placeScreen.openComments.has(c.id)){
+      const list = placeScreen.comments[c.id];
+      const rows = !list
+        ? `<div style="color:var(--muted);font-size:12px;padding:4px 0;">Načítám…</div>`
+        : (list.length ? list.map(cm => `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:4px 0;">
+              <div style="min-width:0;font-family:'Inter', sans-serif;font-size:13px;line-height:1.35;color:var(--ink);"><span style="font-weight:700;">${placeEsc(cm.user)}</span> ${placeEsc(cm.text)} <span style="color:var(--muted);font-size:11px;">${placeEsc(formatLastSeen(cm.at).replace(/^naposledy aktivní /, ''))}</span></div>
+              ${cm.user === me ? `<button data-act="delcomment" data-id="${c.id}" data-cid="${cm.id}" title="Smazat" style="${iconBtn}">${trashIconSVG()}</button>` : ''}
+            </div>`).join('') : `<div style="color:var(--muted);font-size:12px;padding:4px 0;">Zatím žádné komentáře.</div>`);
+      commentsHtml = `
+        <div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:12px;">
+          ${rows}
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input data-comment-input="${c.id}" type="text" maxlength="300" placeholder="Napiš komentář…" style="flex:1;min-width:0;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 10px;border-radius:var(--radius-sm);">
+            <button data-act="sendcomment" data-id="${c.id}" style="background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:13px;padding:0 14px;border-radius:var(--radius-sm);cursor:pointer;">Odeslat</button>
+          </div>
+        </div>`;
+    }
+
     return `
       <div style="padding:12px 0;${idx > 0 ? 'border-top:1px solid var(--line);' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -6654,11 +6849,21 @@ function renderPlaceFeedList(){
         ${distHtml}
         ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
         ${c.photo ? `<img data-act="photo" data-src="${placeEsc(c.photo)}" src="${placeEsc(c.photo)}" loading="lazy" style="display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px;cursor:zoom-in;">` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${chips.join('')}</div>
+        ${pickerHtml}${namesHtml}${commentsHtml}
       </div>`;
   }).join('');
   const olderBtn = hasMore
     ? `<div style="text-align:center;padding:4px 0 10px;"><button data-act="older" style="background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:13px;padding:8px 16px;border-radius:100px;cursor:pointer;">Načíst starší</button></div>` : '';
   feedEl.innerHTML = `<div style="margin-top:auto;">${olderBtn}${items}</div>`;
+
+  feedEl.querySelectorAll('[data-comment-input]').forEach(i => {
+    if(drafts[i.dataset.commentInput] !== undefined) i.value = drafts[i.dataset.commentInput];
+  });
+  if(activeId){
+    const el = feedEl.querySelector(`[data-comment-input="${activeId}"]`);
+    if(el){ el.focus(); try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){} }
+  }
 }
 
 function wirePlaceCheckinFeed(){
