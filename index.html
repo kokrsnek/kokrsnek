@@ -6146,7 +6146,18 @@ function openPlaceCheckinScreen(){
   feedEl.addEventListener('focusin', e => {
     const id = e.target && e.target.dataset && e.target.dataset.commentInput;
     if(!id) return;
+    setPlaceBarForTyping(true);
     [0, 300, 600].forEach(ms => setTimeout(() => revealPlaceCommentBox(id), ms));
+  });
+  // Lišta se vrací s malým zpožděním: klepnutí na Odeslat nejdřív odebere
+  // fokus a lišta by jinak tlačítko posunula dřív, než se klepnutí dokončí.
+  // Při přeskočení do jiného pole komentáře zůstane schovaná.
+  feedEl.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if(a && a.dataset && a.dataset.commentInput && feedEl.contains(a)) return;
+      setPlaceBarForTyping(false);
+    }, 200);
   });
   feedEl.onkeydown = (e) => {
     if(e.key === 'Enter' && e.target.dataset && e.target.dataset.commentInput){
@@ -6167,6 +6178,16 @@ function openPlaceCheckinScreen(){
   wirePlaceNamesLongPress(feedEl);
   wirePlaceCheckinMute(me);
   wirePlaceCheckinFeed();
+}
+
+// Při psaní komentáře v seznamu se spodní lišta (zvoneček, Nový check-in,
+// křížek) schová, ať má seznam nad klávesnicí víc místa.
+function setPlaceBarForTyping(typing){
+  const bar = document.getElementById('placeCheckinBar');
+  const form = document.getElementById('placeCheckinForm');
+  if(!bar) return;
+  if(typing) bar.style.display = 'none';
+  else if(!form || form.style.display === 'none') bar.style.display = 'flex';
 }
 
 // Otevřený formulář dostane celou obrazovku (schová se přepínač, seznam/mapa
