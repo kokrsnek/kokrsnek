@@ -6533,7 +6533,7 @@ function renderPlaceCheckinForm(opts){
             if(oldPath) storage.ref(oldPath).delete().catch(() => {});
           }catch(e){
             console.error('Chyba při nahrávání fotky:', e);
-            alert('Fotku se nepodařilo nahrát, změny textu se uloží bez ní.');
+            alert('Fotku se nepodařilo nahrát (' + (e && (e.code || e.message) || 'neznámá chyba') + '), změny textu se uloží bez ní.');
           }
         } else if(state.remove){
           upd.photo = ''; upd.photoPath = '';
@@ -6551,7 +6551,7 @@ function renderPlaceCheckinForm(opts){
             photo = up.url; photoPath = up.path;
           }catch(e){
             console.error('Chyba při nahrávání fotky:', e);
-            alert('Fotku se nepodařilo nahrát, check-in odejde bez ní.');
+            alert('Fotku se nepodařilo nahrát (' + (e && (e.code || e.message) || 'neznámá chyba') + '), check-in odejde bez ní.');
           }
         }
         const coords = opts.coords;

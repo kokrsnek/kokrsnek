@@ -83,6 +83,28 @@ function normName(s) {
   return (s || '').normalize('NFC').trim();
 }
 
+// TESTOVACÍ REŽIM (jen notifikace check-inů): dokud je tu vyplněné jméno,
+// posílají se notifikace o check-inech (na akci i volný "Kde jsi?") jen tomuto
+// uživateli. Ostatní notifikace (akce, chat, album, připomínky...) se tím
+// nemění. Na ostrý provoz změň na null a znovu nasaď funkce:
+// const TEST_CHECKIN_ONLY_USER = null;
+const TEST_CHECKIN_ONLY_USER = 'Android';
+
+/** V testovacím režimu nechá ze seznamu tokenů jen ty, co patří uživateli TEST_CHECKIN_ONLY_USER. */
+async function keepOnlyTestUserTokens(tokens) {
+  if (!TEST_CHECKIN_ONLY_USER || !tokens.length) return tokens;
+  const wanted = normName(TEST_CHECKIN_ONLY_USER).toLowerCase();
+  const snap = await db.collection('pushTokens').get();
+  const allowed = new Set();
+  snap.forEach((doc) => {
+    const d = doc.data();
+    if (d.token && normName(d.user).toLowerCase() === wanted) allowed.add(d.token);
+  });
+  const kept = tokens.filter((t) => allowed.has(t));
+  console.log(`[testovací režim check-inů] ${kept.length}/${tokens.length} tokenů, jen uživatel ${TEST_CHECKIN_ONLY_USER}`);
+  return kept;
+}
+
 /** Vrátí tokeny všech lidí KROMĚ zadaného jména (aby si nikdo nepingnul sám sebe). */
 /** Vrátí Set normalizovaných jmen těch, kdo mají dané vlákno ztlumené (viz
  * index.html -> chatMuteBtn, pole "muted" v dokumentu chats/{threadId}). */
@@ -252,7 +274,7 @@ exports.onCheckinCreated = onDocumentCreated(
     if (!attendeeNames.length) return;
     const dateStr = formatEventDate(data.eventStart);
     const eventTitle = data.eventTitle || 'akci';
-    const tokens = await getTokensForMany(attendeeNames);
+    const tokens = await keepOnlyTestUserTokens(await getTokensForMany(attendeeNames));
     await sendToTokens(tokens, {
       title: `📍 ${checkedInUser} je na místě`,
       body: `„${eventTitle}“${dateStr ? `\n${dateStr}` : ''}`,
@@ -1247,7 +1269,7 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
       if (u === poster || muted.has(u)) return;
       tokens.push(d.token);
     });
-    await sendToTokens(tokens, {
+    await sendToTokens(await keepOnlyTestUserTokens(tokens), {
       // Bez skloňování místa (české "v pivovaru Bernard" by se automaticky
       // správně vyskloňovat nedalo), takže věta zní "Šuraj je v Pivovar Bernard".
       title: '📍 Check-in',
