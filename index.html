@@ -6146,8 +6146,14 @@ function openPlaceCheckinScreen(){
   feedEl.addEventListener('focusin', e => {
     const id = e.target && e.target.dataset && e.target.dataset.commentInput;
     if(!id) return;
-    setPlaceBarForTyping(true);
-    [0, 300, 600].forEach(ms => setTimeout(() => revealPlaceCommentBox(id), ms));
+    placeScreen.commentFocusAt = Date.now();
+    // Lišta se schová a seznam posune až po dokončení klepnutí, jinak by se
+    // obsah pod prstem pohnul a klepnutí by trefilo něco jiného.
+    setTimeout(() => {
+      const a = document.activeElement;
+      if(a && a.dataset && a.dataset.commentInput) setPlaceBarForTyping(true);
+    }, 350);
+    [400, 700, 1000].forEach(ms => setTimeout(() => revealPlaceCommentBox(id), ms));
   });
   // Lišta se vrací s malým zpožděním: klepnutí na Odeslat nejdřív odebere
   // fokus a lišta by jinak tlačítko posunula dřív, než se klepnutí dokončí.
@@ -7130,13 +7136,16 @@ function scrollPlaceFeedToEnd(){
 // Jedna obsluha pro seznam i pro detail check-inu.
 function handlePlaceFeedClick(e){
   if(placeSuppressClick){ placeSuppressClick = false; return; }
+  // Klepnutí, které právě dalo fokus poli komentáře, nesmí spustit nic dalšího
+  // (na iPhonu přijde až po fokusu a mohlo by dopadnout vedle pole).
+  if(Date.now() - (placeScreen.commentFocusAt || 0) < 500) return;
   const t = e.target.closest('[data-act]');
   if(!t) return;
   const feedEl = document.getElementById('placeCheckinFeed');
   const act = t.dataset.act, id = t.dataset.id;
   // Klepnutí na odkaz (název místa) nebo do pole komentáře detail neotevírá.
   if(act === 'detail'){
-    if(e.target.closest('a, input, textarea')) return;
+    if(e.target.closest('a, input, textarea, [data-nodetail]')) return;
     openPlaceCheckinDetail(id);
     return;
   }
@@ -7190,7 +7199,7 @@ function renderPlaceFeedList(){
     let commentsHtml = '';
     if(placeScreen.openComments.has(c.id)){
       commentsHtml = `
-        <div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:12px;">
+        <div data-nodetail="1" style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:12px;">
           ${placeCommentRowsHtml(c)}
           <div style="display:flex;gap:6px;margin-top:6px;">
             <input data-comment-input="${c.id}" type="text" maxlength="300" placeholder="Napiš komentář…" style="flex:1;min-width:0;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:8px 10px;border-radius:var(--radius-sm);">
