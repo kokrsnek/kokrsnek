@@ -6093,7 +6093,7 @@ function openPlaceCheckinScreen(){
   const sideBtn = 'flex:0 0 auto;width:46px;height:46px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;';
   backdrop.innerHTML = `
     <div class="ev-modal" style="display:flex;flex-direction:column;overflow:hidden;text-align:center;box-sizing:border-box;width:100%;max-width:none;height:100%;max-height:none;border:none;border-radius:0;box-shadow:none;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);">
-      <div style="flex:0 0 auto;display:flex;justify-content:center;padding-bottom:10px;">
+      <div id="placeViewRow" style="flex:0 0 auto;display:flex;justify-content:center;padding-bottom:10px;">
         <div style="display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px;">
           <button id="placeViewListBtn" type="button">Seznam</button>
           <button id="placeViewMapBtn" type="button">Mapa</button>
@@ -6105,7 +6105,7 @@ function openPlaceCheckinScreen(){
         <div id="placeMapEmpty" style="display:none;position:absolute;left:12px;right:12px;top:12px;z-index:5;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);text-align:center;">Žádný z načtených check-inů nemá uloženou polohu.</div>
       </div>
       <div id="placeCheckinForm" style="display:none;flex:0 0 auto;max-height:62%;overflow-y:auto;text-align:left;padding:12px 0;border-top:1px solid var(--line);"></div>
-      <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:12px;border-top:1px solid var(--line);">
+      <div id="placeCheckinBar" style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:12px;border-top:1px solid var(--line);">
         <button id="placeCheckinMuteBtn" title="Ztlumit notifikace z check-inů" style="${sideBtn}">${bellIconSVG(false)}</button>
         <button id="startPlaceCheckinBtn" style="flex:1;height:46px;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:0 12px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Nový check-in</button>
         <button id="placeCheckinCloseBtn" title="Zavřít" style="${sideBtn}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -6155,6 +6155,28 @@ function openPlaceCheckinScreen(){
 
   wirePlaceCheckinMute(me);
   wirePlaceCheckinFeed();
+}
+
+// Otevřený formulář dostane celou obrazovku (schová se přepínač, seznam/mapa
+// i spodní lišta) — s vysunutou klávesnicí je jinak pro psaní málo místa a
+// pole by zajelo pod ovládací prvky. Po zavření se všechno vrátí.
+function setPlaceFormMode(open){
+  const q = id => document.getElementById(id);
+  const row = q('placeViewRow'), feed = q('placeCheckinFeed'), wrap = q('placeMapWrap'), bar = q('placeCheckinBar'), form = q('placeCheckinForm');
+  if(!form) return;
+  if(open){
+    if(row) row.style.display = 'none';
+    if(feed) feed.style.display = 'none';
+    if(wrap) wrap.style.display = 'none';
+    if(bar) bar.style.display = 'none';
+    // Vodorovná rezerva 6 px, ať se nezařízne obrys zvýrazněného pole.
+    form.style.cssText = 'display:block;flex:1 1 auto;min-height:0;overflow-y:auto;text-align:left;padding:6px 6px 0;';
+  } else {
+    form.style.cssText = 'display:none;flex:0 0 auto;max-height:62%;overflow-y:auto;text-align:left;padding:12px 0;border-top:1px solid var(--line);';
+    if(row) row.style.display = 'flex';
+    if(bar) bar.style.display = 'flex';
+    setPlaceView(placeScreen.view);
+  }
 }
 
 function stylePlaceViewButtons(){
@@ -6330,12 +6352,19 @@ async function uploadPlaceCheckinPhoto(checkinId, file){
 }
 
 async function beginPlaceCheckinForm(){
-  const btn = document.getElementById('startPlaceCheckinBtn');
   const formEl = document.getElementById('placeCheckinForm');
   const me = placeScreen.me || getUserName();
-  btn.style.display = 'none';
-  formEl.style.display = 'block';
-  formEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:8px;">Hledám místa v okolí…</div>`;
+  setPlaceFormMode(true);
+  // Při načítání je spodní lišta schovaná, tak je tu aspoň "Zrušit". Značka
+  // (token) zajistí, že pozdě dorazivší výsledky po zrušení nic nevykreslí.
+  const token = String(Date.now());
+  formEl.dataset.token = token;
+  formEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:16px 8px;">Hledám místa v okolí…<div><button type="button" id="placeLoadCancelBtn" style="margin-top:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:13px;padding:8px 18px;border-radius:var(--radius-sm);cursor:pointer;">Zrušit</button></div></div>`;
+  document.getElementById('placeLoadCancelBtn').onclick = () => {
+    formEl.dataset.token = '';
+    formEl.innerHTML = '';
+    setPlaceFormMode(false);
+  };
 
   const favP = loadFavoritePlaces(me).catch(() => []);
   let guess = '';
@@ -6361,22 +6390,19 @@ async function beginPlaceCheckinForm(){
     }
   }
   const favorites = await favP;
+  if(formEl.dataset.token !== token) return; // mezitím zrušeno
   renderPlaceCheckinForm({ mode: 'new', coords, guess, suggestions, favorites });
 }
 
 function beginEditPlaceCheckin(id){
   const d = placeAllDocs().find(x => x.id === id);
   if(!d || d.user !== placeScreen.me) return;
-  const btn = document.getElementById('startPlaceCheckinBtn');
-  const formEl = document.getElementById('placeCheckinForm');
-  btn.style.display = 'none';
-  formEl.style.display = 'block';
+  setPlaceFormMode(true);
   renderPlaceCheckinForm({ mode: 'edit', id, place: d.place || '', note: d.note || '', photo: d.photo || '', photoPath: d.photoPath || '' });
 }
 
 // Jeden formulář pro nový check-in i pro úpravu existujícího.
 function renderPlaceCheckinForm(opts){
-  const btn = document.getElementById('startPlaceCheckinBtn');
   const formEl = document.getElementById('placeCheckinForm');
   const isEdit = opts.mode === 'edit';
   const state = { file: null, remove: false, previewUrl: null };
@@ -6390,25 +6416,32 @@ function renderPlaceCheckinForm(opts){
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
       ${favs.map(n => `<button type="button" class="placePickBtn" data-name="${placeEsc(n)}" style="${chip}">${placeEsc(n)}</button>`).join('')}
     </div>` : '';
-  const sugHtml = sugs.length ? `
-    <div style="${lbl}">Místa v okolí</div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-      ${sugs.map(s => `
+  // Návrhy z okolí: první tři hned, zbytek po rozkliknutí, ať formulář nebývá
+  // dlouhý na tři obrazovky.
+  const sugRow = s => `
         <button type="button" class="placePickBtn" data-name="${placeEsc(s.name)}" style="text-align:left;background:var(--surface);border:1.5px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:13.5px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;">
           <div style="font-weight:700;">${placeEsc(s.name)}</div>
           ${s.vicinity ? `<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">${placeEsc(s.vicinity)}</div>` : ''}
-        </button>`).join('')}
-    </div>` : '';
+        </button>`;
+  const sugFirst = sugs.slice(0, 3), sugMore = sugs.slice(3);
+  const sugHtml = sugs.length ? `
+    <div style="${lbl}">Místa v okolí</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:${sugMore.length ? '6px' : '14px'};">${sugFirst.map(sugRow).join('')}</div>
+    ${sugMore.length ? `
+      <div id="placeSugMore" style="display:none;flex-direction:column;gap:6px;margin-bottom:6px;">${sugMore.map(sugRow).join('')}</div>
+      <button type="button" id="placeSugMoreBtn" style="background:none;border:none;color:var(--accent);font-family:'Inter', sans-serif;font-weight:700;font-size:13px;padding:6px 2px;margin-bottom:10px;cursor:pointer;">Další místa v okolí (${sugMore.length})</button>` : ''}` : '';
 
+  // Pole "Kde jsi" je hned nahoře (je vidět, co se píše, i s klávesnicí),
+  // pod ním nápovědy; tlačítka Zrušit/Odeslat drží dole (sticky).
   formEl.innerHTML = `
-    ${favHtml}${sugHtml}
     <label style="${lbl}">Kde jsi</label>
-    <input id="placeCheckinPlace" type="text" value="${placeEsc(isEdit ? opts.place : (opts.guess || ''))}" placeholder="Napiš, kde jsi…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:12px;">
+    <input id="placeCheckinPlace" type="text" value="${placeEsc(isEdit ? opts.place : (opts.guess || ''))}" placeholder="Napiš, kde jsi…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:14px;">
+    ${favHtml}${sugHtml}
     <label style="${lbl}">Poznámka (nepovinné)</label>
     <textarea id="placeCheckinNote" maxlength="120" rows="2" placeholder="Třeba doporučení pro ostatní…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);resize:none;margin-bottom:12px;">${placeEsc(isEdit ? opts.note : '')}</textarea>
     <input id="placePhotoInput" type="file" accept="image/*" style="display:none;">
     <div id="placePhotoRow" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"></div>
-    <div style="display:flex;gap:8px;">
+    <div style="position:sticky;bottom:0;background:var(--bg2);display:flex;gap:8px;padding:10px 0 4px;border-top:1px solid var(--line);">
       <button id="cancelPlaceCheckinBtn" type="button" style="flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">Zrušit</button>
       <button id="submitPlaceCheckinBtn" type="button" style="flex:1;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:11px;border-radius:var(--radius-sm);cursor:pointer;">${isEdit ? 'Uložit' : 'Odeslat'}</button>
     </div>`;
@@ -6417,6 +6450,18 @@ function renderPlaceCheckinForm(opts){
   const noteInput = document.getElementById('placeCheckinNote');
   const photoInput = document.getElementById('placePhotoInput');
   const photoRow = document.getElementById('placePhotoRow');
+
+  const moreBtn = document.getElementById('placeSugMoreBtn');
+  if(moreBtn) moreBtn.onclick = () => {
+    const more = document.getElementById('placeSugMore');
+    if(more) more.style.display = 'flex';
+    moreBtn.style.display = 'none';
+  };
+  // Po vysunutí klávesnice (okno se zmenší) se pole, do kterého se píše,
+  // dorolováním dostane do viditelné části.
+  const bringIntoView = (el, block) => setTimeout(() => { try{ el.scrollIntoView({ block, behavior: 'smooth' }); }catch(e){} }, 350);
+  placeInput.addEventListener('focus', () => bringIntoView(placeInput, 'nearest'));
+  noteInput.addEventListener('focus', () => bringIntoView(noteInput, 'center'));
 
   // Klepnutí na oblíbené místo / návrh z okolí jen vyplní pole (jde ještě přepsat).
   formEl.querySelectorAll('.placePickBtn').forEach(b => {
@@ -6459,9 +6504,8 @@ function renderPlaceCheckinForm(opts){
 
   const closeForm = () => {
     if(state.previewUrl){ URL.revokeObjectURL(state.previewUrl); state.previewUrl = null; }
-    formEl.style.display = 'none';
     formEl.innerHTML = '';
-    if(btn) btn.style.display = 'flex';
+    setPlaceFormMode(false);
     if(placeScreen.map) setTimeout(() => placeScreen.map && placeScreen.map.invalidateSize(), 60);
   };
   document.getElementById('cancelPlaceCheckinBtn').onclick = closeForm;
