@@ -3985,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole (tam, kde dřív bývala lupa) — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár konkrétních míst v okolí k výběru (přes Google), jde si to ale před odesláním i přepsat ručně. Jde přidat i krátká poznámka. Dole na stejné obrazovce je vidět, kde všude byla nedávno celá parta. Vlastní check-in jde smazat košíkem u něj. Ostatním přijde notifikace; zvonečkem vpravo nahoře na té obrazovce si je můžeš vypnout (nezávisle na chatu).'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole (tam, kde dřív bývala lupa) — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár konkrétních míst v okolí k výběru (přes Google), jde si to ale před odesláním i přepsat ručně. Jde přidat i krátká poznámka. Dole na stejné obrazovce je vidět, kde všude byla nedávno celá parta. Vlastní check-in jde smazat košíkem u něj. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka "Nový check-in" si je můžeš vypnout (nezávisle na chatu). Nejnovější check-in je vždy dole, starší nad ním; křížek vpravo dole obrazovku zavře.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -6029,25 +6029,42 @@ async function reverseGeocodePlace(lat, lng){
   }
 }
 
+// Rozvržení podobně jako chat: nahoře seznam (nejstarší nahoře, nejnovější
+// úplně dole), dole lišta se zvonečkem (vlevo), tlačítkem "Nový check-in"
+// (uprostřed) a křížkem pro zavření (vpravo). Formulář nového check-inu se
+// otevírá těsně nad tou lištou.
+let placeCheckinFitHandler = null;
 function openPlaceCheckinScreen(){
   const me = getUserName();
   if(!me) return;
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) closePlaceCheckinScreen(backdrop); };
+  const sideBtn = 'flex:0 0 auto;width:46px;height:46px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;';
   backdrop.innerHTML = `
-    <div class="ev-modal" style="text-align:center;box-sizing:border-box;width:100%;max-width:none;height:100%;max-height:none;border:none;border-radius:0;box-shadow:none;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);">
-      <div class="ev-modal-title" style="position:relative;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;min-height:38px;">
-        <button id="placeCheckinCloseBtn" title="Zavřít" style="position:absolute;left:0;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;display:inline-flex;align-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-        ${pinIconSVG()} Kde jsi?
-        <button id="placeCheckinMuteBtn" title="Ztlumit notifikace z check-inů" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:inline-flex;align-items:center;">${bellIconSVG(false)}</button>
+    <div class="ev-modal" style="display:flex;flex-direction:column;overflow:hidden;text-align:center;box-sizing:border-box;width:100%;max-width:none;height:100%;max-height:none;border:none;border-radius:0;box-shadow:none;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);">
+      <div id="placeCheckinFeed" style="flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;text-align:left;"><div style="margin:auto;color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <div id="placeCheckinForm" style="display:none;flex:0 0 auto;max-height:62%;overflow-y:auto;text-align:left;padding:12px 0;border-top:1px solid var(--line);"></div>
+      <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:12px;border-top:1px solid var(--line);">
+        <button id="placeCheckinMuteBtn" title="Ztlumit notifikace z check-inů" style="${sideBtn}">${bellIconSVG(false)}</button>
+        <button id="startPlaceCheckinBtn" style="flex:1;height:46px;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:0 12px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Nový check-in</button>
+        <button id="placeCheckinCloseBtn" title="Zavřít" style="${sideBtn}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
-      <button id="startPlaceCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Nový check-in</button>
-      <div id="placeCheckinForm" style="display:none;text-align:left;margin-top:14px;"></div>
-      <div style="height:1px;background:var(--line);margin:20px 0 14px;"></div>
-      <div id="placeCheckinFeed" style="text-align:left;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
     </div>`;
   document.body.appendChild(backdrop);
+  // S vysunutou klávesnicí se okno zmenší na viditelnou část (stejně jako
+  // v chatu), ať formulář a lišta nezajedou pod klávesnici.
+  if(window.visualViewport){
+    placeCheckinFitHandler = () => {
+      const vv = window.visualViewport;
+      backdrop.style.height = vv.height + 'px';
+      backdrop.style.top = vv.offsetTop + 'px';
+      backdrop.style.bottom = 'auto';
+    };
+    placeCheckinFitHandler();
+    window.visualViewport.addEventListener('resize', placeCheckinFitHandler);
+    window.visualViewport.addEventListener('scroll', placeCheckinFitHandler);
+  }
   document.getElementById('startPlaceCheckinBtn').onclick = beginPlaceCheckinForm;
   document.getElementById('placeCheckinCloseBtn').onclick = () => closePlaceCheckinScreen(backdrop);
   wirePlaceCheckinMute(me);
@@ -6080,6 +6097,11 @@ function wirePlaceCheckinMute(me){
 function closePlaceCheckinScreen(backdrop){
   if(placeCheckinsUnsub){ placeCheckinsUnsub(); placeCheckinsUnsub = null; }
   if(placeCheckinMuteUnsub){ placeCheckinMuteUnsub(); placeCheckinMuteUnsub = null; }
+  if(placeCheckinFitHandler && window.visualViewport){
+    window.visualViewport.removeEventListener('resize', placeCheckinFitHandler);
+    window.visualViewport.removeEventListener('scroll', placeCheckinFitHandler);
+    placeCheckinFitHandler = null;
+  }
   backdrop.remove();
 }
 
@@ -6198,15 +6220,19 @@ function wirePlaceCheckinFeed(){
   const feedEl = document.getElementById('placeCheckinFeed');
   if(!feedEl) return;
   const me = getUserName();
+  let firstRender = true;
   placeCheckinsUnsub = db.collection('placeCheckins').orderBy('at', 'desc').limit(50).onSnapshot(snap => {
+    // Když je člověk zrovna dole (u nejnovějšího), nový check-in ho tam udrží;
+    // když čte výš ve starších, nechá se to být.
+    const nearBottom = feedEl.scrollHeight - feedEl.scrollTop - feedEl.clientHeight < 80;
     if(snap.empty){
-      feedEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Zatím nikdo nikde nebyl.</div>`;
+      feedEl.innerHTML = `<div style="margin:auto;color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Zatím nikdo nikde nebyl.</div>`;
       return;
     }
     // Znění stejné jako u notifikace: "Šuraj je v Pivovar Bernard" (bez
     // skloňování místa), případná poznámka v uvozovkách pod tím.
     const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    feedEl.innerHTML = snap.docs.map(d => {
+    const inner = snap.docs.slice().reverse().map((d, idx) => {
       const c = d.data();
       const mapsUrl = (c.lat && c.lng) ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : null;
       const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '');
@@ -6214,7 +6240,7 @@ function wirePlaceCheckinFeed(){
         ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;">${esc(c.place)}</a>`
         : esc(c.place);
       return `
-        <div style="padding:12px 0;border-bottom:1px solid var(--line);">
+        <div style="padding:12px 0;${idx > 0 ? 'border-top:1px solid var(--line);' : ''}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
             <div style="flex:1;min-width:0;font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span style="font-weight:700;">${esc(c.user)}</span> je v ${placeHtml}</div>
             <span style="display:inline-flex;align-items:center;gap:6px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;padding-top:3px;">${when}${c.user === me ? `<button onclick="deletePlaceCheckin('${d.id}')" title="Smazat" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:2px;display:inline-flex;">${trashIconSVG()}</button>` : ''}</span>
@@ -6223,6 +6249,9 @@ function wirePlaceCheckinFeed(){
         </div>
       `;
     }).join('');
+    feedEl.innerHTML = `<div style="margin-top:auto;">${inner}</div>`;
+    if(firstRender || nearBottom) feedEl.scrollTop = feedEl.scrollHeight;
+    firstRender = false;
   }, err => {
     console.error('Chyba při načítání check-inů:', err);
     feedEl.innerHTML = `<div style="color:var(--coral);font-size:12.5px;text-align:center;padding:12px;">Nepodařilo se načíst.</div>`;

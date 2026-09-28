@@ -1247,8 +1247,10 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
       tokens.push(d.token);
     });
     await sendToTokens(tokens, {
-      title: `📍 Check-in: ${data.user}`,
-      body: `${data.place}${data.note ? `\n„${data.note}“` : ''}`,
+      // Bez skloňování místa (české "v pivovaru Bernard" by se automaticky
+      // správně vyskloňovat nedalo), takže věta zní "Šuraj je v Pivovar Bernard".
+      title: '📍 Check-in',
+      body: `${data.user} je v ${data.place}${data.note ? `\n„${data.note}“` : ''}`,
       openPlaces: '1',
     });
   }
