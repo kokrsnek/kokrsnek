@@ -49,12 +49,14 @@ self.addEventListener('notificationclick', (event) => {
   const pollId = event.notification.data && event.notification.data.pollId;
   const bringKey = event.notification.data && event.notification.data.bringKey;
   const expenseKey = event.notification.data && event.notification.data.expenseKey;
+  const openPlaces = event.notification.data && event.notification.data.openPlaces;
   let targetUrl = './index.html';
   if (eventId) targetUrl = `./index.html?event=${encodeURIComponent(eventId)}`;
   else if (chatWith) targetUrl = `./index.html?chat=${encodeURIComponent(chatWith)}`;
   else if (pollId) targetUrl = `./index.html?poll=${encodeURIComponent(pollId)}`;
   else if (bringKey) targetUrl = `./index.html?bring=${encodeURIComponent(bringKey)}`;
   else if (expenseKey) targetUrl = `./index.html?expense=${encodeURIComponent(expenseKey)}`;
+  else if (openPlaces) targetUrl = './index.html?places=1';
 
   // ZÁLOHA PRO iOS: Safari appku po klepnutí na notifikaci skoro vždycky
   // "zabitou" na pozadí jen znovu spustí, a přitom dlouhodobě (a bez opravy
@@ -63,14 +65,14 @@ self.addEventListener('notificationclick', (event) => {
   // pracovník cílovou akci navíc uloží do IndexedDB, a appka si ji po
   // startu sama vyzvedne (viz idbGetPendingNav v index.html), místo aby se
   // spoléhala jen na URL parametr.
-  const idbSetPendingNav = (eventId || chatWith || pollId || bringKey || expenseKey) ? new Promise((resolve) => {
+  const idbSetPendingNav = (eventId || chatWith || pollId || bringKey || expenseKey || openPlaces) ? new Promise((resolve) => {
     try{
       const req = indexedDB.open('kokrsnekNav', 1);
       req.onupgradeneeded = () => { req.result.createObjectStore('pending'); };
       req.onsuccess = () => {
         try{
           const tx = req.result.transaction('pending', 'readwrite');
-          tx.objectStore('pending').put({ eventId, chatWith, pollId, bringKey, expenseKey, at: Date.now() }, 'latest');
+          tx.objectStore('pending').put({ eventId, chatWith, pollId, bringKey, expenseKey, openPlaces, at: Date.now() }, 'latest');
           tx.oncomplete = () => resolve();
           tx.onerror = () => resolve();
         }catch(e){ resolve(); }
@@ -85,16 +87,17 @@ self.addEventListener('notificationclick', (event) => {
         if ('focus' in client) {
           // Appka už běží: pošli jí zprávu (pro případ, že poslouchá) a zkus i tvrdou
           // navigaci na cílovou URL, ať se to otevře spolehlivě i bez zprávy.
-          if ((eventId || chatWith || pollId || bringKey || expenseKey) && 'postMessage' in client) {
+          if ((eventId || chatWith || pollId || bringKey || expenseKey || openPlaces) && 'postMessage' in client) {
             try {
               if (eventId) client.postMessage({ type: 'open-event', eventId });
               else if (chatWith) client.postMessage({ type: 'open-chat', chatWith });
               else if (pollId) client.postMessage({ type: 'open-poll', pollId });
               else if (bringKey) client.postMessage({ type: 'open-bring', bringKey });
-              else client.postMessage({ type: 'open-expense', expenseKey });
+              else if (expenseKey) client.postMessage({ type: 'open-expense', expenseKey });
+              else client.postMessage({ type: 'open-places' });
             } catch (e) {}
           }
-          if ((eventId || chatWith || pollId || bringKey || expenseKey) && 'navigate' in client) {
+          if ((eventId || chatWith || pollId || bringKey || expenseKey || openPlaces) && 'navigate' in client) {
             return client.navigate(targetUrl).then((c) => (c || client).focus()).catch(() => client.focus());
           }
           return client.focus();

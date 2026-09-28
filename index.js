@@ -160,6 +160,7 @@ async function sendToTokens(tokens, notification) {
         pollId: notification.pollId || '',
         bringKey: notification.bringKey || '',
         expenseKey: notification.expenseKey || '',
+        openPlaces: notification.openPlaces || '',
       },
       webpush: {
         headers: { Urgency: 'high' },
@@ -1220,3 +1221,35 @@ exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
   })).filter((r) => r.name);
   return { results };
 });
+
+// --- Check-in "Kde jsi?" (volný, mimo akce) — notifikace ostatním --------------
+// Chodí všem s povolenými oznámeními kromě toho, kdo check-in udělal, a kromě
+// těch, kdo si na obrazovce "Kde jsi?" ztlumili vlastní zvoneček
+// (settings/placeCheckins -> pole "muted", viz wirePlaceCheckinMute v index.html).
+// Jméno se bere z obsahu dokumentu (data.user), ne z cesty — viz poznámka
+// u onCheckinCreated o problémech s diakritikou v cestách.
+exports.onPlaceCheckinCreated = onDocumentCreated(
+  'placeCheckins/{checkinId}',
+  async (event) => {
+    const data = event.data.data();
+    if (!data || !data.user || !data.place) return;
+    const poster = normName(data.user);
+    const settingsDoc = await db.collection('settings').doc('placeCheckins').get();
+    const mutedMap = (settingsDoc.exists && settingsDoc.data().muted) || {};
+    const muted = new Set(Object.keys(mutedMap).filter((n) => mutedMap[n]).map(normName));
+    const snap = await db.collection('pushTokens').get();
+    const tokens = [];
+    snap.forEach((doc) => {
+      const d = doc.data();
+      if (!d.token) return;
+      const u = normName(d.user);
+      if (u === poster || muted.has(u)) return;
+      tokens.push(d.token);
+    });
+    await sendToTokens(tokens, {
+      title: `📍 Check-in: ${data.user}`,
+      body: `${data.place}${data.note ? `\n„${data.note}“` : ''}`,
+      openPlaces: '1',
+    });
+  }
+);

@@ -3132,6 +3132,7 @@ fetchGoogleCalendarEvents().then(async () => {
     const pollId = params.get('poll');
     const bringKey = params.get('bring');
     const expenseKey = params.get('expense');
+    const placesParam = params.get('places');
     if(evKey){
       handled = true;
       setTimeout(() => openEventByKey(evKey), 100);
@@ -3151,6 +3152,10 @@ fetchGoogleCalendarEvents().then(async () => {
     } else if(expenseKey){
       handled = true;
       setTimeout(() => showExpenseReceiptByKey(expenseKey), 100);
+      history.replaceState(null, '', location.pathname);
+    } else if(placesParam){
+      handled = true;
+      setTimeout(() => openPlaceCheckinScreen(), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
@@ -3182,6 +3187,8 @@ fetchGoogleCalendarEvents().then(async () => {
         setTimeout(() => openBringListByKey(pending.bringKey), 100);
       } else if(pending.expenseKey){
         setTimeout(() => showExpenseReceiptByKey(pending.expenseKey), 100);
+      } else if(pending.openPlaces){
+        setTimeout(() => openPlaceCheckinScreen(), 100);
       }
     }
   }catch(e){ console.error('pending nav error', e); }
@@ -3978,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole (tam, kde dřív bývala lupa) — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár konkrétních míst v okolí k výběru (přes Google), jde si to ale před odesláním i přepsat ručně. Jde přidat i krátká poznámka. Dole na stejné obrazovce je vidět, kde všude byla nedávno celá parta.'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole (tam, kde dřív bývala lupa) — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Appka podle polohy telefonu nabídne pár konkrétních míst v okolí k výběru (přes Google), jde si to ale před odesláním i přepsat ručně. Jde přidat i krátká poznámka. Dole na stejné obrazovce je vidět, kde všude byla nedávno celá parta. Vlastní check-in jde smazat košíkem u něj. Ostatním přijde notifikace; zvonečkem vpravo nahoře na té obrazovce si je můžeš vypnout (nezávisle na chatu).'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -4286,6 +4293,8 @@ if(navigator.serviceWorker){
       openBringListByKey(event.data.bringKey);
     } else if(event.data && event.data.type === 'open-expense' && event.data.expenseKey){
       showExpenseReceiptByKey(event.data.expenseKey);
+    } else if(event.data && event.data.type === 'open-places'){
+      openPlaceCheckinScreen();
     }
   });
 }
@@ -6029,7 +6038,7 @@ function openPlaceCheckinScreen(){
   backdrop.innerHTML = `
     <div class="ev-modal" style="text-align:center;max-height:92vh;">
       <div class="sheet-grabber-down" onclick="closePlaceCheckinScreen(this.closest('.ev-modal-backdrop'))" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
-      <div class="ev-modal-title" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;">${pinIconSVG()} Kde jsi?</div>
+      <div class="ev-modal-title" style="position:relative;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;">${pinIconSVG()} Kde jsi?<button id="placeCheckinMuteBtn" title="Ztlumit notifikace z check-inů" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:inline-flex;align-items:center;">${bellIconSVG(false)}</button></div>
       <button id="startPlaceCheckinBtn" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:'Inter', sans-serif;font-weight:700;font-size:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">${pinIconSVG()}Nový check-in</button>
       <div id="placeCheckinForm" style="display:none;text-align:left;margin-top:14px;"></div>
       <div style="height:1px;background:var(--line);margin:20px 0 14px;"></div>
@@ -6037,11 +6046,36 @@ function openPlaceCheckinScreen(){
     </div>`;
   document.body.appendChild(backdrop);
   document.getElementById('startPlaceCheckinBtn').onclick = beginPlaceCheckinForm;
+  wirePlaceCheckinMute(me);
   wirePlaceCheckinFeed();
+}
+
+// Vlastní zvoneček check-inů — nezávislý na zvonečcích u chatových vláken.
+// Ukládá se do settings/placeCheckins (pole "muted" se jmény, stejně jako u
+// chatu) a čte ho Cloud Function onPlaceCheckinCreated. Výchozí stav je
+// zapnuto, ztlumení je na každého zvlášť.
+let placeCheckinMuteUnsub = null;
+function wirePlaceCheckinMute(me){
+  const btn = document.getElementById('placeCheckinMuteBtn');
+  if(!btn) return;
+  const ref = db.collection('settings').doc('placeCheckins');
+  placeCheckinMuteUnsub = ref.onSnapshot(snap => {
+    const muted = (snap.exists && snap.data().muted) || {};
+    const isMuted = !!muted[me];
+    btn.innerHTML = bellIconSVG(isMuted);
+    btn.title = isMuted ? 'Zapnout notifikace z check-inů' : 'Ztlumit notifikace z check-inů';
+    btn.style.color = isMuted ? 'var(--coral)' : 'var(--muted)';
+    btn.dataset.muted = isMuted ? '1' : '';
+  }, err => console.error('Chyba při načítání nastavení check-inů:', err));
+  btn.onclick = () => {
+    const nowMuted = btn.dataset.muted === '1';
+    ref.set({ muted: { [me]: !nowMuted } }, { merge: true }).catch(() => {});
+  };
 }
 
 function closePlaceCheckinScreen(backdrop){
   if(placeCheckinsUnsub){ placeCheckinsUnsub(); placeCheckinsUnsub = null; }
+  if(placeCheckinMuteUnsub){ placeCheckinMuteUnsub(); placeCheckinMuteUnsub = null; }
   backdrop.remove();
 }
 
@@ -6142,9 +6176,24 @@ async function submitPlaceCheckin(coords){
   submitBtn.disabled = false;
 }
 
+// Smazat jde jen vlastní check-in (koš se ukazuje jen u něj a před smazáním
+// se appka ještě jednou podívá, jestli záznam opravdu patří tomu, kdo maže).
+async function deletePlaceCheckin(id){
+  const me = getUserName();
+  if(!me) return;
+  if(!confirm('Smazat tenhle check-in?')) return;
+  try{
+    const ref = db.collection('placeCheckins').doc(id);
+    const snap = await ref.get();
+    if(!snap.exists || snap.data().user !== me) return;
+    await ref.delete();
+  }catch(e){ console.error('Chyba při mazání check-inu:', e); }
+}
+
 function wirePlaceCheckinFeed(){
   const feedEl = document.getElementById('placeCheckinFeed');
   if(!feedEl) return;
+  const me = getUserName();
   placeCheckinsUnsub = db.collection('placeCheckins').orderBy('at', 'desc').limit(50).onSnapshot(snap => {
     if(snap.empty){
       feedEl.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px;">Zatím nikdo nikde nebyl.</div>`;
@@ -6158,7 +6207,7 @@ function wirePlaceCheckinFeed(){
         <div style="padding:10px 0;border-bottom:1px solid var(--line);">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
             <span style="font-family:'Inter', sans-serif;font-weight:700;font-size:13.5px;color:var(--ink);">${c.user}</span>
-            <span style="font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${when}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${when}${c.user === me ? `<button onclick="deletePlaceCheckin('${d.id}')" title="Smazat" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:2px;display:inline-flex;">${trashIconSVG()}</button>` : ''}</span>
           </div>
           <div style="font-family:'Inter', sans-serif;font-size:13.5px;color:var(--ink);margin-top:2px;">
             ${mapsUrl ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;">${pinIconSVG().replace('width="16" height="16"','width="12" height="12"')} ${c.place}</a>` : c.place}
