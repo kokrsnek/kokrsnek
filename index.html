@@ -6846,7 +6846,7 @@ function openPlaceCheckinDetail(id){
       </div>
     </div>`;
   document.body.appendChild(backdrop);
-  Object.assign(placeDetail, { id, backdrop, map:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
+  Object.assign(placeDetail, { id, backdrop, map:null, marker:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
 
   const modal = backdrop.querySelector('.ev-modal');
   modal.onclick = handlePlaceFeedClick;
@@ -6875,6 +6875,11 @@ function openPlaceCheckinDetail(id){
     if(placeDetail.id !== id) return;
     placeDetail.avatar = a || '';
     placeDetail.last.head = null;
+    // Mapa se mohla vykreslit dřív, než avatar dorazil — pin se přebarví.
+    if(placeDetail.marker){
+      const cur = placeAllDocs().find(x => x.id === id);
+      if(cur) placeDetail.marker.setIcon(placePinIcon(cur, placeDetail.avatar));
+    }
     renderPlaceDetail();
   }).catch(() => {});
 }
@@ -6896,7 +6901,7 @@ function closePlaceCheckinDetail(){
   }
   placeDetail.backdrop.remove();
   placeScreen.emojiPickerFor = null;
-  Object.assign(placeDetail, { id:null, backdrop:null, map:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
+  Object.assign(placeDetail, { id:null, backdrop:null, map:null, marker:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
 }
 
 function renderPlaceDetail(){
@@ -6978,7 +6983,7 @@ async function initPlaceDetailMap(c){
   const map = L.map(el, { attributionControl:false, zoomControl:false, dragging:false, touchZoom:false, scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, keyboard:false }).setView([c.lat, c.lng], 16);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   L.control.attribution({ prefix: false, position: 'bottomleft' }).addAttribution('© OpenStreetMap').addTo(map);
-  L.marker([c.lat, c.lng], { icon: placePinIcon(c, placeDetail.avatar), interactive: false }).addTo(map);
+  placeDetail.marker = L.marker([c.lat, c.lng], { icon: placePinIcon(c, placeDetail.avatar), interactive: false }).addTo(map);
   const pos = placeScreen.pos;
   if(pos && c.user !== placeScreen.me && haversineDistanceMeters(pos.lat, pos.lng, c.lat, c.lng) < 3000){
     L.circleMarker([pos.lat, pos.lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#3B82F6', fillOpacity: 1, interactive: false }).addTo(map);
