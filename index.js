@@ -21,8 +21,9 @@
  *                            v Google Kalendáři — notifikace celé partě
  *  12. onEventSnapshotUpdated — appka detekovala změnu data nebo místa u budoucí
  *                            akce — notifikace jen lidem, co mají Dojdu/Nedojdu
- *  13. sendBirthdayNamedayPush — denně v 8:00: narozeniny/svátek člena party, pošle
- *                            se CELÉ partě (ne jen tomu, kdo zrovna otevře appku)
+ *  13. sendBirthdayNamedayPush — denně v 8:00: narozeniny/svátek člena party —
+ *                            ostatním připomínka "popřej", oslavenci osobní
+ *                            přání (pole "app" v PEOPLE)
  *  14. sendLowRsvpReminder — denně v 8:00: akce za 3 dny má skoro žádné odpovědi
  *  14b. sendPostEventThankYou — denně v 8:00: den po skončení akce — lidem s "Dojdu"
  *                            poděkování za účast, všem ostatním jen pozvánka na
@@ -643,41 +644,42 @@ exports.onEventSnapshotUpdated = onDocumentUpdated(
 // CELÉ partě, ne jen tomu, kdo zrovna toho dne appku otevře.
 
 const PEOPLE = [
-  {name:'Leoš', day:17, month:6, nick:'Gudasovi'},
-  {name:'Iva', day:null, month:null, nick:'Ivě'},
-  {name:'Lukáš', day:29, month:6, nick:'Šurajovi'},
-  {name:'Michal', day:30, month:12, nick:'Miškovi'},
-  {name:'Michal', day:25, month:2, nick:'Majklovi'},
-  {name:'Markéta', day:null, month:null, nick:'Markétě'},
-  {name:'Doubravka', day:29, month:1, nick:'Doubravce'},
-  {name:'Alexej', day:30, month:6, nick:'Alexovi'},
-  {name:'Jana', day:30, month:12, nick:'Maleně'},
-  {name:'Petr', day:null, month:null, nick:'Pecákovi'},
-  {name:'Petr', day:null, month:null, nick:'Peckovi'},
-  {name:'Stanislava', day:null, month:null, nick:'Slávce'},
-  {name:'Jaromír', day:18, month:8, nick:'Pifovi'},
-  {name:'Zuzana', day:null, month:null, nick:'Zuzce'},
-  {name:'Tomáš', day:13, month:4, nick:'Gučimu'},
-  {name:'Veronika', day:null, month:null, nick:'Verči'},
-  {name:'Miroslav', day:17, month:2, nick:'Mírovi'},
-  {name:'Josef', day:29, month:11, nick:'Bazimu'},
-  {name:'Lenka', day:null, month:null, nick:'Lence'},
-  {name:'Pavel', day:15, month:3, nick:'Čentovi'},
-  {name:'Lenka', day:null, month:null, nick:'Bugině'},
-  {name:'Pavel', day:null, month:null, nick:'Pavlovi'},
-  {name:'Petra', day:null, month:null, nick:'Petře'},
-  {name:'Vladimír', day:null, month:null, nick:'Hugovi'},
-  {name:'David', day:null, month:null, nick:'Dejvovi'},
-  {name:'Šárka', day:null, month:null, nick:'Šárce'},
-  {name:'Richard', day:null, month:null, nick:'Richardovi'},
-  {name:'Josef', day:null, month:null, nick:'Joskovi'},
-  {name:'Dagmar', day:null, month:null, nick:'Dáši'},
-  {name:'Pavel', day:null, month:null, nick:'Bormenovi'},
-  {name:'Vladimír', day:null, month:null, nick:'Rosomákovi'},
-  {name:'Aleš', day:null, month:null, nick:'Ájisovi'},
-  {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové'},
-  {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného'},
-  {name:'Vojtěch', day:null, month:null, nick:'Těchovi'},
+  {name:'Leoš', day:17, month:6, nick:'Gudasovi', app:'Gudas'},
+  {name:'Iva', day:18, month:6, nick:'Ivě', app:'Iva'},
+  {name:'Lukáš', day:29, month:6, nick:'Šurajovi', app:'Šuraj'},
+  {name:'Michal', day:30, month:12, nick:'Miškovi', app:null},
+  {name:'Michal', day:25, month:2, nick:'Majklovi', app:'Majkl'},
+  {name:'Markéta', day:19, month:9, nick:'Markétě', app:null},
+  {name:'Doubravka', day:29, month:1, nick:'Doubravce', app:null},
+  {name:'Alexej', day:30, month:6, nick:'Alexovi', app:'Alex'},
+  {name:'Jana', day:30, month:12, nick:'Maleně', app:null},
+  {name:'Petr', day:30, month:1, nick:'Pecákovi', app:'Pecak'},
+  {name:'Petr', day:30, month:8, nick:'Peckovi', app:null},
+  {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null},
+  {name:'Jaromír', day:18, month:8, nick:'Pifovi', app:'Pif'},
+  {name:'Zuzana', day:null, month:null, nick:'Zuzce', app:null},
+  {name:'Tomáš', day:13, month:4, nick:'Gučimu', app:'Guči'},
+  {name:'Veronika', day:10, month:5, nick:'Verči', app:null},
+  {name:'Miroslav', day:17, month:2, nick:'Mírovi', app:'Míra'},
+  {name:'Josef', day:29, month:11, nick:'Bazimu', app:'Bazi'},
+  {name:'Lenka', day:null, month:null, nick:'Lence', app:null},
+  {name:'Pavel', day:15, month:3, nick:'Čentovi', app:'Čento'},
+  {name:'Lenka', day:2, month:11, nick:'Bugině', app:null},
+  {name:'Pavel', day:22, month:10, nick:'Pavlovi', app:'Pavel'},
+  {name:'Petra', day:17, month:9, nick:'Petře', app:null},
+  {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null},
+  {name:'David', day:3, month:11, nick:'Dejvovi', app:'Dejv'},
+  {name:'Šárka', day:null, month:null, nick:'Šárce', app:null},
+  {name:'Richard', day:14, month:7, nick:'Richardovi', app:null},
+  {name:'Josef', day:31, month:1, nick:'Joskovi', app:null},
+  {name:'Dagmar', day:null, month:null, nick:'Dagmar', app:null},
+  {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null},
+  {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null},
+  {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null},
+  {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null},
+  {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null},
+  {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null},
+  {name:'Dagmar', day:2, month:8, nick:'Dáši', app:'Dáša'},
 ];
 
 const NAMEDAYS = {
@@ -714,10 +716,10 @@ const NAMEDAYS = {
   "30.5":"Ferdinand","31.5":"Kamila","1.6":"Laura","2.6":"Jarmil","3.6":"Tamara",
   "4.6":"Dalibor","5.6":"Dobroslav","6.6":"Norbert","7.6":"Slavomíra","8.6":"Medard",
   "9.6":"Stanislava","10.6":"Gita","11.6":"Bruno","12.6":"Antonie","13.6":"Antonín",
-  "14.6":"Roland","15.6":"Vít","16.6":"Zuzana","17.6":"Adolf","18.6":"Milan",
+  "14.6":"Roland","15.6":"Vít","16.6":"Zbyněk","17.6":"Adolf","18.6":"Milan",
   "19.6":"Leoš","20.6":"Květa","21.6":"Alois","22.6":"Pavla","23.6":"Zdeňka",
   "24.6":"Jan","25.6":"Ivan","26.6":"Adriana","27.6":"Ladislav","28.6":"Lubomír",
-  "29.6":"Petr","30.6":"Pavel","1.7":"Jaroslava","2.7":"Patricie","3.7":"Radomír",
+  "29.6":"Petr a Pavel","30.6":"Šárka","1.7":"Jaroslava","2.7":"Patricie","3.7":"Radomír",
   "4.7":"Prokop","5.7":"Cyril a Metoděj","6.7":"Jan Hus","7.7":"Bohuslava",
   "8.7":"Nora","9.7":"Drahomíra","10.7":"Libuše","11.7":"Olga","12.7":"Bořek",
   "13.7":"Markéta","14.7":"Karolína","15.7":"Jindřich","16.7":"Luboš","17.7":"Martina",
@@ -762,32 +764,83 @@ function getNameday(d) {
   return NAMEDAYS[key] || '';
 }
 
+/** Jméno pro porovnání s tím, co si kdo napsal v aplikaci: bez ohledu na
+ *  velká písmena a diakritiku ("Pecák" = "pecak"). */
+function looseName(n) {
+  return normName(n).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Oslavenec dostane osobní přání — podle pole "app" v PEOPLE (jméno, pod
+// kterým člověk používá aplikaci; kdo ho nemá, osobní přání nedostane).
+// Ostatní z party dostanou jako dřív připomínku "Nezapomeň dnes popřát …",
+// jen oslavenec ji o sobě samém nedostane.
 exports.sendBirthdayNamedayPush = onSchedule(
   { schedule: '0 8 * * *', timeZone: 'Europe/Prague' },
   async () => {
-    const today = new Date();
+    // Běží v 8:00 pražského času; datum podle Prahy, ne podle UTC serveru.
+    const [y, m, d] = czDateStr(new Date()).split('-').map(Number);
+    const today = new Date(y, m - 1, d);
     const todayDay = today.getDate();
     const todayMonth = today.getMonth() + 1;
+    const namedayNames = getNameday(today).split(/\s+a\s+|,\s*/).map((s) => s.trim()).filter(Boolean);
 
     const birthdayMatches = PEOPLE.filter((p) => p.day === todayDay && p.month === todayMonth);
-    const nameday = getNameday(today);
-    const namedayMatches = nameday ? PEOPLE.filter((p) => p.name === nameday) : [];
+    const namedayMatches = PEOPLE.filter((p) => namedayNames.includes(p.name));
     if (!birthdayMatches.length && !namedayMatches.length) return;
+    const celebrantKey = (p) => (p.app ? looseName(p.app) : null);
 
+    const celebrants = new Map(); // looseName(app) -> { birthday, nameday, app }
+    PEOPLE.forEach((p) => {
+      if (!p.app) return;
+      const b = p.day === todayDay && p.month === todayMonth;
+      const n = namedayNames.includes(p.name);
+      if (!b && !n) return;
+      const key = looseName(p.app);
+      const c = celebrants.get(key) || { birthday: false, nameday: false, app: p.app };
+      c.birthday = c.birthday || b;
+      c.nameday = c.nameday || n;
+      celebrants.set(key, c);
+    });
     const snap = await db.collection('pushTokens').get();
-    const tokens = [];
-    snap.forEach((doc) => { if (doc.data().token) tokens.push(doc.data().token); });
-    if (!tokens.length) return;
+    const allTokens = []; // { token, key }
+    snap.forEach((doc) => {
+      const t = doc.data();
+      if (t.token) allTokens.push({ token: t.token, key: looseName(t.user) });
+    });
+    if (!allTokens.length) return;
 
+    // 1) Připomínka ostatním — narozeniny: pro každého oslavence zvlášť, bez něj samotného.
     for (const p of birthdayMatches) {
-      await sendToTokens(tokens, { title: '🎂 Narozeniny!', body: `Nezapomeň dnes popřát ${p.nick}` });
+      const self = celebrantKey(p);
+      const tokens = allTokens.filter((t) => t.key !== self).map((t) => t.token);
+      if (tokens.length) await sendToTokens(tokens, { title: '🎂 Narozeniny!', body: `Nezapomeň dnes popřát ${p.nick}` });
     }
+    // 2) Připomínka ostatním — svátek: jedna zpráva se všemi jmény; kdo sám slaví,
+    //    dostane seznam bez sebe (a když by zbyl prázdný, nedostane nic).
     if (namedayMatches.length) {
-      const nicks = namedayMatches.map((p) => p.nick);
-      const body = nicks.length === 1
-        ? `Nezapomeň dnes popřát ${nicks[0]}`
-        : `Nezapomeň dnes popřát: ${nicks.join(', ')}`;
-      await sendToTokens(tokens, { title: `🎉 Svátek má ${nameday}!`, body });
+      const title = `🎉 Svátek ${namedayNames.length > 1 ? 'mají' : 'má'} ${namedayNames.join(' a ')}!`;
+      const byBody = new Map();
+      allTokens.forEach((t) => {
+        const nicks = namedayMatches.filter((p) => celebrantKey(p) !== t.key).map((p) => p.nick);
+        if (!nicks.length) return;
+        const body = nicks.length === 1 ? `Nezapomeň dnes popřát ${nicks[0]}` : `Nezapomeň dnes popřát: ${nicks.join(', ')}`;
+        if (!byBody.has(body)) byBody.set(body, []);
+        byBody.get(body).push(t.token);
+      });
+      for (const [body, tokens] of byBody) await sendToTokens(tokens, { title, body });
+    }
+
+    // 3) Osobní přání oslavencům.
+    for (const [key, c] of celebrants) {
+      const tokens = allTokens.filter((t) => t.key === key).map((t) => t.token);
+      if (!tokens.length) {
+        console.log(`[narozeniny/svátek] ${c.app}: žádný push token (notifikace vypnuté nebo jiné jméno v aplikaci)`);
+        continue;
+      }
+      const title = c.birthday && c.nameday
+        ? '🎉 Vše nejlepší k dnešním narozeninám i svátku!'
+        : c.birthday ? '🎂 Vše nejlepší k dnešním narozeninám!' : '🎉 Vše nejlepší k dnešnímu svátku!';
+      await sendToTokens(tokens, { title, body: 'Přeje ti celá parta KoKrŠNeK 🥳' });
     }
   }
 );

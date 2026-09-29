@@ -1481,43 +1481,47 @@ function checkBirthdaysAndNamedays(){
   const todayStr = today.toISOString().slice(0,10);
   if(localStorage.getItem('birthdayShownDate') === todayStr) return;
 
-  // Jméno, den, měsíc narozenin (null = zatím nevyplněno), přezdívka už ve správném pádu
+  // Jméno, den, měsíc narozenin (null = zatím nevyplněno), přezdívka už ve
+  // správném pádu a app = jméno, pod kterým člověk používá aplikaci (null =
+  // aplikaci nepoužívá). Stejný seznam je i ve functions/index.js — při změně
+  // upravit oba.
   const PEOPLE = [
-    {name:'Leoš', day:17, month:6, nick:'Gudasovi'},
-    {name:'Iva', day:null, month:null, nick:'Ivě'},
-    {name:'Lukáš', day:29, month:6, nick:'Šurajovi'},
-    {name:'Michal', day:30, month:12, nick:'Miškovi'},
-    {name:'Michal', day:25, month:2, nick:'Majklovi'},
-    {name:'Markéta', day:null, month:null, nick:'Markétě'},
-    {name:'Doubravka', day:29, month:1, nick:'Doubravce'},
-    {name:'Alexej', day:30, month:6, nick:'Alexovi'},
-    {name:'Jana', day:30, month:12, nick:'Maleně'},
-    {name:'Petr', day:null, month:null, nick:'Pecákovi'},
-    {name:'Petr', day:null, month:null, nick:'Peckovi'},
-    {name:'Stanislava', day:null, month:null, nick:'Slávce'},
-    {name:'Jaromír', day:18, month:8, nick:'Pifovi'},
-    {name:'Zuzana', day:null, month:null, nick:'Zuzce'},
-    {name:'Tomáš', day:13, month:4, nick:'Gučimu'},
-    {name:'Veronika', day:null, month:null, nick:'Verči'},
-    {name:'Miroslav', day:17, month:2, nick:'Mírovi'},
-    {name:'Josef', day:29, month:11, nick:'Bazimu'},
-    {name:'Lenka', day:null, month:null, nick:'Lence'},
-    {name:'Pavel', day:15, month:3, nick:'Čentovi'},
-    {name:'Lenka', day:null, month:null, nick:'Bugině'},
-    {name:'Pavel', day:null, month:null, nick:'Pavlovi'},
-    {name:'Petra', day:null, month:null, nick:'Petře'},
-    {name:'Vladimír', day:null, month:null, nick:'Hugovi'},
-    {name:'David', day:null, month:null, nick:'Dejvovi'},
-    {name:'Šárka', day:null, month:null, nick:'Šárce'},
-    {name:'Richard', day:null, month:null, nick:'Richardovi'},
-    {name:'Josef', day:null, month:null, nick:'Joskovi'},
-    {name:'Dagmar', day:null, month:null, nick:'Dáši'},
-    {name:'Pavel', day:null, month:null, nick:'Bormenovi'},
-    {name:'Vladimír', day:null, month:null, nick:'Rosomákovi'},
-    {name:'Aleš', day:null, month:null, nick:'Ájisovi'},
-    {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové'},
-    {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného'},
-    {name:'Vojtěch', day:null, month:null, nick:'Těchovi'},
+    {name:'Leoš', day:17, month:6, nick:'Gudasovi', app:'Gudas'},
+    {name:'Iva', day:18, month:6, nick:'Ivě', app:'Iva'},
+    {name:'Lukáš', day:29, month:6, nick:'Šurajovi', app:'Šuraj'},
+    {name:'Michal', day:30, month:12, nick:'Miškovi', app:null},
+    {name:'Michal', day:25, month:2, nick:'Majklovi', app:'Majkl'},
+    {name:'Markéta', day:19, month:9, nick:'Markétě', app:null},
+    {name:'Doubravka', day:29, month:1, nick:'Doubravce', app:null},
+    {name:'Alexej', day:30, month:6, nick:'Alexovi', app:'Alex'},
+    {name:'Jana', day:30, month:12, nick:'Maleně', app:null},
+    {name:'Petr', day:30, month:1, nick:'Pecákovi', app:'Pecak'},
+    {name:'Petr', day:30, month:8, nick:'Peckovi', app:null},
+    {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null},
+    {name:'Jaromír', day:18, month:8, nick:'Pifovi', app:'Pif'},
+    {name:'Zuzana', day:null, month:null, nick:'Zuzce', app:null},
+    {name:'Tomáš', day:13, month:4, nick:'Gučimu', app:'Guči'},
+    {name:'Veronika', day:10, month:5, nick:'Verči', app:null},
+    {name:'Miroslav', day:17, month:2, nick:'Mírovi', app:'Míra'},
+    {name:'Josef', day:29, month:11, nick:'Bazimu', app:'Bazi'},
+    {name:'Lenka', day:null, month:null, nick:'Lence', app:null},
+    {name:'Pavel', day:15, month:3, nick:'Čentovi', app:'Čento'},
+    {name:'Lenka', day:2, month:11, nick:'Bugině', app:null},
+    {name:'Pavel', day:22, month:10, nick:'Pavlovi', app:'Pavel'},
+    {name:'Petra', day:17, month:9, nick:'Petře', app:null},
+    {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null},
+    {name:'David', day:3, month:11, nick:'Dejvovi', app:'Dejv'},
+    {name:'Šárka', day:null, month:null, nick:'Šárce', app:null},
+    {name:'Richard', day:14, month:7, nick:'Richardovi', app:null},
+    {name:'Josef', day:31, month:1, nick:'Joskovi', app:null},
+    {name:'Dagmar', day:null, month:null, nick:'Dagmar', app:null},
+    {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null},
+    {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null},
+    {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null},
+    {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null},
+    {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null},
+    {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null},
+    {name:'Dagmar', day:2, month:8, nick:'Dáši', app:'Dáša'},
   ];
 
   const todayDay = today.getDate();
@@ -1526,23 +1530,42 @@ function checkBirthdaysAndNamedays(){
   const birthdayMatches = PEOPLE.filter(p => p.day === todayDay && p.month === todayMonth);
 
   const nameday = getNameday(today);
-  const namedayMatches = nameday ? PEOPLE.filter(p => p.name === nameday) : [];
+  // Jeden den může mít víc jmen ("Petr a Pavel").
+  const namedayNames = nameday ? nameday.split(/\s+a\s+|,\s*/).map(s => s.trim()).filter(Boolean) : [];
+  const namedayMatches = PEOPLE.filter(p => namedayNames.includes(p.name));
 
   if(!birthdayMatches.length && !namedayMatches.length) return;
 
   localStorage.setItem('birthdayShownDate', todayStr);
 
+  // Oslavenec (podle jména v aplikaci, bez ohledu na velká písmena a
+  // diakritiku) dostane osobní přání místo připomínky "popřej sám sobě".
+  const loose = n => String(n || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const meKey = loose(getUserName());
+  const isMe = p => !!(meKey && p.app && loose(p.app) === meKey);
+  const myBirthday = birthdayMatches.some(isMe);
+  const myNameday = namedayMatches.some(isMe);
+
   const queue = [];
-  birthdayMatches.forEach(p => {
+  if(myBirthday || myNameday){
+    queue.push({
+      title: myBirthday && myNameday ? '🎉 Vše nejlepší k dnešním narozeninám i svátku!'
+        : myBirthday ? '🎂 Vše nejlepší k dnešním narozeninám!' : '🎉 Vše nejlepší k dnešnímu svátku!',
+      text: 'Přeje ti celá parta KoKrŠNeK 🥳'
+    });
+  }
+  birthdayMatches.filter(p => !isMe(p)).forEach(p => {
     queue.push({ title: '🎂 Narozeniny!', text: `Nezapomeň dnes popřát ${p.nick}` });
   });
-  if(namedayMatches.length){
-    const nicks = namedayMatches.map(p => p.nick);
+  const otherNameday = namedayMatches.filter(p => !isMe(p));
+  if(otherNameday.length){
+    const nicks = otherNameday.map(p => p.nick);
     const text = nicks.length === 1
       ? `Nezapomeň dnes popřát ${nicks[0]}`
       : `Nezapomeň dnes popřát: ${nicks.join(', ')}`;
-    queue.push({ title: `🎉 Svátek má ${nameday}!`, text });
+    queue.push({ title: `🎉 Svátek ${namedayNames.length > 1 ? 'mají' : 'má'} ${nameday}!`, text });
   }
+  if(!queue.length) return;
 
   showBirthdayQueue(queue);
 }
@@ -1789,10 +1812,10 @@ const NAMEDAYS = {
   "30.5":"Ferdinand","31.5":"Kamila","1.6":"Laura","2.6":"Jarmil","3.6":"Tamara",
   "4.6":"Dalibor","5.6":"Dobroslav","6.6":"Norbert","7.6":"Slavomíra","8.6":"Medard",
   "9.6":"Stanislava","10.6":"Gita","11.6":"Bruno","12.6":"Antonie","13.6":"Antonín",
-  "14.6":"Roland","15.6":"Vít","16.6":"Zuzana","17.6":"Adolf","18.6":"Milan",
+  "14.6":"Roland","15.6":"Vít","16.6":"Zbyněk","17.6":"Adolf","18.6":"Milan",
   "19.6":"Leoš","20.6":"Květa","21.6":"Alois","22.6":"Pavla","23.6":"Zdeňka",
   "24.6":"Jan","25.6":"Ivan","26.6":"Adriana","27.6":"Ladislav","28.6":"Lubomír",
-  "29.6":"Petr","30.6":"Pavel","1.7":"Jaroslava","2.7":"Patricie","3.7":"Radomír",
+  "29.6":"Petr a Pavel","30.6":"Šárka","1.7":"Jaroslava","2.7":"Patricie","3.7":"Radomír",
   "4.7":"Prokop","5.7":"Cyril a Metoděj","6.7":"Jan Hus","7.7":"Bohuslava",
   "8.7":"Nora","9.7":"Drahomíra","10.7":"Libuše","11.7":"Olga","12.7":"Bořek",
   "13.7":"Markéta","14.7":"Karolína","15.7":"Jindřich","16.7":"Luboš","17.7":"Martina",
@@ -3992,7 +4015,7 @@ function showWelcome(){
     ['🌧️ Efekt počasí','Pokud appka zjistí, že u tebe prší nebo sněží (jen s tvým souhlasem k poloze), zobrazí jemný déšť nebo sníh na pozadí.'],
     ['🔔 Notifikace — co všechno appka posílá','Nový lajk, Dojdu/Nedojdu, komentář (i odpověď a emoji reakce na tvůj komentář), nové album fotek nebo seznam nákladů u akce, úplně nová akce v kalendáři, změna data či místa u akce (pokud jsi na ni odpověděl/a), připomínka akce v den konání i 5 dní předem, akce za 3 dny bez odezvy, den po skončení akce poděkování za účast (a pozvánka na další akci) těm, co měli Dojdu, ostatním jen pozvánka na další akci, narozeniny a svátek člena party, sesazení z 1. místa v kvízu, nová anketa, a šťouchnutí/zpráva/reakce z minichatu. Zapíná se zvonečkem nahoře, jde ztlumit i jen po jednotlivých vláknech v minichatu.'],
     ['Výročí','Připomínka výročí minulých událostí.'],
-    ['🎂 Narozeniny a svátky','Konfety a připomínka v appce, když má někdo z party narozeniny nebo svátek podle jména — navíc přijde i push notifikace celé partě, i těm, kdo appku zrovna neotevřou.'],
+    ['🎂 Narozeniny a svátky','Když má někdo z party narozeniny nebo svátek podle jména, ukážou se v aplikaci konfety a připomínka, ať mu popřeješ. V 8 ráno přijde celé partě i push notifikace „Nezapomeň dnes popřát …“. Oslavenec sám ji o sobě nedostane — místo ní uvidí osobní přání „Vše nejlepší k dnešním narozeninám / dnešnímu svátku“ (v aplikaci i jako push). Osobní přání funguje u těch, u koho je v seznamu uvedené jméno, pod kterým aplikaci používá.'],
     ['🏆 Kvíz','Klikni na "KoKrŠNeK v.t.s." dole v detailu události — spustí se kvíz o hlavních městech na čas. Nejdřív appka vystřídá všechny evropské země, teprve pak přibere i zbytek světa. Dlouhé podržení otevře rovnou žebříček nejlepších.'],
     ['! Report chyb','Vykřičník nahoře vedle zvonečku — pošli zprávu (klidně i se screenshotem) pokud něco nefunguje. Druhý stisk otevře tuto nápovědu.'],
     ['Zavírání dialogů','Kdekoliv v appce zavřeš okno tažením/klikem na červenou čárku (nahoře nebo dole, podle typu okna) nebo klikem mimo něj.']
