@@ -7581,7 +7581,12 @@ function renderPlaceFeedList(){
   feedEl._photos = ordered.filter(c => c.photo).map(c => c.photo);
   const hasMore = placeScreen.live.length >= PLACE_PAGE_SIZE && !placeScreen.olderExhausted;
   const iconBtn = PLACE_ICON_BTN;
+  // Každý druhý check-in lehce do modra, ať je vidět, kde jeden končí a druhý
+  // začíná. Počítá se od nejnovějšího (dole), takže načtení starších barvy
+  // neposune.
+  const tint = document.documentElement.getAttribute('data-theme') === 'light' ? 'rgba(59,130,246,0.07)' : 'rgba(96,165,250,0.10)';
   const items = ordered.map((c, idx) => {
+    const tinted = (ordered.length - 1 - idx) % 2 === 1;
     const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number';
     const mapsUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : null;
     const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '') + (c.editedAt ? ' · upraveno' : '');
@@ -7608,19 +7613,17 @@ function renderPlaceFeedList(){
     }
 
     return `
-      <div data-act="detail" data-id="${c.id}" style="padding:12px 0;cursor:pointer;${idx > 0 ? 'border-top:1px solid var(--line);' : ''}">
+      <div data-act="detail" data-id="${c.id}" style="padding:12px 10px 8px;margin:2px 0;border-radius:14px;cursor:pointer;background:${tinted ? tint : 'transparent'};">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
           <div style="flex:1;min-width:0;">
             <div style="font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span style="font-weight:700;">${placeEsc(c.user)}</span> je v ${placeHtml}</div>
             ${distHtml}
             ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
           </div>
-          <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <span style="display:inline-flex;align-items:center;gap:2px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;padding-top:3px;">${placeEsc(when)}${actions}</span>
-            ${c.photo ? `<img data-act="photo" data-src="${placeEsc(c.photo)}" src="${placeEsc(c.photo)}" loading="lazy" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:zoom-in;background:var(--surface);">` : ''}
-          </div>
+          ${c.photo ? `<img data-act="photo" data-src="${placeEsc(c.photo)}" src="${placeEsc(c.photo)}" loading="lazy" style="flex:0 0 auto;display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:zoom-in;background:var(--surface);">` : ''}
         </div>
         ${socialHtml}${commentsHtml}
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:6px;min-height:24px;font-family:'Inter', sans-serif;font-size:11px;color:var(--muted);white-space:nowrap;">${placeEsc(when)}${actions}</div>
       </div>`;
   }).join('');
   const olderBtn = hasMore
