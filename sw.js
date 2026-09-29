@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', (event) => {
   else if (pollId) targetUrl = `./index.html?poll=${encodeURIComponent(pollId)}`;
   else if (bringKey) targetUrl = `./index.html?bring=${encodeURIComponent(bringKey)}`;
   else if (expenseKey) targetUrl = `./index.html?expense=${encodeURIComponent(expenseKey)}`;
-  else if (openPlaces) targetUrl = './index.html?places=1';
+  else if (openPlaces) targetUrl = `./index.html?places=${encodeURIComponent(openPlaces)}`;
 
   // ZÁLOHA PRO iOS: Safari appku po klepnutí na notifikaci skoro vždycky
   // "zabitou" na pozadí jen znovu spustí, a přitom dlouhodobě (a bez opravy
@@ -94,7 +94,7 @@ self.addEventListener('notificationclick', (event) => {
               else if (pollId) client.postMessage({ type: 'open-poll', pollId });
               else if (bringKey) client.postMessage({ type: 'open-bring', bringKey });
               else if (expenseKey) client.postMessage({ type: 'open-expense', expenseKey });
-              else client.postMessage({ type: 'open-places' });
+              else client.postMessage({ type: 'open-places', checkinId: openPlaces });
             } catch (e) {}
           }
           if ((eventId || chatWith || pollId || bringKey || expenseKey || openPlaces) && 'navigate' in client) {

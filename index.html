@@ -3155,7 +3155,7 @@ fetchGoogleCalendarEvents().then(async () => {
       history.replaceState(null, '', location.pathname);
     } else if(placesParam){
       handled = true;
-      setTimeout(() => openPlaceCheckinScreen(), 100);
+      setTimeout(() => openPlaceCheckinFromNotification(placesParam), 100);
       history.replaceState(null, '', location.pathname);
     }
   }catch(e){ console.error('deep-link error', e); }
@@ -3188,7 +3188,7 @@ fetchGoogleCalendarEvents().then(async () => {
       } else if(pending.expenseKey){
         setTimeout(() => showExpenseReceiptByKey(pending.expenseKey), 100);
       } else if(pending.openPlaces){
-        setTimeout(() => openPlaceCheckinScreen(), 100);
+        setTimeout(() => openPlaceCheckinFromNotification(pending.openPlaces), 100);
       }
     }
   }catch(e){ console.error('pending nav error', e); }
@@ -3985,7 +3985,7 @@ function showWelcome(){
     ['💸 Příspěvek na akci','U minulých událostí — QR platba a platební údaje na příspěvek.'],
     ['📍 Jsem na místě','Tlačítko v detailu akce, jen v den konání — potvrď, že jsi dorazil/a. Appka zkusí zjistit polohu telefonu; pokud sedí s místem akce, u jména se objeví špendlík "ověřeno polohou" — bez povolení/signálu polohy check-in proběhne stejně, jen bez razítka. Vidíš i kdo další už je na místě.'],
     ['👋 Uvítací check-in','Když appku otevřeš zrovna v den/čas akce a jsi na jejím místě, appka sama nabídne "Vítej na [akci]! KoKrŠNeci! 🤩 Jsem tu.💪" — stačí ťuknout a check-in je hotový bez hledání v detailu akce. Ptá se na polohu max. jednou za den na danou akci.'],
-    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Aplikace podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Feed / Mapa / Místa: Feed je seznam check-inů, Mapa ukazuje piny s avatarem a jménem (zeleně ty z posledních 24 hodin); vpravo nahoře se přepíná Poslední (jen poslední check-in každého) / Vše. Piny blízko sebe se spojí do jednoho s avatary a počtem — klepnutím se ukáže seznam, kdo tam je, a jde přiblížit a Místa je žebříček míst podle počtu check-inů — klepnutím se místo rozbalí a ukáže, kdo a kdy tam byl. U cizích check-inů je vidět, jak daleko jsou od tebe. Klepnutím na check-in se otevře jeho detail: větší fotka, malá mapa místa, reakce a všechny komentáře s polem pro nový komentář dole (šipkou vlevo nahoře zpět). Na mapě se detail otevře tlačítkem Zobrazit check-in v bublině u pinu. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. U cizích check-inů jde zmáčknout Přijdu taky / Jsem poblíž, dát emoji reakci, napsat komentář nebo rovnou soukromou zprávu autorovi (tlačítko Zpráva do chatu). Kdo přijde nebo je poblíž, ukáže dlouhé podržení tlačítka Přijdu taky / Jsem poblíž; autor dostane notifikaci. Ostatním přijde notifikace; zvonečkem vlevo od tlačítka Nový check-in si je můžeš vypnout (nezávisle na chatu). Křížek vpravo dole obrazovku zavře.'],
+    ['📍 Kde jsi?','Zelené tlačítko se špendlíkem vpravo dole — check-in kdekoliv, ne jen na akcích party (dovolená, nový podnik...). Aplikace podle polohy telefonu nabídne pár míst v okolí k výběru (přes Google), nahoře máš i svoje nejčastější místa, a jde to i přepsat ručně. K check-inu jde přidat poznámku a fotku. Nahoře se přepíná Feed / Mapa / Místa: Feed je seznam check-inů, Mapa ukazuje piny s avatarem a jménem (zeleně ty z posledních 24 hodin), vpravo nahoře se na ní přepíná Poslední (jen poslední check-in každého) / Vše a piny blízko sebe se spojí do jednoho s avatary a počtem (klepnutím se ukáže seznam, kdo tam je, a jde přiblížit). Místa jsou žebříček míst podle počtu check-inů — klepnutím se místo rozbalí a ukáže, kdo a kdy tam byl. U cizích check-inů je vidět, jak daleko jsou od tebe. Klepnutím na check-in se otevře jeho detail: větší fotka, malá mapa místa, reakce a všechny komentáře s polem pro nový komentář dole (šipkou vlevo nahoře zpět). Na mapě se detail otevře tlačítkem Zobrazit check-in v bublině u pinu. Vlastní check-in jde upravit tužkou nebo smazat košíkem. Nejnovější je dole, starší nad ním a tlačítkem Načíst starší se dotáhnou další. U cizích check-inů jde zmáčknout Přijdu taky / Jsem poblíž, dát emoji reakci, napsat komentář nebo rovnou soukromou zprávu autorovi (tlačítko Zpráva do chatu). Kdo přijde nebo je poblíž, ukáže dlouhé podržení tlačítka Přijdu taky / Jsem poblíž. Jsem poblíž pošle autorovi i tvoji polohu — uvidí ji jen on, v detailu check-inu na mapě a se vzdáleností; zrušením reakce se poloha smaže. Notifikace z check-inů (nové check-iny ostatních a reakce i komentáře u tvých check-inů) jsou ve výchozím stavu vypnuté — zapneš je zvonečkem vlevo od tlačítka Nový check-in (nezávisle na chatu). Klepnutí na notifikaci otevře rovnou daný check-in. Křížek vpravo dole obrazovku zavře.'],
     ['🧾 Náklady akce','U minulých událostí, hned pod Příspěvkem — jakmile jsou náklady u akce zadané, klik zobrazí náhled s rozpisem položek, celkovou částkou a plus/mínus oproti příspěvkům. Dokud nic zadané není, je tlačítko zašedlé.'],
     ['📊 Roční přehled + export','V ročním přehledu nákladů (tlačítko "Náklady za rok" u minulé akce) je i "Export docházky + nákladů do XLSX" — jedna tabulka za celý kalendářní rok: akce, datum, kolik lidí mělo Jdu, náklady, příspěvky a rozdíl, i s celkovým součtem.'],
     ['Počasí','V detailu, na kartě i ve sdílení se zobrazí předpověď nebo historické počasí pro danou akci.'],
@@ -4294,7 +4294,7 @@ if(navigator.serviceWorker){
     } else if(event.data && event.data.type === 'open-expense' && event.data.expenseKey){
       showExpenseReceiptByKey(event.data.expenseKey);
     } else if(event.data && event.data.type === 'open-places'){
-      openPlaceCheckinScreen();
+      openPlaceCheckinFromNotification(event.data.checkinId);
     }
   });
 }
@@ -6083,10 +6083,25 @@ function loadLeaflet(){
 // zvonečkem (vlevo), tlačítkem "Nový check-in" (uprostřed) a křížkem pro
 // zavření (vpravo). Formulář se otevírá těsně nad tou lištou.
 let placeCheckinFitHandler = null;
+// Z notifikace: otevře obrazovku "Kde jsi?" a rovnou detail check-inu.
+// Když je obrazovka už otevřená, jen se přidá detail.
+async function openPlaceCheckinFromNotification(checkinId){
+  if(!document.getElementById('placeCheckinFeed')) openPlaceCheckinScreen();
+  if(!checkinId || checkinId === '1' || !document.getElementById('placeCheckinFeed')) return;
+  try{
+    if(!findPlaceDoc(checkinId)){
+      const snap = await db.collection('placeCheckins').doc(checkinId).get();
+      if(!snap.exists) return;
+      placeScreen.linked = [{ id: snap.id, ...snap.data() }];
+    }
+    if(document.getElementById('placeCheckinFeed')) openPlaceCheckinDetail(checkinId);
+  }catch(e){ console.error('Chyba při otevírání check-inu z notifikace:', e); }
+}
+
 function openPlaceCheckinScreen(){
   const me = getUserName();
   if(!me) return;
-  Object.assign(placeScreen, { me, live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true, emojiPickerFor:null, openComments:new Set(), commentUnsubs:{}, comments:{}, placesAll:null, placesLoading:false, placesError:false, placesOpen:null });
+  Object.assign(placeScreen, { me, linked:[], live:[], older:[], olderExhausted:false, view:'list', pos:null, map:null, markerLayer:null, posMarker:null, mapNeedsFit:true, emojiPickerFor:null, openComments:new Set(), commentUnsubs:{}, comments:{}, placesAll:null, placesLoading:false, placesError:false, placesOpen:null });
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
   backdrop.onclick = e => { if(e.target===backdrop) closePlaceCheckinScreen(backdrop); };
@@ -6479,25 +6494,47 @@ function openPlaceClusterSheet(items){
 }
 
 // Vlastní zvoneček check-inů — nezávislý na zvonečcích u chatových vláken.
-// Ukládá se do settings/placeCheckins (pole "muted" se jmény, stejně jako u
-// chatu) a čte ho Cloud Function onPlaceCheckinCreated. Výchozí stav je
-// zapnuto, ztlumení je na každého zvlášť.
+// Notifikace z "Kde jsi?" (nové check-iny ostatních + reakce a komentáře u
+// tvých check-inů) jsou ve výchozím stavu VYPNUTÉ a chodí jen tomu, kdo si
+// je zvonečkem zapne. Ukládá se do settings/placeCheckins, pole "enabled"
+// (jméno -> true), a čtou ho Cloud Functions. Staré pole "muted" se už nepoužívá.
 let placeCheckinMuteUnsub = null;
+// Krátká bublina nad lištou po přepnutí zvonečku. Když má člověk vypnuté
+// notifikace celé aplikace (zvoneček nahoře), upozorní ho, že bez nich
+// nic nepřijde.
+function showPlaceBellHint(on){
+  const old = document.getElementById('placeBellHint');
+  if(old) old.remove();
+  const bar = document.getElementById('placeCheckinBar');
+  if(!bar) return;
+  const appOff = !localStorage.getItem('pushToken');
+  const el = document.createElement('div');
+  el.id = 'placeBellHint';
+  el.style.cssText = "position:fixed;left:16px;right:16px;z-index:95;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Inter', sans-serif;font-size:13px;line-height:1.4;color:var(--ink);text-align:left;";
+  el.textContent = on
+    ? (appOff ? 'Notifikace z check-inů zapnuté. Aby chodily, zapni i notifikace aplikace zvonečkem nahoře na hlavní obrazovce.' : 'Notifikace z check-inů zapnuté — nové check-iny a reakce na tvoje check-iny.')
+    : 'Notifikace z check-inů vypnuté.';
+  document.body.appendChild(el);
+  const r = bar.getBoundingClientRect();
+  el.style.top = Math.max(8, r.top - el.offsetHeight - 10) + 'px';
+  setTimeout(() => el.remove(), 3500);
+}
 function wirePlaceCheckinMute(me){
   const btn = document.getElementById('placeCheckinMuteBtn');
   if(!btn) return;
   const ref = db.collection('settings').doc('placeCheckins');
   placeCheckinMuteUnsub = ref.onSnapshot(snap => {
-    const muted = (snap.exists && snap.data().muted) || {};
-    const isMuted = !!muted[me];
-    btn.innerHTML = bellIconSVG(isMuted);
-    btn.title = isMuted ? 'Zapnout notifikace z check-inů' : 'Ztlumit notifikace z check-inů';
-    btn.style.color = isMuted ? 'var(--coral)' : 'var(--muted)';
-    btn.dataset.muted = isMuted ? '1' : '';
+    const enabled = (snap.exists && snap.data().enabled) || {};
+    const isOn = !!enabled[me];
+    btn.innerHTML = bellIconSVG(!isOn);
+    btn.title = isOn ? 'Vypnout notifikace z check-inů' : 'Zapnout notifikace z check-inů';
+    btn.style.color = isOn ? 'var(--accent)' : 'var(--muted)';
+    btn.dataset.on = isOn ? '1' : '';
   }, err => console.error('Chyba při načítání nastavení check-inů:', err));
   btn.onclick = () => {
-    const nowMuted = btn.dataset.muted === '1';
-    ref.set({ muted: { [me]: !nowMuted } }, { merge: true }).catch(() => {});
+    const turnOn = btn.dataset.on !== '1';
+    ref.set({ enabled: { [me]: turnOn } }, { merge: true }).catch(() => {});
+    showPlaceBellHint(turnOn);
   };
 }
 
@@ -6840,6 +6877,33 @@ function patchPlaceDoc(id, fn){
   placeScreen.live = placeScreen.live.map(d => d.id === id ? fn(d) : d);
   placeScreen.older = placeScreen.older.map(d => d.id === id ? fn(d) : d);
   if(placeScreen.placesAll) placeScreen.placesAll = placeScreen.placesAll.map(d => d.id === id ? fn(d) : d);
+  if(placeScreen.linked) placeScreen.linked = placeScreen.linked.map(d => d.id === id ? fn(d) : d);
+}
+
+// Poloha pro "Jsem poblíž": čerstvá z GPS (max. 8 s), jinak ta, kterou
+// obrazovka zjistila při otevření. Když polohu nejde zjistit, reakce se uloží
+// bez ní.
+function getNearReactionLocation(){
+  const fallback = () => placeScreen.pos ? { lat: placeScreen.pos.lat, lng: placeScreen.pos.lng, at: new Date().toISOString() } : null;
+  if(!navigator.geolocation) return Promise.resolve(fallback());
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, at: new Date().toISOString() }),
+      () => resolve(fallback()),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+}
+
+// Pro autora: poloha lidí, kteří dali "Jsem poblíž" (jen ti, co ho pořád mají).
+function placeNearLocs(c){
+  if(!c || c.user !== placeScreen.me) return [];
+  const nl = c.nearLoc || {};
+  return (c.near || []).filter(n => nl[n] && typeof nl[n].lat === 'number').map(n => {
+    const from = (typeof c.lat === 'number') ? c : placeScreen.pos;
+    const dist = from ? haversineDistanceMeters(from.lat, from.lng, nl[n].lat, nl[n].lng) : null;
+    return { name: n, lat: nl[n].lat, lng: nl[n].lng, at: nl[n].at, dist };
+  });
 }
 
 async function togglePlaceReaction(id, kind, emoji){
@@ -6849,11 +6913,30 @@ async function togglePlaceReaction(id, kind, emoji){
   const ref = db.collection('placeCheckins').doc(id);
   const FV = firebase.firestore.FieldValue;
   try{
-    if(kind === 'coming' || kind === 'near'){
-      const has = (d[kind] || []).includes(me);
-      patchPlaceDoc(id, x => ({ ...x, [kind]: has ? (x[kind] || []).filter(n => n !== me) : [...(x[kind] || []), me] }));
+    if(kind === 'coming'){
+      const has = (d.coming || []).includes(me);
+      patchPlaceDoc(id, x => ({ ...x, coming: has ? (x.coming || []).filter(n => n !== me) : [...(x.coming || []), me] }));
       refreshPlaceViews(true);
-      await ref.update({ [kind]: has ? FV.arrayRemove(me) : FV.arrayUnion(me) });
+      await ref.update({ coming: has ? FV.arrayRemove(me) : FV.arrayUnion(me) });
+    } else if(kind === 'near'){
+      // "Jsem poblíž" pošle s reakcí i polohu — zobrazuje se jen autorovi
+      // check-inu (v detailu a v bublině jmen). Při zrušení se poloha smaže.
+      const has = (d.near || []).includes(me);
+      const locPath = new firebase.firestore.FieldPath('nearLoc', me);
+      patchPlaceDoc(id, x => ({ ...x, near: has ? (x.near || []).filter(n => n !== me) : [...(x.near || []), me] }));
+      refreshPlaceViews(true);
+      if(has){
+        patchPlaceDoc(id, x => { const nl = { ...(x.nearLoc || {}) }; delete nl[me]; return { ...x, nearLoc: nl }; });
+        await ref.update('near', FV.arrayRemove(me), locPath, FV.delete());
+      } else {
+        const loc = await getNearReactionLocation();
+        if(loc){
+          patchPlaceDoc(id, x => ({ ...x, nearLoc: { ...(x.nearLoc || {}), [me]: loc } }));
+          await ref.update('near', FV.arrayUnion(me), locPath, loc);
+        } else {
+          await ref.update({ near: FV.arrayUnion(me) });
+        }
+      }
     } else {
       const cur = (d.emojis || {})[me];
       patchPlaceDoc(id, x => { const e = { ...(x.emojis || {}) }; if(cur === emoji) delete e[me]; else e[me] = emoji; return { ...x, emojis: e }; });
@@ -7040,6 +7123,7 @@ function openPlaceCheckinDetail(id){
           <div id="pdMap" style="position:relative;height:170px;border-radius:14px;overflow:hidden;isolation:isolate;z-index:0;background:var(--surface);cursor:pointer;"></div>
           <a id="pdMapsLink" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font-family:'Inter', sans-serif;font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;">Otevřít v mapách</a>
         </div>
+        <div id="pdNear"></div>
         <div id="pdSocial" style="margin-top:6px;"></div>
         <div style="margin-top:16px;font-family:'Inter', sans-serif;font-weight:700;font-size:13px;color:var(--ink);">Komentáře</div>
         <div id="pdComments" style="margin-top:4px;"></div>
@@ -7050,7 +7134,7 @@ function openPlaceCheckinDetail(id){
       </div>
     </div>`;
   document.body.appendChild(backdrop);
-  Object.assign(placeDetail, { id, backdrop, map:null, marker:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
+  Object.assign(placeDetail, { id, backdrop, map:null, marker:null, nearLayer:null, nearKey:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
 
   const modal = backdrop.querySelector('.ev-modal');
   modal.onclick = handlePlaceFeedClick;
@@ -7105,7 +7189,7 @@ function closePlaceCheckinDetail(){
   }
   placeDetail.backdrop.remove();
   placeScreen.emojiPickerFor = null;
-  Object.assign(placeDetail, { id:null, backdrop:null, map:null, marker:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
+  Object.assign(placeDetail, { id:null, backdrop:null, map:null, marker:null, nearLayer:null, nearKey:null, mapStarted:false, fit:null, avatar:'', last:{}, commentCount:-1, scrollToEnd:false });
 }
 
 function renderPlaceDetail(){
@@ -7152,6 +7236,18 @@ function renderPlaceDetail(){
     if(hasCoords && !placeDetail.mapStarted) initPlaceDetailMap(c);
   }
 
+  // Kdo je poblíž (jen pro autora, s polohou z reakce Jsem poblíž).
+  const nearList = placeNearLocs(c);
+  setIfChanged('near', q('#pdNear'), nearList.length ? `
+    <div style="margin-top:14px;font-family:'Inter', sans-serif;font-weight:700;font-size:13px;color:var(--ink);">Kdo je poblíž <span style="font-weight:400;color:var(--muted);font-size:11.5px;">— vidíš jen ty</span></div>
+    ${nearList.map(x => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-family:'Inter', sans-serif;font-size:13.5px;color:var(--ink);">
+        <span style="width:9px;height:9px;border-radius:50%;background:#E8833A;flex:0 0 auto;"></span>
+        <span style="font-weight:700;">${placeEsc(x.name)}</span>
+        <span style="color:var(--muted);font-size:12px;">${x.dist != null ? placeEsc(formatPlaceDistance(x.dist)) + ' od check-inu' : ''}${x.at ? ' · ' + placeEsc(formatLastSeen(x.at).replace(/^naposledy aktivní /, '')) : ''}</span>
+      </div>`).join('')}` : '');
+  updatePlaceDetailNearPins(c, false);
+
   const social = q('#pdSocial'); if(social) social.style.display = 'block';
   setIfChanged('social', social, placeReactionsHtml(c, { detail: true }));
 
@@ -7194,7 +7290,28 @@ async function initPlaceDetailMap(c){
     map.fitBounds([[c.lat, c.lng], [pos.lat, pos.lng]], { padding: [50, 50], maxZoom: 16 });
   }
   placeDetail.map = map;
+  updatePlaceDetailNearPins(findPlaceDoc(id) || c, true);
   setTimeout(() => { try{ map.invalidateSize(); }catch(e){} }, 60);
+}
+
+// Oranžové tečky lidí, kteří dali "Jsem poblíž" (jen autor). Při prvním
+// vykreslení mapy se výřez roztáhne, aby byli vidět.
+function updatePlaceDetailNearPins(c, fit){
+  const map = placeDetail.map;
+  if(!map || !c) return;
+  const list = placeNearLocs(c);
+  const key = JSON.stringify(list.map(x => [x.name, x.lat, x.lng]));
+  if(!fit && placeDetail.nearKey === key) return;
+  placeDetail.nearKey = key;
+  if(placeDetail.nearLayer){ map.removeLayer(placeDetail.nearLayer); placeDetail.nearLayer = null; }
+  if(!list.length) return;
+  placeDetail.nearLayer = L.layerGroup(list.map(x =>
+    L.circleMarker([x.lat, x.lng], { radius: 8, color: '#fff', weight: 2, fillColor: '#E8833A', fillOpacity: 1 })
+      .bindTooltip(x.name, { permanent: true, direction: 'top', offset: [0, -8] })
+  )).addTo(map);
+  if(fit && typeof c.lat === 'number'){
+    map.fitBounds([[c.lat, c.lng], ...list.map(x => [x.lat, x.lng])], { padding: [45, 45], maxZoom: 16 });
+  }
 }
 
 // ---- Kdo přijde / kdo je poblíž: jména po dlouhém podržení čipu ----
@@ -7243,11 +7360,13 @@ function showPlaceNamesBubble(kind, id, rect){
   const c = findPlaceDoc(id);
   if(!c) return;
   const names = c[kind] || [];
+  const nearDist = {};
+  if(kind === 'near') placeNearLocs(c).forEach(x => { if(x.dist != null) nearDist[x.name] = formatPlaceDistance(x.dist); });
   const el = document.createElement('div');
   el.id = 'placeNamesBubble';
   el.style.cssText = "position:fixed;z-index:95;max-width:260px;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,.45);font-family:'Inter', sans-serif;font-size:13px;line-height:1.4;color:var(--ink);text-align:left;";
   el.innerHTML = `<div style="font-weight:700;margin-bottom:2px;">${kind === 'coming' ? 'Přijdou' : 'Poblíž'}</div>`
-    + (names.length ? names.map(placeEsc).join(', ') : `<span style="color:var(--muted);">Zatím nikdo</span>`);
+    + (names.length ? names.map(n => placeEsc(n) + (nearDist[n] ? ` <span style="color:var(--muted);">(${placeEsc(nearDist[n])})</span>` : '')).join(', ') : `<span style="color:var(--muted);">Zatím nikdo</span>`);
   document.body.appendChild(el);
   const w = el.offsetWidth, h = el.offsetHeight;
   const left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
@@ -7285,7 +7404,7 @@ function scrollPlaceFeedToEnd(){
 const PLACES_STATS_LIMIT = 1000;
 
 function findPlaceDoc(id){
-  return placeAllDocs().find(x => x.id === id) || (placeScreen.placesAll || []).find(x => x.id === id);
+  return placeAllDocs().find(x => x.id === id) || (placeScreen.placesAll || []).find(x => x.id === id) || (placeScreen.linked || []).find(x => x.id === id);
 }
 
 async function loadPlacesStats(){

@@ -87,8 +87,8 @@ function normName(s) {
 // posílají se notifikace o check-inech (na akci i volný "Kde jsi?") jen tomuto
 // uživateli. Ostatní notifikace (akce, chat, album, připomínky...) se tím
 // nemění. Na ostrý provoz změň na null a znovu nasaď funkce:
-// const TEST_CHECKIN_ONLY_USER = null;
-const TEST_CHECKIN_ONLY_USER = 'Android';
+const TEST_CHECKIN_ONLY_USER = null;
+// const TEST_CHECKIN_ONLY_USER = 'Android';
 
 /** V testovacím režimu nechá ze seznamu tokenů jen ty, co patří uživateli TEST_CHECKIN_ONLY_USER. */
 async function keepOnlyTestUserTokens(tokens) {
@@ -1246,27 +1246,50 @@ exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
 });
 
 // --- Check-in "Kde jsi?" (volný, mimo akce) — notifikace ostatním --------------
-// Chodí všem s povolenými oznámeními kromě toho, kdo check-in udělal, a kromě
-// těch, kdo si na obrazovce "Kde jsi?" ztlumili vlastní zvoneček
-// (settings/placeCheckins -> pole "muted", viz wirePlaceCheckinMute v index.html).
+// Chodí jen těm, kdo si na obrazovce "Kde jsi?" zapnuli vlastní zvoneček
+// (settings/placeCheckins -> pole "enabled"; výchozí stav vypnuto, viz
+// wirePlaceCheckinMute v index.html), kromě toho, kdo check-in udělal.
 // Jméno se bere z obsahu dokumentu (data.user), ne z cesty — viz poznámka
 // u onCheckinCreated o problémech s diakritikou v cestách.
+/** Kdo má zapnutý zvoneček check-inů (settings/placeCheckins -> "enabled").
+ *  Notifikace z "Kde jsi?" jsou ve výchozím stavu vypnuté — chodí jen těm,
+ *  kdo si je v aplikaci zvonečkem zapnou. */
+async function getPlaceCheckinEnabledSet() {
+  const doc = await db.collection('settings').doc('placeCheckins').get();
+  const map = (doc.exists && doc.data().enabled) || {};
+  return new Set(Object.keys(map).filter((n) => map[n]).map(normName));
+}
+
+/** Vzdálenost dvou bodů v metrech. */
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = (x) => (x * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function formatDistanceCz(m) {
+  if (m < 995) return `${Math.max(10, Math.round(m / 10) * 10)} m`;
+  return `${(m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',')} km`;
+}
+
 exports.onPlaceCheckinCreated = onDocumentCreated(
   'placeCheckins/{checkinId}',
   async (event) => {
     const data = event.data.data();
     if (!data || !data.user || !data.place) return;
     const poster = normName(data.user);
-    const settingsDoc = await db.collection('settings').doc('placeCheckins').get();
-    const mutedMap = (settingsDoc.exists && settingsDoc.data().muted) || {};
-    const muted = new Set(Object.keys(mutedMap).filter((n) => mutedMap[n]).map(normName));
+    const enabled = await getPlaceCheckinEnabledSet();
+    if (!enabled.size) return;
     const snap = await db.collection('pushTokens').get();
     const tokens = [];
     snap.forEach((doc) => {
       const d = doc.data();
       if (!d.token) return;
       const u = normName(d.user);
-      if (u === poster || muted.has(u)) return;
+      if (u === poster || !enabled.has(u)) return;
       tokens.push(d.token);
     });
     await sendToTokens(await keepOnlyTestUserTokens(tokens), {
@@ -1274,7 +1297,7 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
       // správně vyskloňovat nedalo), takže věta zní "Šuraj je v Pivovar Bernard".
       title: '📍 Check-in',
       body: `${data.user} je v ${data.place}${data.note ? `\n„${data.note}“` : ''}`,
-      openPlaces: '1',
+      openPlaces: event.params.checkinId,
     });
   }
 );
@@ -1286,14 +1309,12 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
 // pro ně stejný zvoneček jako pro check-iny (settings/placeCheckins) i
 // testovací režim TEST_CHECKIN_ONLY_USER.
 
-/** Tokeny autora check-inu; prázdné, když reagoval sám autor nebo má ztlumený zvoneček check-inů. */
+/** Tokeny autora check-inu; prázdné, když reagoval sám autor nebo nemá zapnutý zvoneček check-inů. */
 async function getPlaceCheckinAuthorTokens(authorName, reactorName) {
   const author = normName(authorName);
   if (!author || author === normName(reactorName)) return [];
-  const settingsDoc = await db.collection('settings').doc('placeCheckins').get();
-  const mutedMap = (settingsDoc.exists && settingsDoc.data().muted) || {};
-  const muted = new Set(Object.keys(mutedMap).filter((n) => mutedMap[n]).map(normName));
-  if (muted.has(author)) return [];
+  const enabled = await getPlaceCheckinEnabledSet();
+  if (!enabled.has(author)) return [];
   const snap = await db.collection('pushTokens').get();
   const tokens = [];
   snap.forEach((doc) => {
@@ -1322,13 +1343,21 @@ exports.onPlaceCheckinReacted = onDocumentUpdated(
       const tokens = await getPlaceCheckinAuthorTokens(after.user, r.who);
       if (!tokens.length) continue;
       let title;
+      let body = `Tvůj check-in: ${after.place}`;
       if (r.kind === 'coming') title = `👋 ${r.who}: Přijdu taky`;
-      else if (r.kind === 'near') title = `📍 ${r.who}: Jsem poblíž`;
-      else title = `${r.emoji} ${r.who} reagoval na tvůj check-in`;
+      else if (r.kind === 'near') {
+        title = `📍 ${r.who}: Jsem poblíž`;
+        // Poloha z reakce (pole nearLoc) — vzdálenost od místa check-inu.
+        const loc = (after.nearLoc || {})[r.who];
+        if (loc && typeof loc.lat === 'number' && typeof after.lat === 'number') {
+          const m = distanceMeters(after.lat, after.lng, loc.lat, loc.lng);
+          body = `${r.who} je ${formatDistanceCz(m)} od tvého check-inu (${after.place})`;
+        }
+      } else title = `${r.emoji} ${r.who} reagoval na tvůj check-in`;
       await sendToTokens(tokens, {
         title,
-        body: `Tvůj check-in: ${after.place}`,
-        openPlaces: '1',
+        body,
+        openPlaces: event.params.checkinId,
       });
     }
   }
@@ -1347,7 +1376,7 @@ exports.onPlaceCheckinCommentCreated = onDocumentCreated(
     await sendToTokens(tokens, {
       title: `💬 ${cm.user} komentoval tvůj check-in`,
       body: `${cm.text}\n(${p.place})`,
-      openPlaces: '1',
+      openPlaces: event.params.checkinId,
     });
   }
 );
