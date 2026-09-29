@@ -6333,6 +6333,43 @@ function placePinIcon(c, avatar){
     });
 }
 
+// ---- Odkazy do Google Map ----
+// Check-in s Google ID místa (vybraný z "Místa v okolí") otevře kartu místa,
+// ostatní (vlastní názvy jako "Doma") souřadnice.
+function placeMapsUrl(c){
+  if(c && c.gPlaceId) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.place || '')}&query_place_id=${encodeURIComponent(c.gPlaceId)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`;
+}
+
+// iOS: odkaz na google.com/maps se z nainstalované aplikace otevře v okně
+// Safari, to hned předá Google Mapám a po návratu zůstane prázdné bílé okno.
+// Proto se na iOS rovnou zkusí aplikace Google Mapy (schéma comgooglemapsurl);
+// když není nainstalovaná a stránka zůstane vidět, otevře se web jako dřív.
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function openGoogleMapsUrl(url){
+  if(!IS_IOS){ window.open(url, '_blank', 'noopener'); return; }
+  let left = false;
+  const onHide = () => { if(document.visibilityState === 'hidden') left = true; };
+  document.addEventListener('visibilitychange', onHide);
+  window.location.href = url.replace(/^https:\/\//, 'comgooglemapsurl://');
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', onHide);
+    if(!left && document.visibilityState === 'visible') window.open(url, '_blank', 'noopener');
+  }, 1500);
+}
+// Všechny odkazy na Google Mapy v aplikaci (check-iny i akce) jdou na iOS
+// přes openGoogleMapsUrl. Zachytává se už ve fázi capture, protože bubliny
+// na mapě klepnutí dál nepouští.
+if(IS_IOS){
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="https://www.google.com/maps"], a[href^="https://maps.google.com"]');
+    if(!a) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openGoogleMapsUrl(a.href);
+  }, true);
+}
+
 // Mapa: v režimu "Poslední" jen poslední check-in každého člověka (pokud má
 // polohu), v režimu "Vše" všechny načtené. Piny, které by se na obrazovce
 // překrývaly, se spojí do skupinového pinu (avatary + počet); klepnutí na něj
@@ -6421,7 +6458,7 @@ function placePopupHtml(c, avatar){
       ${c.note ? `<div style="font-style:italic;color:#5b5663;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
       <div style="color:#837E8A;font-size:12px;margin-top:3px;">${placeEsc(when + dist)}</div>
       ${c.photo ? `<img src="${placeEsc(c.photo)}" style="display:block;width:100%;max-width:200px;border-radius:8px;margin-top:6px;">` : ''}
-      <a href="https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;color:#2F7A56;font-weight:600;text-decoration:none;">Otevřít v mapách</a>
+      <a href="${placeMapsUrl(c)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;color:#2F7A56;font-weight:600;text-decoration:none;">Otevřít v mapách</a>
       <button type="button" data-act="detail" data-id="${c.id}" style="display:block;width:100%;margin-top:8px;background:#3E8F68;border:none;color:#fff;font:700 13px Inter,sans-serif;padding:7px 10px;border-radius:9px;cursor:pointer;">Zobrazit check-in</button>
     </div>`;
 }
@@ -6783,6 +6820,8 @@ function renderPlaceCheckinForm(opts){
         const snap = await ref.get();
         if(!snap.exists || snap.data().user !== me){ closeForm(); return; }
         const upd = { place, note, editedAt: new Date().toISOString() };
+        // Po přejmenování místa už Google ID nesedí — odkaz se vrátí na souřadnice.
+        if(place !== (snap.data().place || '')) upd.gPlaceId = '';
         const oldPath = snap.data().photoPath || '';
         if(state.file){
           try{
@@ -6814,10 +6853,15 @@ function renderPlaceCheckinForm(opts){
           }
         }
         const coords = opts.coords;
+        // Když název přesně odpovídá místu vybranému z "Místa v okolí", uloží
+        // se i jeho Google ID — odkaz do Google Map pak otevře kartu místa,
+        // ne jen souřadnice.
+        const picked = (opts.suggestions || []).find(s => s.id && s.name === place);
         await ref.set({
           user: me, place, note,
           lat: coords ? coords.lat : null,
           lng: coords ? coords.lng : null,
+          gPlaceId: picked ? picked.id : '',
           at: new Date().toISOString(),
           photo, photoPath
         });
@@ -7291,12 +7335,12 @@ function renderPlaceDetail(){
 async function initPlaceDetailMap(c){
   placeDetail.mapStarted = true;
   const id = c.id;
-  const url = `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`;
+  const url = placeMapsUrl(c);
   const link = placeDetail.backdrop.querySelector('#pdMapsLink');
   const el = placeDetail.backdrop.querySelector('#pdMap');
   if(link) link.href = url;
   if(!el) return;
-  el.onclick = () => window.open(url, '_blank', 'noopener');
+  el.onclick = () => openGoogleMapsUrl(url);
   try{ await loadLeaflet(); }catch(e){
     el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'Inter', sans-serif;font-size:13px;">Mapu se nepodařilo načíst.</div>`;
     return;
@@ -7509,7 +7553,7 @@ function renderPlacesList(){
           ${d.photo ? `<img src="${placeEsc(d.photo)}" loading="lazy" style="flex:0 0 auto;width:44px;height:44px;object-fit:cover;border-radius:8px;background:var(--surface);">` : ''}
         </div>`).join('');
       const more = g.items.length > 20 ? `<div style="padding:8px 0;color:var(--muted);font-size:12px;border-top:1px solid var(--line);">…a ${g.items.length - 20} starších</div>` : '';
-      const maps = g.lat != null ? `<a href="https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lng}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 0 8px;font-family:'Inter', sans-serif;font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;">Otevřít v mapách</a>` : '';
+      const maps = g.lat != null ? `<a href="${placeMapsUrl(g.items.find(d => d.gPlaceId) || { lat: g.lat, lng: g.lng })}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 0 8px;font-family:'Inter', sans-serif;font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;">Otevřít v mapách</a>` : '';
       detail = `<div style="margin:0 0 10px 40px;">${maps}${rows}${more}</div>`;
     }
     return `
@@ -7588,7 +7632,7 @@ function renderPlaceFeedList(){
   const items = ordered.map((c, idx) => {
     const tinted = (ordered.length - 1 - idx) % 2 === 1;
     const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number';
-    const mapsUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : null;
+    const mapsUrl = hasCoords ? placeMapsUrl(c) : null;
     const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '') + (c.editedAt ? ' · upraveno' : '');
     const placeHtml = mapsUrl
       ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;">${placeEsc(c.place)}</a>`

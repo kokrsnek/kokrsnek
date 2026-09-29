@@ -1271,7 +1271,7 @@ exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.shortFormattedAddress,places.location',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.shortFormattedAddress,places.location',
       },
       body: JSON.stringify({
         locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 150.0 } },
@@ -1290,6 +1290,7 @@ exports.nearbyPlaces = onCall({ region: 'us-central1' }, async (request) => {
     throw new HttpsError('unavailable', 'Google Places se nepodařilo kontaktovat.');
   }
   const results = (data.places || []).map((p) => ({
+    id: p.id || '',
     name: (p.displayName && p.displayName.text) || '',
     vicinity: p.shortFormattedAddress || '',
     lat: (p.location && p.location.latitude) || lat,
