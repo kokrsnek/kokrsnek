@@ -1348,9 +1348,10 @@ exports.onPlaceCheckinCreated = onDocumentCreated(
     });
     await sendToTokens(await keepOnlyTestUserTokens(tokens), {
       // Bez skloňování místa (české "v pivovaru Bernard" by se automaticky
-      // správně vyskloňovat nedalo), takže věta zní "Šuraj je v Pivovar Bernard".
+      // správně vyskloňovat nedalo), takže věta zní "Šuraj je v Pivovar Bernard"; u názvů s předložkou
+      // ("Na Boudě", "V práci") nebo "Doma" se "v" vynechá.
       title: '📍 Check-in',
-      body: `${data.user} je v ${data.place}${data.note ? `\n„${data.note}“` : ''}`,
+      body: `${data.user} ${/^(na|u|v|ve|za|pod|nad|před|při|mezi|doma|venku)(\s|$)/i.test(String(data.place || '').trim()) ? 'je' : 'je v'} ${data.place}${data.note ? `\n„${data.note}“` : ''}`,
       openPlaces: event.params.checkinId,
     });
   }

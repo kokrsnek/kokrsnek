@@ -6421,6 +6421,16 @@ function refreshPlaceViews(keepScroll){
   if(keepScroll) feedEl.scrollTop = top;
 }
 
+// "je v" před místem — "v" se vynechá, když název sám začíná předložkou nebo
+// je to příslovce ("Na Boudě", "U Lípy", "V práci", "Doma"), ať nevznikne
+// "je v Na Boudě". Stejné pravidlo je ve functions/index.js.
+function placeIsPhrase(place){
+  return /^(na|u|v|ve|za|pod|nad|před|při|mezi|doma|venku)(\s|$)/i.test(String(place || '').trim());
+}
+function placeVerb(place){
+  return placeIsPhrase(place) ? 'je' : 'je v';
+}
+
 // Pin s avatarem (emoji) a štítkem se jménem — pro velkou mapu i pro malou
 // mapu v detailu check-inu.
 function placePinIcon(c, avatar){
@@ -6561,7 +6571,7 @@ function placePopupHtml(c, avatar){
   const when = formatLastSeen(c.at).replace(/^naposledy aktivní /, '');
   const dist = (pos && c.user !== placeScreen.me) ? ' · ' + formatPlaceDistance(haversineDistanceMeters(pos.lat, pos.lng, c.lat, c.lng)) : '';
   return `<div style="font-family:'Inter',sans-serif;color:#242229;min-width:150px;">
-      ${avatar ? placeEsc(avatar) + ' ' : ''}<b>${placeEsc(c.user)}</b> je v ${placeEsc(c.place)}
+      ${avatar ? placeEsc(avatar) + ' ' : ''}<b>${placeEsc(c.user)}</b> ${placeVerb(c.place)} ${placeEsc(c.place)}
       ${c.note ? `<div style="font-style:italic;color:#5b5663;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
       <div style="color:#837E8A;font-size:12px;margin-top:3px;">${placeEsc(when + dist)}</div>
       ${c.photo ? `<img src="${placeEsc(c.photo)}" style="display:block;width:100%;max-width:200px;border-radius:8px;margin-top:6px;">` : ''}
@@ -6630,7 +6640,7 @@ function openPlaceClusterSheet(items){
       <div data-cid="${c.id}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer;">
         <div style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:21px;font-family:'Inter', sans-serif;font-weight:700;color:var(--ink);">${placeEsc(av || (c.user || '?').trim().charAt(0).toUpperCase())}</div>
         <div style="flex:1;min-width:0;font-family:'Inter', sans-serif;">
-          <div style="font-size:14.5px;line-height:1.35;color:var(--ink);"><span style="font-weight:700;">${placeEsc(c.user)}</span> je v <span style="font-weight:700;color:var(--accent);">${placeEsc(c.place)}</span></div>
+          <div style="font-size:14.5px;line-height:1.35;color:var(--ink);"><span style="font-weight:700;">${placeEsc(c.user)}</span> ${placeVerb(c.place)} <span style="font-weight:700;color:var(--accent);">${placeEsc(c.place)}</span></div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">${placeEsc(when + dist)}</div>
           ${c.note ? `<div style="font-size:12.5px;color:var(--muted);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">„${placeEsc(c.note)}“</div>` : ''}
         </div>
@@ -7408,7 +7418,7 @@ function renderPlaceDetail(){
     <div style="display:flex;align-items:center;gap:12px;">
       <div style="flex:0 0 auto;width:52px;height:52px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;font-family:'Inter', sans-serif;font-weight:700;color:var(--ink);">${placeDetail.avatar ? placeEsc(placeDetail.avatar) : placeEsc(initial)}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Inter', sans-serif;font-size:17px;line-height:1.35;color:var(--ink);"><span data-act="user" data-user="${placeEsc(c.user)}" style="font-weight:700;cursor:pointer;">${placeEsc(c.user)}</span> je v <span style="font-weight:700;color:var(--accent);">${placeEsc(c.place)}</span></div>
+        <div style="font-family:'Inter', sans-serif;font-size:17px;line-height:1.35;color:var(--ink);"><span data-act="user" data-user="${placeEsc(c.user)}" style="font-weight:700;cursor:pointer;">${placeEsc(c.user)}</span> ${placeVerb(c.place)} <span style="font-weight:700;color:var(--accent);">${placeEsc(c.place)}</span></div>
         <div style="font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);margin-top:3px;">${placeEsc(when + dist)}</div>
       </div>
     </div>
@@ -7877,7 +7887,7 @@ function renderPlaceFeedList(){
       <div data-act="detail" data-id="${c.id}" style="padding:12px 10px 8px;margin:2px 0;border-radius:14px;cursor:pointer;background:${tinted ? tint : 'transparent'};">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
           <div style="flex:1;min-width:0;">
-            <div style="font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span data-act="user" data-user="${placeEsc(c.user)}" style="font-weight:700;cursor:pointer;">${placeEsc(c.user)}</span> je v ${placeHtml}</div>
+            <div style="font-family:'Inter', sans-serif;font-size:14.5px;line-height:1.4;color:var(--ink);"><span data-act="user" data-user="${placeEsc(c.user)}" style="font-weight:700;cursor:pointer;">${placeEsc(c.user)}</span> ${placeVerb(c.place)} ${placeHtml}</div>
             ${distHtml}
             ${c.note ? `<div style="font-family:'Inter', sans-serif;font-size:12.5px;color:var(--muted);font-style:italic;margin-top:3px;">„${placeEsc(c.note)}“</div>` : ''}
           </div>
