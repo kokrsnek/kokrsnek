@@ -4016,7 +4016,7 @@ function showWelcome(){
     ['🔔 Notifikace — co všechno appka posílá','Nový lajk, Dojdu/Nedojdu, komentář (i odpověď a emoji reakce na tvůj komentář), nové album fotek nebo seznam nákladů u akce, úplně nová akce v kalendáři, změna data či místa u akce (pokud jsi na ni odpověděl/a), připomínka akce v den konání i 5 dní předem, akce za 3 dny bez odezvy, den po skončení akce poděkování za účast (a pozvánka na další akci) těm, co měli Dojdu, ostatním jen pozvánka na další akci, narozeniny a svátek člena party, sesazení z 1. místa v kvízu, nová anketa, a šťouchnutí/zpráva/reakce z minichatu. Zapíná se zvonečkem nahoře, jde ztlumit i jen po jednotlivých vláknech v minichatu.'],
     ['Výročí','Připomínka výročí minulých událostí.'],
     ['🎂 Narozeniny a svátky','Když má někdo z party narozeniny nebo svátek podle jména, ukážou se v aplikaci konfety a připomínka, ať mu popřeješ. V 8 ráno přijde celé partě i push notifikace „Nezapomeň dnes popřát …“. Oslavenec sám ji o sobě nedostane — místo ní uvidí osobní přání „Vše nejlepší k dnešním narozeninám / dnešnímu svátku“ (v aplikaci i jako push). Osobní přání funguje u těch, u koho je v seznamu uvedené jméno, pod kterým aplikaci používá.'],
-    ['🏆 Kvíz','Klikni na "KoKrŠNeK v.t.s." dole v detailu události — spustí se kvíz o hlavních městech na čas. Nejdřív appka vystřídá všechny evropské země, teprve pak přibere i zbytek světa. Dlouhé podržení otevře rovnou žebříček nejlepších.'],
+    ['🏆 Kvíz','Klikni na \"KoKrŠNeK v.t.s.\" dole v detailu události — spustí se kvíz s matematickými příklady pro 3. ročník (sčítání a odčítání do 1000, násobilka, dělení) na čas, 15 sekund na příklad. Výsledek se píše do pole s číselnou klávesnicí a potvrzuje tlačítkem OK; po chybě se ukáže správný výsledek. Čím delší série, tím těžší příklady. Dlouhé podržení otevře rovnou žebříček nejlepších.'],
     ['! Report chyb','Vykřičník nahoře vedle zvonečku — pošli zprávu (klidně i se screenshotem) pokud něco nefunguje. Druhý stisk otevře tuto nápovědu.'],
     ['Zavírání dialogů','Kdekoliv v appce zavřeš okno tažením/klikem na červenou čárku (nahoře nebo dole, podle typu okna) nebo klikem mimo něj.']
   ];
@@ -9742,208 +9742,7 @@ function startQuiz(){
   if(window.quizState && window.quizState.timerInterval){
     clearInterval(window.quizState.timerInterval);
   }
-  if(!window.QUIZ_QUESTIONS){
-    window.QUIZ_QUESTIONS = [
-      {q:"Jaké je hlavní město: Albánie?", a:["Vlorë","Tirana","Durrës"], correct:1},
-      {q:"Jaké je hlavní město: Andorra?", a:["Andorra la Vella","Escaldes-Engordany","Encamp"], correct:0},
-      {q:"Jaké je hlavní město: Belgie?", a:["Gent","Antverpy","Brusel"], correct:2},
-      {q:"Jaké je hlavní město: Bílorusko?", a:["Minsk","Mahiljou","Homel"], correct:0},
-      {q:"Jaké je hlavní město: Bosna a Hercegovina?", a:["Sarajevo","Tuzla","Banja Luka"], correct:0},
-      {q:"Jaké je hlavní město: Bulharsko?", a:["Sofie","Plovdiv","Varna"], correct:0},
-      {q:"Jaké je hlavní město: Černá Hora?", a:["Nikšić","Herceg Novi","Podgorica"], correct:2},
-      {q:"Jaké je hlavní město: Česko?", a:["Brno","Praha","Ostrava"], correct:1},
-      {q:"Jaké je hlavní město: Dánsko?", a:["Odense","Kodaň","Aarhus"], correct:1},
-      {q:"Jaké je hlavní město: Estonsko?", a:["Tallinn","Tartu","Narva"], correct:0},
-      {q:"Jaké je hlavní město: Finsko?", a:["Tampere","Helsinky","Turku"], correct:1},
-      {q:"Jaké je hlavní město: Francie?", a:["Marseille","Lyon","Paříž"], correct:2},
-      {q:"Jaké je hlavní město: Chorvatsko?", a:["Záhřeb","Rijeka","Split"], correct:0},
-      {q:"Jaké je hlavní město: Irsko?", a:["Limerick","Dublin","Cork"], correct:1},
-      {q:"Jaké je hlavní město: Island?", a:["Hafnarfjörður","Kópavogur","Reykjavík"], correct:2},
-      {q:"Jaké je hlavní město: Itálie?", a:["Řím","Neapol","Milán"], correct:0},
-      {q:"Jaké je hlavní město: Kypr?", a:["Limassol","Nikósie","Larnaka"], correct:1},
-      {q:"Jaké je hlavní město: Lichtenštejnsko?", a:["Vaduz","Schaan","Triesen"], correct:0},
-      {q:"Jaké je hlavní město: Litva?", a:["Vilnius","Kaunas","Klaipėda"], correct:0},
-      {q:"Jaké je hlavní město: Lotyšsko?", a:["Liepāja","Riga","Daugavpils"], correct:1},
-      {q:"Jaké je hlavní město: Lucembursko?", a:["Lucemburk","Differdange","Esch-sur-Alzette"], correct:0},
-      {q:"Jaké je hlavní město: Maďarsko?", a:["Budapešť","Debrecín","Szeged"], correct:0},
-      {q:"Jaké je hlavní město: Malta?", a:["Mosta","Birkirkara","Valletta"], correct:2},
-      {q:"Jaké je hlavní město: Moldavsko?", a:["Bălți","Tiraspol","Kišiněv"], correct:2},
-      {q:"Jaké je hlavní město: Monako?", a:["Fontvieille","Monako","Monte Carlo"], correct:1},
-      {q:"Jaké je hlavní město: Německo?", a:["Mnichov","Berlín","Hamburk"], correct:1},
-      {q:"Jaké je hlavní město: Nizozemsko?", a:["Amsterdam","Haag","Rotterdam"], correct:0},
-      {q:"Jaké je hlavní město: Norsko?", a:["Oslo","Bergen","Trondheim"], correct:0},
-      {q:"Jaké je hlavní město: Polsko?", a:["Krakov","Varšava","Lodž"], correct:1},
-      {q:"Jaké je hlavní město: Portugalsko?", a:["Vila Nova de Gaia","Porto","Lisabon"], correct:2},
-      {q:"Jaké je hlavní město: Rakousko?", a:["Graz","Linz","Vídeň"], correct:2},
-      {q:"Jaké je hlavní město: Rumunsko?", a:["Timișoara","Kluž-Napoca","Bukurešť"], correct:2},
-      {q:"Jaké je hlavní město: Rusko?", a:["Petrohrad","Novosibirsk","Moskva"], correct:2},
-      {q:"Jaké je hlavní město: Řecko?", a:["Atény","Patras","Soluň"], correct:0},
-      {q:"Jaké je hlavní město: San Marino?", a:["Borgo Maggiore","San Marino","Serravalle"], correct:1},
-      {q:"Jaké je hlavní město: Severní Makedonie?", a:["Skopje","Bitola","Kumanovo"], correct:0},
-      {q:"Jaké je hlavní město: Slovensko?", a:["Prešov","Bratislava","Košice"], correct:1},
-      {q:"Jaké je hlavní město: Slovinsko?", a:["Lublaň","Maribor","Celje"], correct:0},
-      {q:"Jaké je hlavní město: Srbsko?", a:["Niš","Bělehrad","Novi Sad"], correct:1},
-      {q:"Jaké je hlavní město: Španělsko?", a:["Barcelona","Valencie","Madrid"], correct:2},
-      {q:"Jaké je hlavní město: Švédsko?", a:["Malmö","Göteborg","Stockholm"], correct:2},
-      {q:"Jaké je hlavní město: Švýcarsko?", a:["Bern","Ženeva","Curych"], correct:0},
-      {q:"Jaké je hlavní město: Ukrajina?", a:["Charkov","Oděsa","Kyjev"], correct:2},
-      {q:"Jaké je hlavní město: Vatikán?", a:["Prati","Vatikán","Borgo"], correct:1},
-      {q:"Jaké je hlavní město: Velká Británie?", a:["Londýn","Birmingham","Manchester"], correct:0},
-      {q:"Jaké je hlavní město: Afghánistán?", a:["Herát","Kábul","Kandahár"], correct:1},
-      {q:"Jaké je hlavní město: Alžírsko?", a:["Oran","Alžír","Constantine"], correct:1},
-      {q:"Jaké je hlavní město: Angola?", a:["Lobito","Huambo","Luanda"], correct:2},
-      {q:"Jaké je hlavní město: Antigua a Barbuda?", a:["Liberta","Saint John's","All Saints"], correct:1},
-      {q:"Jaké je hlavní město: Argentina?", a:["Córdoba","Rosario","Buenos Aires"], correct:2},
-      {q:"Jaké je hlavní město: Arménie?", a:["Vanadzor","Gjumri","Jerevan"], correct:2},
-      {q:"Jaké je hlavní město: Austrálie?", a:["Canberra","Sydney","Melbourne"], correct:0},
-      {q:"Jaké je hlavní město: Ázerbájdžán?", a:["Baku","Ganja","Sumgait"], correct:0},
-      {q:"Jaké je hlavní město: Bahamy?", a:["West End","Freeport","Nassau"], correct:2},
-      {q:"Jaké je hlavní město: Bahrajn?", a:["Manama","Rifa","Muharraq"], correct:0},
-      {q:"Jaké je hlavní město: Bangladéš?", a:["Dháka","Chattogram","Khulna"], correct:0},
-      {q:"Jaké je hlavní město: Barbados?", a:["Speightstown","Bridgetown","Oistins"], correct:1},
-      {q:"Jaké je hlavní město: Belize?", a:["Belize City","Belmopan","San Ignacio"], correct:1},
-      {q:"Jaké je hlavní město: Benin?", a:["Parakou","Cotonou","Porto-Novo"], correct:2},
-      {q:"Jaké je hlavní město: Bhútán?", a:["Phuntsholing","Paro","Thimphu"], correct:2},
-      {q:"Jaké je hlavní město: Bolívie?", a:["La Paz","Santa Cruz","Sucre"], correct:2},
-      {q:"Jaké je hlavní město: Botswana?", a:["Francistown","Gaborone","Molepolole"], correct:1},
-      {q:"Jaké je hlavní město: Brazílie?", a:["Rio de Janeiro","Brasília","São Paulo"], correct:1},
-      {q:"Jaké je hlavní město: Brunej?", a:["Kuala Belait","Bandar Seri Begawan","Seria"], correct:1},
-      {q:"Jaké je hlavní město: Burkina Faso?", a:["Ouagadougou","Bobo-Dioulasso","Koudougou"], correct:0},
-      {q:"Jaké je hlavní město: Burundi?", a:["Gitega","Ngozi","Bujumbura"], correct:0},
-      {q:"Jaké je hlavní město: Čad?", a:["Ndžamena","Moundou","Sarh"], correct:0},
-      {q:"Jaké je hlavní město: Chile?", a:["Valparaíso","Santiago","Concepción"], correct:1},
-      {q:"Jaké je hlavní město: Čína?", a:["Peking","Šanghaj","Kanton"], correct:0},
-      {q:"Jaké je hlavní město: Dominika?", a:["Portsmouth","Roseau","Marigot"], correct:1},
-      {q:"Jaké je hlavní město: Dominikánská republika?", a:["La Romana","Santiago","Santo Domingo"], correct:2},
-      {q:"Jaké je hlavní město: Džibutsko?", a:["Ali Sabieh","Tadjourah","Džibuti"], correct:2},
-      {q:"Jaké je hlavní město: Egypt?", a:["Káhira","Gíza","Alexandrie"], correct:0},
-      {q:"Jaké je hlavní město: Ekvádor?", a:["Quito","Cuenca","Guayaquil"], correct:0},
-      {q:"Jaké je hlavní město: Eritrea?", a:["Asmara","Keren","Massawa"], correct:0},
-      {q:"Jaké je hlavní město: Eswatini?", a:["Lobamba","Manzini","Mbabane"], correct:2},
-      {q:"Jaké je hlavní město: Etiopie?", a:["Dire Dawa","Mek'ele","Addis Abeba"], correct:2},
-      {q:"Jaké je hlavní město: Fidži?", a:["Suva","Nadi","Lautoka"], correct:0},
-      {q:"Jaké je hlavní město: Filipíny?", a:["Quezon City","Davao","Manila"], correct:2},
-      {q:"Jaké je hlavní město: Gabon?", a:["Franceville","Port-Gentil","Libreville"], correct:2},
-      {q:"Jaké je hlavní město: Gambie?", a:["Brikama","Banjul","Serekunda"], correct:1},
-      {q:"Jaké je hlavní město: Ghana?", a:["Akkra","Tamale","Kumasi"], correct:0},
-      {q:"Jaké je hlavní město: Grenada?", a:["Gouyave","St. George's","Grenville"], correct:1},
-      {q:"Jaké je hlavní město: Gruzie?", a:["Kutaisi","Batumi","Tbilisi"], correct:2},
-      {q:"Jaké je hlavní město: Guatemala?", a:["Mixco","Ciudad de Guatemala","Villa Nueva"], correct:1},
-      {q:"Jaké je hlavní město: Guinea?", a:["Conakry","Kankan","Nzérékoré"], correct:0},
-      {q:"Jaké je hlavní město: Guinea-Bissau?", a:["Bafatá","Bissau","Gabú"], correct:1},
-      {q:"Jaké je hlavní město: Guyana?", a:["New Amsterdam","Georgetown","Linden"], correct:1},
-      {q:"Jaké je hlavní město: Haiti?", a:["Port-au-Prince","Gonaïves","Cap-Haïtien"], correct:0},
-      {q:"Jaké je hlavní město: Honduras?", a:["Choloma","San Pedro Sula","Tegucigalpa"], correct:2},
-      {q:"Jaké je hlavní město: Indie?", a:["Bengalúru","Naí Dillí","Bombaj"], correct:1},
-      {q:"Jaké je hlavní město: Indonésie?", a:["Bandung","Surabaya","Jakarta"], correct:2},
-      {q:"Jaké je hlavní město: Irák?", a:["Bagdád","Mosul","Basra"], correct:0},
-      {q:"Jaké je hlavní město: Írán?", a:["Mašhad","Isfahán","Teherán"], correct:2},
-      {q:"Jaké je hlavní město: Izrael?", a:["Jeruzalém","Tel Aviv","Haifa"], correct:0},
-      {q:"Jaké je hlavní město: Jamajka?", a:["Kingston","Spanish Town","Montego Bay"], correct:0},
-      {q:"Jaké je hlavní město: Japonsko?", a:["Tokio","Jokohama","Ósaka"], correct:0},
-      {q:"Jaké je hlavní město: Jemen?", a:["Taíz","Aden","Saná"], correct:2},
-      {q:"Jaké je hlavní město: Jihoafrická republika?", a:["Johannesburg","Kapské Město","Pretoria"], correct:2},
-      {q:"Jaké je hlavní město: Jižní Korea?", a:["Inčchon","Soul","Pusan"], correct:1},
-      {q:"Jaké je hlavní město: Jižní Súdán?", a:["Juba","Wau","Malakal"], correct:0},
-      {q:"Jaké je hlavní město: Jordánsko?", a:["Zarqá","Irbid","Ammán"], correct:2},
-      {q:"Jaké je hlavní město: Kambodža?", a:["Phnompenh","Battambang","Siem Reap"], correct:0},
-      {q:"Jaké je hlavní město: Kamerun?", a:["Yaoundé","Garoua","Douala"], correct:0},
-      {q:"Jaké je hlavní město: Kanada?", a:["Ottawa","Montreal","Toronto"], correct:0},
-      {q:"Jaké je hlavní město: Kapverdy?", a:["Praia","Santa Maria","Mindelo"], correct:0},
-      {q:"Jaké je hlavní město: Katar?", a:["Al-Rajján","Dauhá","Umm Salal"], correct:1},
-      {q:"Jaké je hlavní město: Kazachstán?", a:["Astana","Šymkent","Almaty"], correct:0},
-      {q:"Jaké je hlavní město: Keňa?", a:["Nairobi","Kisumu","Mombasa"], correct:0},
-      {q:"Jaké je hlavní město: Kiribati?", a:["Bikenibeu","Jižní Tarawa","Betio"], correct:1},
-      {q:"Jaké je hlavní město: Kolumbie?", a:["Cali","Bogotá","Medellín"], correct:1},
-      {q:"Jaké je hlavní město: Komory?", a:["Fomboni","Mutsamudu","Moroni"], correct:2},
-      {q:"Jaké je hlavní město: Kongo (Brazzaville)?", a:["Pointe-Noire","Dolisie","Brazzaville"], correct:2},
-      {q:"Jaké je hlavní město: Kongo (Kinshasa)?", a:["Kinshasa","Lubumbashi","Mbuji-Mayi"], correct:0},
-      {q:"Jaké je hlavní město: Kostarika?", a:["Alajuela","San José","Cartago"], correct:1},
-      {q:"Jaké je hlavní město: Kuba?", a:["Havana","Camagüey","Santiago de Cuba"], correct:0},
-      {q:"Jaké je hlavní město: Kuvajt?", a:["Al-Ahmadi","Kuvajt","Hawalli"], correct:1},
-      {q:"Jaké je hlavní město: Kyrgyzstán?", a:["Biškek","Jalal-Abad","Oš"], correct:0},
-      {q:"Jaké je hlavní město: Laos?", a:["Savannakhet","Vientiane","Pakse"], correct:1},
-      {q:"Jaké je hlavní město: Lesotho?", a:["Mafeteng","Maseru","Teyateyaneng"], correct:1},
-      {q:"Jaké je hlavní město: Libanon?", a:["Sidon","Tripolis","Bejrút"], correct:2},
-      {q:"Jaké je hlavní město: Libérie?", a:["Kakata","Monrovia","Gbarnga"], correct:1},
-      {q:"Jaké je hlavní město: Libye?", a:["Benghází","Tripolis","Misráta"], correct:1},
-      {q:"Jaké je hlavní město: Madagaskar?", a:["Antananarivo","Antsirabe","Toamasina"], correct:0},
-      {q:"Jaké je hlavní město: Malajsie?", a:["Johor Bahru","Ipoh","Kuala Lumpur"], correct:2},
-      {q:"Jaké je hlavní město: Malawi?", a:["Lilongwe","Mzuzu","Blantyre"], correct:0},
-      {q:"Jaké je hlavní město: Maledivy?", a:["Fuvahmulah","Addu City","Malé"], correct:2},
-      {q:"Jaké je hlavní město: Mali?", a:["Bamako","Sikasso","Mopti"], correct:0},
-      {q:"Jaké je hlavní město: Maroko?", a:["Rabat","Casablanca","Fez"], correct:0},
-      {q:"Jaké je hlavní město: Marshallovy ostrovy?", a:["Ebeye","Majuro","Jaluit"], correct:1},
-      {q:"Jaké je hlavní město: Mauricius?", a:["Beau Bassin-Rose Hill","Vacoas-Phoenix","Port Louis"], correct:2},
-      {q:"Jaké je hlavní město: Mauritánie?", a:["Nouakchott","Kaédi","Nouadhibou"], correct:0},
-      {q:"Jaké je hlavní město: Mexiko?", a:["Monterrey","Ciudad de México","Guadalajara"], correct:1},
-      {q:"Jaké je hlavní město: Mikronésie?", a:["Palikir","Kolonia","Weno"], correct:0},
-      {q:"Jaké je hlavní město: Mongolsko?", a:["Ulánbátar","Darchan","Erdenet"], correct:0},
-      {q:"Jaké je hlavní město: Mosambik?", a:["Maputo","Beira","Matola"], correct:0},
-      {q:"Jaké je hlavní město: Myanmar?", a:["Rangún","Naypyidaw","Mandalaj"], correct:1},
-      {q:"Jaké je hlavní město: Namibie?", a:["Swakopmund","Windhoek","Walvis Bay"], correct:1},
-      {q:"Jaké je hlavní město: Nauru?", a:["Aiwo","Denigomodu","Yaren"], correct:2},
-      {q:"Jaké je hlavní město: Nepál?", a:["Káthmándú","Lalitpur","Pokhara"], correct:0},
-      {q:"Jaké je hlavní město: Niger?", a:["Maradi","Niamey","Zinder"], correct:1},
-      {q:"Jaké je hlavní město: Nigérie?", a:["Kano","Abuja","Lagos"], correct:1},
-      {q:"Jaké je hlavní město: Nikaragua?", a:["Masaya","Managua","León"], correct:1},
-      {q:"Jaké je hlavní město: Nový Zéland?", a:["Wellington","Christchurch","Auckland"], correct:0},
-      {q:"Jaké je hlavní město: Omán?", a:["Sohar","Maskat","Salalah"], correct:1},
-      {q:"Jaké je hlavní město: Pákistán?", a:["Láhaur","Islámábád","Karáčí"], correct:1},
-      {q:"Jaké je hlavní město: Palau?", a:["Koror","Ngerulmud","Airai"], correct:1},
-      {q:"Jaké je hlavní město: Palestina?", a:["Gaza","Hebron","Ramalláh"], correct:2},
-      {q:"Jaké je hlavní město: Panama?", a:["Panama","San Miguelito","Colón"], correct:0},
-      {q:"Jaké je hlavní město: Papua Nová Guinea?", a:["Mount Hagen","Lae","Port Moresby"], correct:2},
-      {q:"Jaké je hlavní město: Paraguay?", a:["San Lorenzo","Ciudad del Este","Asunción"], correct:2},
-      {q:"Jaké je hlavní město: Peru?", a:["Lima","Arequipa","Trujillo"], correct:0},
-      {q:"Jaké je hlavní město: Pobřeží slonoviny?", a:["Abidžan","Yamoussoukro","Bouaké"], correct:1},
-      {q:"Jaké je hlavní město: Rovníková Guinea?", a:["Ebebiyín","Malabo","Bata"], correct:1},
-      {q:"Jaké je hlavní město: Rwanda?", a:["Butare","Gisenyi","Kigali"], correct:2},
-      {q:"Jaké je hlavní město: Salvador?", a:["San Salvador","Santa Ana","Soyapango"], correct:0},
-      {q:"Jaké je hlavní město: Samoa?", a:["Faleula","Apia","Vaitele"], correct:1},
-      {q:"Jaké je hlavní město: Saúdská Arábie?", a:["Džidda","Rijád","Mekka"], correct:1},
-      {q:"Jaké je hlavní město: Senegal?", a:["Touba","Dakar","Thiès"], correct:1},
-      {q:"Jaké je hlavní město: Severní Korea?", a:["Hamhung","Čchongdžin","Pchjongjang"], correct:2},
-      {q:"Jaké je hlavní město: Seychely?", a:["Beau Vallon","Anse Boileau","Victoria"], correct:2},
-      {q:"Jaké je hlavní město: Sierra Leone?", a:["Kenema","Bo","Freetown"], correct:2},
-      {q:"Jaké je hlavní město: Singapur?", a:["Woodlands","Singapur","Jurong"], correct:1},
-      {q:"Jaké je hlavní město: Somálsko?", a:["Kismayo","Hargeisa","Mogadišo"], correct:2},
-      {q:"Jaké je hlavní město: Středoafrická republika?", a:["Bimbo","Bangui","Berbérati"], correct:1},
-      {q:"Jaké je hlavní město: Súdán?", a:["Port Súdán","Omdurmán","Chartúm"], correct:2},
-      {q:"Jaké je hlavní město: Surinam?", a:["Lelydorp","Nieuw Nickerie","Paramaribo"], correct:2},
-      {q:"Jaké je hlavní město: Svatý Kryštof a Nevis?", a:["Sandy Point Town","Charlestown","Basseterre"], correct:2},
-      {q:"Jaké je hlavní město: Svatá Lucie?", a:["Vieux Fort","Micoud","Castries"], correct:2},
-      {q:"Jaké je hlavní město: Svatý Vincenc a Grenadiny?", a:["Georgetown","Kingstown","Barrouallie"], correct:1},
-      {q:"Jaké je hlavní město: Sýrie?", a:["Damašek","Homs","Aleppo"], correct:0},
-      {q:"Jaké je hlavní město: Svatý Tomáš a Princův ostrov?", a:["Santo António","São Tomé","Neves"], correct:1},
-      {q:"Jaké je hlavní město: Šalamounovy ostrovy?", a:["Gizo","Honiara","Auki"], correct:1},
-      {q:"Jaké je hlavní město: Tádžikistán?", a:["Chudžand","Dušanbe","Kuljab"], correct:1},
-      {q:"Jaké je hlavní město: Tanzanie?", a:["Mwanza","Dodoma","Dar es Salaam"], correct:1},
-      {q:"Jaké je hlavní město: Thajsko?", a:["Nakhon Ratchasima","Bangkok","Nonthaburi"], correct:1},
-      {q:"Jaké je hlavní město: Togo?", a:["Sokodé","Kara","Lomé"], correct:2},
-      {q:"Jaké je hlavní město: Tonga?", a:["Nukuʻalofa","Haveluloto","Neiafu"], correct:0},
-      {q:"Jaké je hlavní město: Trinidad a Tobago?", a:["Chaguanas","Port of Spain","San Fernando"], correct:1},
-      {q:"Jaké je hlavní město: Tunisko?", a:["Sfax","Sousse","Tunis"], correct:2},
-      {q:"Jaké je hlavní město: Turecko?", a:["Ankara","Istanbul","Izmir"], correct:0},
-      {q:"Jaké je hlavní město: Turkmenistán?", a:["Ašchabad","Daşoguz","Türkmenabat"], correct:0},
-      {q:"Jaké je hlavní město: Tuvalu?", a:["Vaiaku","Funafuti","Savave"], correct:1},
-      {q:"Jaké je hlavní město: Uganda?", a:["Gulu","Kampala","Lira"], correct:1},
-      {q:"Jaké je hlavní město: Uruguay?", a:["Salto","Paysandú","Montevideo"], correct:2},
-      {q:"Jaké je hlavní město: USA?", a:["Washington, D.C.","Los Angeles","New York"], correct:0},
-      {q:"Jaké je hlavní město: Uzbekistán?", a:["Samarkand","Taškent","Buchara"], correct:1},
-      {q:"Jaké je hlavní město: Vanuatu?", a:["Norsup","Luganville","Port Vila"], correct:2},
-      {q:"Jaké je hlavní město: Venezuela?", a:["Valencia","Maracaibo","Caracas"], correct:2},
-      {q:"Jaké je hlavní město: Vietnam?", a:["Ho Či Minovo Město","Hanoj","Da Nang"], correct:1},
-      {q:"Jaké je hlavní město: Východní Timor?", a:["Maliana","Baucau","Dili"], correct:2},
-      {q:"Jaké je hlavní město: Zambie?", a:["Ndola","Kitwe","Lusaka"], correct:2},
-      {q:"Jaké je hlavní město: Zimbabwe?", a:["Bulawayo","Chitungwiza","Harare"], correct:2},
-    ];
-    // Prvních 45 položek pole výš jsou evropské země — pickQuizQuestion()
-    // podle tohohle čísla pozná, kde evropský blok končí a kde začíná
-    // zbytek světa.
-    window.QUIZ_EU_COUNT = 45;
-  }
-  window.quizState = { streak: 0, usedIndices: [], timerInterval: null, timeLeft: 10 };
+  window.quizState = { streak: 0, usedKeys: [], timerInterval: null, timeLeft: QUIZ_TIME };
   document.getElementById('quizBackdrop')?.remove();
   const backdrop = document.createElement('div');
   backdrop.className = 'ev-modal-backdrop';
@@ -9955,50 +9754,127 @@ function startQuiz(){
       <div id="quizModalContent"></div>
     </div>`;
   document.body.appendChild(backdrop);
+  // S vysunutou klávesnicí se okno zmenší na viditelnou část, ať pole s
+  // výsledkem a OK nezajedou pod klávesnici. Po zavření okna se samo odpojí.
+  if(window.visualViewport){
+    const vv = window.visualViewport;
+    const fit = () => {
+      if(!document.body.contains(backdrop)){
+        vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit);
+        return;
+      }
+      backdrop.style.height = vv.height + 'px';
+      backdrop.style.top = vv.offsetTop + 'px';
+      backdrop.style.bottom = 'auto';
+    };
+    fit();
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+  }
   nextQuizQuestion();
 }
 
-function pickQuizQuestion(){
-  const qs = window.QUIZ_QUESTIONS;
-  const st = window.quizState;
-  // Prvních QUIZ_EU_COUNT otázek v poli jsou evropské země (viz jejich
-  // pořadí v QUIZ_QUESTIONS výš) — appka losuje nejdřív jen z nich. Až
-  // vystřídá úplně všechny, teprve pak přibere i zbytek světa. Jakmile
-  // dojde i tenhle větší okruh, celý cyklus se sám vrátí zase na Evropu.
-  const euCount = window.QUIZ_EU_COUNT || qs.length;
-  const euUsedCount = st.usedIndices.filter(i => i < euCount).length;
-  let pool = euUsedCount < euCount ? euCount : qs.length;
-  if(st.usedIndices.length >= pool) st.usedIndices = [];
-  const euUsedAfterReset = st.usedIndices.filter(i => i < euCount).length;
-  pool = euUsedAfterReset < euCount ? euCount : qs.length;
-  let idx;
-  do { idx = Math.floor(Math.random()*pool); } while(st.usedIndices.includes(idx));
-  st.usedIndices.push(idx);
-  return qs[idx];
+// Příklady pro 3. ročník ZŠ — generují se náhodně, takže se nikdy neopakují
+// dokola. Obtížnost roste se sérií:
+//  • úroveň 1 (série 0–4):  + a − do 100, malá násobilka (2–5) a dělení v ní
+//  • úroveň 2 (série 5–11): + a − do 1000 s desítkami, celá násobilka 2–10 a dělení
+//  • úroveň 3 (série 12+):  + a − do 1000 libovolně, násobení dvojciferného
+//    čísla jednociferným (14 · 3), dělení v násobilce
+// Násobení se píše "·" a dělení ":", jak se to učí ve škole.
+const QUIZ_TIME = 15; // sekund na příklad
+// Vlastní žebříček pro příklady — staré výsledky z kvízu hlavních měst
+// zůstaly v databázi pod '_quiz_leaderboard', jen se už nezobrazují.
+const QUIZ_LEADERBOARD_DOC = '_quiz_math_leaderboard';
+function quizRand(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+
+function makeMathQuestion(level){
+  const kind = ['add', 'sub', 'mul', 'div'][quizRand(0, 3)];
+  let a, b, ans, text, step = 1;
+  if(kind === 'add' || kind === 'sub'){
+    if(level === 0){ a = quizRand(11, 89); b = quizRand(2, 99 - a); }
+    else if(level === 1){ a = quizRand(10, 89) * 10; b = quizRand(1, 100 - a / 10) * 10; step = 10; }
+    else { a = quizRand(101, 899); b = quizRand(12, 999 - a); }
+    if(kind === 'add'){ ans = a + b; text = `${a} + ${b}`; }
+    else { const big = a + b; ans = big - b; text = `${big} − ${b}`; }
+  } else if(kind === 'mul'){
+    if(level === 0){ a = quizRand(2, 5); b = quizRand(1, 10); }
+    else if(level === 1){ a = quizRand(2, 10); b = quizRand(2, 10); }
+    else { a = quizRand(11, 25); b = quizRand(2, 5); }
+    ans = a * b; text = `${a} · ${b}`; step = Math.min(a, b);
+  } else {
+    if(level === 0){ b = quizRand(2, 5); ans = quizRand(1, 10); }
+    else { b = quizRand(2, 10); ans = quizRand(2, 10); }
+    a = b * ans; text = `${a} : ${b}`;
+  }
+  // Špatné možnosti blízko správné odpovědi (o 1, o 2, o desítku, o násobek),
+  // ať se nedá tipovat podle toho, která je "divná".
+  // U příkladů s desítkami jsou i špatné možnosti desítky (jinak by šlo
+  // poznat správnou podle nuly na konci).
+  const cands = (step === 10 && (kind === 'add' || kind === 'sub'))
+    ? [ans + 10, ans - 10, ans + 20, ans - 20, ans + 100, ans - 100]
+    : [ans + 1, ans - 1, ans + 2, ans - 2, ans + 10, ans - 10, ans + step, ans - step];
+  const wrong = [...new Set(cands)].filter(x => x >= 0 && x !== ans).sort(() => Math.random() - 0.5).slice(0, 2);
+  const opts = [ans, ...wrong];
+  return { q: `${text} = ?`, a: opts.map(String), correct: 0, key: text };
 }
 
+function pickQuizQuestion(){
+  const st = window.quizState;
+  const level = st.streak < 5 ? 0 : (st.streak < 12 ? 1 : 2);
+  let q, guard = 0;
+  do { q = makeMathQuestion(level); } while(st.usedKeys.includes(q.key) && ++guard < 30);
+  st.usedKeys.push(q.key);
+  return q;
+}
+
+// Odpověď se píše do pole s číselnou klávesnicí. Pole i tlačítko OK zůstávají
+// stejné po celou hru (mění se jen příklad), takže klávesnice mezi příklady
+// nezajede. Číselná klávesnice na iPhonu nemá Enter, proto je tu velké OK.
 function nextQuizQuestion(){
   const st = window.quizState;
   clearInterval(st.timerInterval);
   st.token = (st.token || 0) + 1;
   const myToken = st.token;
   const question = pickQuizQuestion();
-  st.timeLeft = 10;
+  st.current = question;
+  st.timeLeft = QUIZ_TIME;
   const content = document.getElementById('quizModalContent');
   if(!content) return;
-  const order = [0,1,2].sort(() => Math.random()-0.5);
-  content.innerHTML = `
-    <div style="font-family:'Inter', sans-serif;font-size:12px;letter-spacing:0.02em;color:var(--muted);font-weight:600;margin-bottom:6px;">Série: ${st.streak}</div>
-    <div id="quizTimer" style="font-family:'Inter', sans-serif;font-size:30px;font-weight:800;color:var(--accent);margin-bottom:10px;">10</div>
-    <div class="ev-modal-title" style="margin-bottom:16px;">${question.q}</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      ${order.map(i => `<button onclick="answerQuiz(${i === question.correct})" style="
-        background:var(--surface);border:1px solid var(--line);
-        color:var(--ink);font-family:'Inter', sans-serif;font-weight:600;font-size:15px;
-        padding:13px;border-radius:var(--radius-sm);cursor:pointer;">${question.a[i]}</button>`).join('')}
-    </div>
-  `;
+  if(!document.getElementById('quizAnswerInput')){
+    content.innerHTML = `
+      <div id="quizStreak" style="font-family:'Inter', sans-serif;font-size:12px;letter-spacing:0.02em;color:var(--muted);font-weight:600;margin-bottom:6px;"></div>
+      <div id="quizTimer" style="font-family:'Inter', sans-serif;font-size:30px;font-weight:800;color:var(--accent);margin-bottom:10px;"></div>
+      <div id="quizQuestion" class="ev-modal-title" style="margin-bottom:16px;font-size:30px;font-variant-numeric:tabular-nums;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="quizAnswerInput" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="4" enterkeyhint="done" aria-label="Výsledek" style="
+          flex:1;min-width:0;box-sizing:border-box;text-align:center;
+          background:var(--surface);border:1.5px solid var(--line);color:var(--ink);
+          font-family:'Inter', sans-serif;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;
+          padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
+        <button id="quizOkBtn" type="button" style="
+          flex:0 0 96px;background:var(--accent);border:none;color:#fff;
+          font-family:'Inter', sans-serif;font-weight:800;font-size:20px;
+          border-radius:var(--radius-sm);cursor:pointer;">OK</button>
+      </div>`;
+    const input = document.getElementById('quizAnswerInput');
+    const ok = document.getElementById('quizOkBtn');
+    input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, ''); });
+    input.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); submitQuizAnswer(); } });
+    // Klepnutí na OK nesmí vzít poli fokus, jinak by klávesnice zajela.
+    ok.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
+    ok.addEventListener('touchend', e => { e.preventDefault(); submitQuizAnswer(); }, { passive: false });
+    ok.addEventListener('mousedown', e => e.preventDefault());
+    ok.addEventListener('click', submitQuizAnswer);
+  }
+  const input = document.getElementById('quizAnswerInput');
   const timerEl = document.getElementById('quizTimer');
+  document.getElementById('quizStreak').textContent = `Série: ${st.streak}`;
+  document.getElementById('quizQuestion').textContent = question.q;
+  timerEl.textContent = st.timeLeft;
+  timerEl.style.color = 'var(--accent)';
+  input.value = '';
+  input.style.borderColor = 'var(--line)';
+  input.focus();
   let myIntervalId;
   myIntervalId = setInterval(() => {
     if(window.quizState !== st || st.token !== myToken){ clearInterval(myIntervalId); return; } // osiřelý/zastaralý časovač — ignoruj a nezasahuj do aktuální hry
@@ -10013,6 +9889,21 @@ function nextQuizQuestion(){
   st.timerInterval = myIntervalId;
 }
 
+function submitQuizAnswer(){
+  const st = window.quizState;
+  const input = document.getElementById('quizAnswerInput');
+  if(!st || !st.current || !input) return;
+  const v = input.value.trim();
+  if(v === ''){
+    // Prázdné pole se nepočítá jako chyba — jen se zvýrazní.
+    input.style.borderColor = '#E2664F';
+    input.focus();
+    return;
+  }
+  st.lastAnswer = v;
+  answerQuiz(Number(v) === Number(st.current.a[st.current.correct]), 'špatná odpověď');
+}
+
 function answerQuiz(isCorrect, reason){
   const st = window.quizState;
   clearInterval(st.timerInterval);
@@ -10020,7 +9911,7 @@ function answerQuiz(isCorrect, reason){
     st.streak++;
     nextQuizQuestion();
   } else {
-    endQuiz(reason || 'špatná odpověď (klik)');
+    endQuiz(reason || 'špatná odpověď');
   }
 }
 
@@ -10029,10 +9920,16 @@ function endQuiz(reason){
   const content = document.getElementById('quizModalContent');
   if(!content) return;
   const savedName = localStorage.getItem('kokrsnekUser') || '';
-  const streakWord = st.streak===1 ? 'otázku' : (st.streak>=2 && st.streak<=4 ? 'otázky' : 'otázek');
+  const streakWord = st.streak===1 ? 'příklad' : (st.streak>=2 && st.streak<=4 ? 'příklady' : 'příkladů');
+  // Ukázat, jak měl příklad správně vyjít.
+  const cur = st.current;
+  const solution = cur ? `${cur.key} = ${cur.a[cur.correct]}` : '';
+  const why = reason === 'vypršel čas' ? 'Vypršel čas.' : (st.lastAnswer ? `Tvoje odpověď: ${placeEsc(st.lastAnswer)}.` : '');
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   content.innerHTML = `
     <div class="ev-modal-title" style="margin-bottom:6px;">Konec!</div>
-    <div class="ev-modal-label" style="margin-bottom:16px;font-size:14.5px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);">Uhodl jsi <span style="color:var(--accent);font-weight:700;">${st.streak}</span> ${streakWord} v řadě</div>
+    ${solution ? `<div style="font-family:'Inter', sans-serif;font-size:14px;color:var(--muted);margin-bottom:4px;">${why} Správně: <b style="color:var(--ink);font-variant-numeric:tabular-nums;">${placeEsc(solution)}</b></div>` : ''}
+    <div class="ev-modal-label" style="margin-bottom:16px;font-size:14.5px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);">Spočítal jsi správně <span style="color:var(--accent);font-weight:700;">${st.streak}</span> ${streakWord} v řadě</div>
     <input id="quizNameInput" type="text" placeholder="Tvoje jméno…" value="${savedName}" style="
       width:100%; box-sizing:border-box;
       background:var(--surface); border:1px solid var(--line);
@@ -10078,7 +9975,7 @@ async function submitQuizScore(){
   const content = document.getElementById('quizModalContent');
   let saveError = null;
   try{
-    const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
+    const ref = db.collection('events').doc(QUIZ_LEADERBOARD_DOC).collection('scores').doc(name);
     // Ulož pokus do historie a zjisti dosavadní nejlepší skóre paralelně (rychlejší, méně náchylné na výpadek)
     const [, snap] = await withRetry(() => Promise.all([
       withTimeout(ref.collection('attempts').add({ score: st.streak, at: new Date().toISOString() }), 8000),
@@ -10101,7 +9998,7 @@ async function showQuizLeaderboard(saveError){
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
   const saveErrorHtml = saveError ? `<div style="color:#E2664F;font-size:11px;margin-bottom:10px;text-align:center;">Skóre se nepodařilo uložit: ${saveError.message}</div>` : '';
   try{
-    const snap = await withRetry(() => withTimeout(db.collection('events').doc('_quiz_leaderboard').collection('scores').get(), 8000));
+    const snap = await withRetry(() => withTimeout(db.collection('events').doc(QUIZ_LEADERBOARD_DOC).collection('scores').get(), 8000));
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
       <div class="ev-modal-title" style="margin-bottom:12px;">🏆 Žebříček</div>
@@ -10148,7 +10045,7 @@ async function showQuizAttempts(name){
   if(!content) return;
   content.innerHTML = `<div class="ev-modal-title" style="margin-bottom:12px;">📜 ${name} — pokusy</div><div style="color:var(--muted);font-size:12px;">Načítám…</div>`;
   try{
-    const ref = db.collection('events').doc('_quiz_leaderboard').collection('scores').doc(name);
+    const ref = db.collection('events').doc(QUIZ_LEADERBOARD_DOC).collection('scores').doc(name);
     const snap = await withRetry(() => withTimeout(ref.collection('attempts').get(), 8000));
     const rows = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0) - (a.score||0));
     content.innerHTML = `
