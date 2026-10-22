@@ -5125,6 +5125,16 @@ function openChatThread(me, other){
     if(btn) btn.style.display = isNearChatBottom() ? 'none' : 'flex';
   };
   msgsEl.addEventListener('scroll', updateScrollDownBtn);
+  // Přilepení ke spodku: po otevření vlákna se drží poslední zpráva dole, i
+  // když se fotky načítají až potom a seznam prodlužují. Jakmile člověk sám
+  // odroluje nahoru (prstem / kolečkem), přestane se to dít; když se vrátí
+  // úplně dolů, zase se to zapne.
+  let chatStickBottom = true;
+  const releaseStick = () => { chatStickBottom = false; };
+  msgsEl.addEventListener('touchmove', releaseStick, { passive: true });
+  msgsEl.addEventListener('wheel', releaseStick, { passive: true });
+  msgsEl.addEventListener('scroll', () => { if(isNearChatBottom()) chatStickBottom = true; });
+  const keepChatAtBottom = () => { if(chatStickBottom) scrollChatToBottom(); };
   const QUICK_CHAT_EMOJIS = ['👍','❤️','😂','😮','😢'];
   let latestMsgDocs = [];
   let otherLastSeenIso = null;
@@ -5185,7 +5195,7 @@ function openChatThread(me, other){
     // Nová zpráva strhne pohled dolů, jen když si člověk zrovna nerolí historii
     // výš — jinak by ho nová příchozí zpráva otravně vytrhla z čtení. Když
     // zůstane výš, jen se mu ukáže tlačítko "dolů" (viz scrollDownBtn).
-    const wasNearBottom = msgsEl.childElementCount === 0 || isNearChatBottom();
+    const wasNearBottom = chatStickBottom || msgsEl.childElementCount === 0 || isNearChatBottom();
     msgsEl.innerHTML = docs.map(d => {
       const data = d.data();
       const mine = data.from === me;
@@ -5257,8 +5267,12 @@ function openChatThread(me, other){
     msgsEl.innerHTML += `<div style="position:sticky;bottom:4px;align-self:flex-end;margin-top:4px;z-index:3;">
       <button id="chatScrollDownBtn" title="Dolů na poslední zprávu" style="display:none;width:34px;height:34px;border-radius:50%;background:var(--surface-strong);border:1px solid var(--line);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
     </div>`;
-    if(wasNearBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
-    document.getElementById('chatScrollDownBtn').onclick = scrollChatToBottom;
+    if(wasNearBottom){ chatStickBottom = true; msgsEl.scrollTop = msgsEl.scrollHeight; }
+    // Každá dočtená fotka seznam prodlouží — dorovnat zpátky na konec.
+    msgsEl.querySelectorAll('img').forEach(img => {
+      if(!img.complete) img.addEventListener('load', keepChatAtBottom, { once: true });
+    });
+    document.getElementById('chatScrollDownBtn').onclick = () => { chatStickBottom = true; scrollChatToBottom(); };
     updateScrollDownBtn();
     wireChatLongPress();
   }
