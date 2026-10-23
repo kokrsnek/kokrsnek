@@ -2798,6 +2798,68 @@ async function quickPostComment(evIdx){
   fetchCardStats(rawEvents[evIdx], evIdx, null, evIdx);
 }
 
+// ---- Ukazatel času na aktuální kartě (jako ve Službách) ----
+// Probíhající akce: pruh od začátku do konce ("Uběhlo … / Zbývá …").
+// Nadcházející akce: pruh čekání od konce předchozí akce do začátku této
+// ("Od minulé akce … / Do začátku …"). Přepočítává se každých 30 s.
+function czPlural(n, one, few, many){ return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
+function fmtSpan(ms){
+  const min = Math.max(0, Math.floor(ms / 60000));
+  const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+  if(d >= 3) return `${d} ${czPlural(d, 'den', 'dny', 'dní')}`;
+  if(d >= 1) return `${d} ${czPlural(d, 'den', 'dny', 'dní')} ${h} h`;
+  if(h >= 1) return `${h} h ${m} min`;
+  return `${m} min`;
+}
+function eventProgressRange(ev){
+  const t = Date.now(), st = ev.start.getTime(), en = ev.end.getTime();
+  if(st <= t && en >= t && en > st) return { mode: 'live', from: st, to: en };
+  if(st > t){
+    // Konec poslední akce, která skončila před začátkem téhle.
+    let prevEnd = null;
+    rawEvents.forEach(o => {
+      const e = o.end && o.end.getTime();
+      if(o !== ev && e && e <= st && e <= t && (prevEnd === null || e > prevEnd)) prevEnd = e;
+    });
+    if(prevEnd === null) prevEnd = Math.min(t, st - 7 * 86400000);
+    return { mode: 'wait', from: prevEnd, to: st };
+  }
+  return null;
+}
+function eventProgressHtml(ev){
+  const r = eventProgressRange(ev);
+  if(!r) return '';
+  return `<div class="ev-progress" data-start="${ev.start.getTime()}" data-end="${ev.end.getTime()}" data-key="${String(getEventKey(ev)).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="margin:14px 2px 4px;font-family:'Inter', sans-serif;">${eventProgressInner(ev, r)}</div>`;
+}
+function eventProgressInner(ev, r){
+  const t = Date.now();
+  const total = Math.max(1, r.to - r.from);
+  const pct = Math.max(0, Math.min(100, (t - r.from) / total * 100));
+  const live = r.mode === 'live';
+  const fill = live ? 'linear-gradient(90deg, var(--accent), #6FC59A, var(--accent))' : 'linear-gradient(90deg, var(--coral), #F0A08E)';
+  const leftLbl = live ? 'Uběhlo' : 'Od minulé akce';
+  const rightLbl = live ? 'Zbývá' : 'Do začátku';
+  return `
+    <div style="height:10px;border-radius:100px;background:var(--line);overflow:hidden;">
+      <div style="height:100%;width:${pct.toFixed(1)}%;border-radius:100px;background:${fill};transition:width .6s ease;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:12.5px;color:var(--muted);">
+      <span>${leftLbl} <b style="color:var(--ink);font-weight:700;">${fmtSpan(t - r.from)}</b></span>
+      <span style="text-align:right;">${rightLbl} <b style="color:var(--ink);font-weight:700;">${fmtSpan(r.to - t)}</b></span>
+    </div>`;
+}
+function updateEventProgressBars(){
+  document.querySelectorAll('.ev-progress').forEach(el => {
+    const ev = rawEvents.find(o => getEventKey(o) === el.dataset.key);
+    if(!ev) return;
+    const r = eventProgressRange(ev);
+    if(!r){ el.remove(); return; }
+    el.innerHTML = eventProgressInner(ev, r);
+  });
+}
+setInterval(() => { if(!document.hidden) updateEventProgressBars(); }, 30000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) updateEventProgressBars(); });
+
 function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
   const uid = uidSuffix !== undefined ? uidSuffix : i;
   const kind = isNow ? "now" : (isPast ? "past" : "future");
@@ -2832,6 +2894,7 @@ function buildTimelineSlot(ev, i, isNow, isPast, uidSuffix){
       ${ev.place ? `<div class="place-row">${shortenPlace(ev.place.replace(/https?:\/\/[^\s]*/g,'').trim() || ev.place)}</div>` : ``}
       ${ev.place ? `<div id="slotWx_${uid}" style="font-family:'Inter', sans-serif;font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:16px;"></div>` : ''}
       ${isNow && isHappeningNow ? `<span class="badge">probíhá teď</span>` : ``}
+      ${isNow ? eventProgressHtml(ev) : ''}
       ${isPast && ev.photoAlbum ? `<a class="photo-link" href="#" onclick="event.preventDefault();event.stopPropagation();checkAlbumAccess('${ev.photoAlbum.replace(/'/g,"\\'")}')">${photoSVG()}Album fotek</a>` : ``}
       <div id="statsRow_${uid}" style="display:flex;justify-content:center;gap:16px;margin-top:8px;min-height:20px;"></div>
     </div>
@@ -3977,7 +4040,7 @@ function showWelcome(){
 
   var features = [
     ['☀️🌙 Světlý/tmavý režim','Tlačítko sluníčko/měsíc vpravo nahoře — přepne appku do světlého nebo tmavého vzhledu. Appka si volbu zapamatuje.'],
-    ['Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni kamkoliv na kartu pro detail. Nadcházející karty mají červený nádech, minulé modrý, aktuální zelený.'],
+    ['Časová osa','Scrolluj nahoru a dolů mezi událostmi. Klikni kamkoliv na kartu pro detail. Nadcházející karty mají červený nádech, minulé modrý, aktuální zelený. Na aktuální kartě je ukazatel času: u probíhající akce kolik uběhlo a kolik zbývá, u nadcházející kolik uplynulo od minulé akce a kolik zbývá do začátku.'],
     ['📅 Den v týdnu na kartách','U jednodenních akcí (celodenních i s časem) je na kartě i v detailu před datem zkratka dne v týdnu, třeba "út 27. říj 2026".'],
     ['🗓️ Sticky nadpis měsíce','Při rolování timeline se nahoře drží název aktuálního měsíce a roku, dokud ho nevystrčí další skupina karet.'],
     ['Filtrovaná mini-timeline','Dlouze podrž kdekoliv na kartě — otevře se jen ta jedna opakující se akce (např. všechny ročníky "Výroční oheň") napříč lety.'],
