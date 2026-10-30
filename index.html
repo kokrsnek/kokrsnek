@@ -1476,6 +1476,47 @@ function startWeatherEffect(type, intensity){
   }, WEATHER_EFFECT_INTERVALS[type][intensity]);
 }
 
+// Členové party pro narozeniny a svátky (a doplňkově pro výběr jmen v
+// docházce). Stejný seznam je i ve functions/index.js — při změně upravit oba.
+const PARTY_PEOPLE = [
+  {name:'Leoš', day:17, month:6, nick:'Gudasovi', app:'Gudas'},
+  {name:'Iva', day:18, month:6, nick:'Ivě', app:'Iva'},
+  {name:'Lukáš', day:29, month:6, nick:'Šurajovi', app:'Šuraj'},
+  {name:'Michal', day:30, month:12, nick:'Miškovi', app:null},
+  {name:'Michal', day:25, month:2, nick:'Majklovi', app:'Majkl'},
+  {name:'Markéta', day:19, month:9, nick:'Markétě', app:null},
+  {name:'Doubravka', day:29, month:1, nick:'Doubravce', app:null},
+  {name:'Alexej', day:30, month:6, nick:'Alexovi', app:'Alex'},
+  {name:'Jana', day:30, month:12, nick:'Maleně', app:null},
+  {name:'Petr', day:30, month:1, nick:'Pecákovi', app:'Pecak'},
+  {name:'Petr', day:30, month:8, nick:'Peckovi', app:null},
+  {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null},
+  {name:'Jaromír', day:18, month:8, nick:'Pifovi', app:'Pif'},
+  {name:'Zuzana', day:12, month:11, nick:'Zuzce', app:null},
+  {name:'Tomáš', day:13, month:4, nick:'Gučimu', app:'Guči'},
+  {name:'Veronika', day:10, month:5, nick:'Verči', app:null},
+  {name:'Miroslav', day:17, month:2, nick:'Mírovi', app:'Míra'},
+  {name:'Josef', day:29, month:11, nick:'Bazimu', app:'Bazi'},
+  {name:'Lenka', day:null, month:null, nick:'Lence', app:null},
+  {name:'Pavel', day:15, month:3, nick:'Čentovi', app:'Čento'},
+  {name:'Lenka', day:2, month:11, nick:'Bugině', app:null},
+  {name:'Pavel', day:22, month:10, nick:'Pavlovi', app:'Pavel'},
+  {name:'Petra', day:17, month:9, nick:'Petře', app:null},
+  {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null},
+  {name:'David', day:3, month:11, nick:'Dejvovi', app:'Dejv'},
+  {name:'Šárka', day:13, month:10, nick:'Šárce', app:null},
+  {name:'Richard', day:14, month:7, nick:'Richardovi', app:null},
+  {name:'Josef', day:31, month:1, nick:'Joskovi', app:null},
+  {name:'Dagmar', day:null, month:null, nick:'Dagmar', app:null},
+  {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null},
+  {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null},
+  {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null},
+  {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null},
+  {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null},
+  {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null},
+  {name:'Dagmar', day:2, month:8, nick:'Dáši', app:'Dáša'},
+];
+
 function checkBirthdaysAndNamedays(){
   const today = new Date();
   const todayStr = today.toISOString().slice(0,10);
@@ -1485,44 +1526,7 @@ function checkBirthdaysAndNamedays(){
   // správném pádu a app = jméno, pod kterým člověk používá aplikaci (null =
   // aplikaci nepoužívá). Stejný seznam je i ve functions/index.js — při změně
   // upravit oba.
-  const PEOPLE = [
-    {name:'Leoš', day:17, month:6, nick:'Gudasovi', app:'Gudas'},
-    {name:'Iva', day:18, month:6, nick:'Ivě', app:'Iva'},
-    {name:'Lukáš', day:29, month:6, nick:'Šurajovi', app:'Šuraj'},
-    {name:'Michal', day:30, month:12, nick:'Miškovi', app:null},
-    {name:'Michal', day:25, month:2, nick:'Majklovi', app:'Majkl'},
-    {name:'Markéta', day:19, month:9, nick:'Markétě', app:null},
-    {name:'Doubravka', day:29, month:1, nick:'Doubravce', app:null},
-    {name:'Alexej', day:30, month:6, nick:'Alexovi', app:'Alex'},
-    {name:'Jana', day:30, month:12, nick:'Maleně', app:null},
-    {name:'Petr', day:30, month:1, nick:'Pecákovi', app:'Pecak'},
-    {name:'Petr', day:30, month:8, nick:'Peckovi', app:null},
-    {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null},
-    {name:'Jaromír', day:18, month:8, nick:'Pifovi', app:'Pif'},
-    {name:'Zuzana', day:12, month:11, nick:'Zuzce', app:null},
-    {name:'Tomáš', day:13, month:4, nick:'Gučimu', app:'Guči'},
-    {name:'Veronika', day:10, month:5, nick:'Verči', app:null},
-    {name:'Miroslav', day:17, month:2, nick:'Mírovi', app:'Míra'},
-    {name:'Josef', day:29, month:11, nick:'Bazimu', app:'Bazi'},
-    {name:'Lenka', day:null, month:null, nick:'Lence', app:null},
-    {name:'Pavel', day:15, month:3, nick:'Čentovi', app:'Čento'},
-    {name:'Lenka', day:2, month:11, nick:'Bugině', app:null},
-    {name:'Pavel', day:22, month:10, nick:'Pavlovi', app:'Pavel'},
-    {name:'Petra', day:17, month:9, nick:'Petře', app:null},
-    {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null},
-    {name:'David', day:3, month:11, nick:'Dejvovi', app:'Dejv'},
-    {name:'Šárka', day:13, month:10, nick:'Šárce', app:null},
-    {name:'Richard', day:14, month:7, nick:'Richardovi', app:null},
-    {name:'Josef', day:31, month:1, nick:'Joskovi', app:null},
-    {name:'Dagmar', day:null, month:null, nick:'Dagmar', app:null},
-    {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null},
-    {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null},
-    {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null},
-    {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null},
-    {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null},
-    {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null},
-    {name:'Dagmar', day:2, month:8, nick:'Dáši', app:'Dáša'},
-  ];
+  const PEOPLE = PARTY_PEOPLE;
 
   const todayDay = today.getDate();
   const todayMonth = today.getMonth() + 1;
@@ -9390,7 +9394,11 @@ async function openAttendeesEditor(evIdx, key){
       <div class="sheet-grabber-down" onclick="this.closest('.ev-modal-backdrop').remove()" style="width:100%;height:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;cursor:pointer;"><div style="width:38px;height:5px;background:#E2664F;border-radius:100px;"></div></div>
       <button class="ev-modal-close" onclick="this.closest('.ev-modal-backdrop').remove()">×</button>
       <div class="ev-modal-title" style="text-align:center;margin-bottom:12px;">Kdo se opravdu zúčastnil</div>
-      <div id="attendEditorList" style="text-align:left;max-height:50vh;overflow-y:auto;margin-bottom:14px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <div id="attendEditorList" style="text-align:left;max-height:46vh;overflow-y:auto;margin-bottom:10px;"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Načítám…</div></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <input id="attendAddInput" type="text" maxlength="40" placeholder="Přidat jméno…" autocomplete="off" style="flex:1;min-width:0;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;">
+        <button id="attendAddBtn" type="button" style="flex:0 0 auto;padding:0 16px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Přidat</button>
+      </div>
       <button id="attendEditorSave" style="display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);border:none;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Uložit</button>
     </div>`;
   document.body.appendChild(backdrop);
@@ -9402,11 +9410,47 @@ async function openAttendeesEditor(evIdx, key){
       db.collection('events').doc(key).collection('attendees').get()
     ]);
     const attending = new Set(attendSnap.docs.map(d => d.id));
-    listEl.innerHTML = names.map(n => `
+    const loose = n => String(n || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const have = new Set(names.map(loose));
+    // Uživatelé aplikace nahoře, pod nimi ostatní ze seznamu narozenin a
+    // svátků, kteří aplikaci nepoužívají (jméno, u stejných jmen s přezdívkou),
+    // a nakonec ručně dopsaní z dřívějška, co už mají účast uloženou.
+    const extra = [];
+    const nameCount = {};
+    PARTY_PEOPLE.forEach(p => { nameCount[p.name] = (nameCount[p.name] || 0) + 1; });
+    PARTY_PEOPLE.forEach(p => {
+      const label = p.app ? p.app : ((nameCount[p.name] > 1 || have.has(loose(p.name))) && p.nick !== p.name ? `${p.name} (${p.nick})` : p.name);
+      if(have.has(loose(label))) return;
+      have.add(loose(label)); extra.push(label);
+    });
+    const custom = [...attending].filter(n => !have.has(loose(n)));
+    custom.forEach(n => have.add(loose(n)));
+    const row = (n, checked) => `
       <label style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);cursor:pointer;">
-        <input type="checkbox" data-name="${n}" ${attending.has(n) ? 'checked' : ''} style="width:18px;height:18px;flex:0 0 auto;">
-        ${n}
-      </label>`).join('');
+        <input type="checkbox" data-name="${placeEsc(n)}" ${checked ? 'checked' : ''} style="width:18px;height:18px;flex:0 0 auto;">
+        ${placeEsc(n)}
+      </label>`;
+    const head = t => `<div style="font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:var(--muted);padding:12px 2px 4px;">${t}</div>`;
+    listEl.innerHTML = names.map(n => row(n, attending.has(n))).join('')
+      + (extra.length || custom.length ? head('Další z party') : '')
+      + [...custom, ...extra.sort((a, b) => a.localeCompare(b, 'cs'))].map(n => row(n, attending.has(n))).join('');
+
+    // Dopsání jména, které v seznamu není — přidá se zaškrtnuté na konec.
+    const addInput = document.getElementById('attendAddInput');
+    const addName = () => {
+      const n = normName(addInput.value).replace(/[\/]/g, '-').slice(0, 40);
+      if(!n) return;
+      const existing = [...listEl.querySelectorAll('[data-name]')].find(c => loose(c.dataset.name) === loose(n));
+      if(existing){ existing.checked = true; existing.closest('label').scrollIntoView({ block: 'nearest' }); }
+      else {
+        if(!listEl.querySelector('.attend-added-head')) listEl.insertAdjacentHTML('beforeend', `<div class="attend-added-head">${head('Dopsaní')}</div>`);
+        listEl.insertAdjacentHTML('beforeend', row(n, true));
+        listEl.scrollTop = listEl.scrollHeight;
+      }
+      addInput.value = '';
+    };
+    document.getElementById('attendAddBtn').onclick = addName;
+    addInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addName(); } });
   }catch(e){
     console.error('Chyba při načítání seznamu party:', e);
     listEl.innerHTML = '<div style="color:var(--coral);font-size:12px;text-align:center;padding:12px;">Nepodařilo se načíst</div>';
