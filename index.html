@@ -1477,43 +1477,45 @@ function startWeatherEffect(type, intensity){
 }
 
 // Členové party pro narozeniny a svátky (a doplňkově pro výběr jmen v
-// docházce). Stejný seznam je i ve functions/index.js — při změně upravit oba.
+// docházce). list = jak se člověk bez aplikace jmenuje v seznamu
+// "Zúčastnili se". Stejný seznam (bez pole list) je i ve functions/index.js —
+// při změně jmen, dat nebo pole app upravit oba.
 const PARTY_PEOPLE = [
   {name:'Leoš', day:17, month:6, nick:'Gudasovi', app:'Gudas'},
   {name:'Iva', day:18, month:6, nick:'Ivě', app:'Iva'},
   {name:'Lukáš', day:29, month:6, nick:'Šurajovi', app:'Šuraj'},
-  {name:'Michal', day:30, month:12, nick:'Miškovi', app:null},
+  {name:'Michal', day:30, month:12, nick:'Miškovi', app:null, list:'Miška'},
   {name:'Michal', day:25, month:2, nick:'Majklovi', app:'Majkl'},
   {name:'Markéta', day:19, month:9, nick:'Markétě', app:null},
   {name:'Doubravka', day:29, month:1, nick:'Doubravce', app:null},
   {name:'Alexej', day:30, month:6, nick:'Alexovi', app:'Alex'},
-  {name:'Jana', day:30, month:12, nick:'Maleně', app:null},
+  {name:'Jana', day:30, month:12, nick:'Maleně', app:null, list:'Malena'},
   {name:'Petr', day:30, month:1, nick:'Pecákovi', app:'Pecak'},
-  {name:'Petr', day:30, month:8, nick:'Peckovi', app:null},
-  {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null},
+  {name:'Petr', day:30, month:8, nick:'Peckovi', app:'Peca'},
+  {name:'Stanislava', day:null, month:null, nick:'Slávce', app:null, list:'Slávka'},
   {name:'Jaromír', day:18, month:8, nick:'Pifovi', app:'Pif'},
-  {name:'Zuzana', day:12, month:11, nick:'Zuzce', app:null},
+  {name:'Zuzana', day:12, month:11, nick:'Zuzce', app:null, list:'Zuzka'},
   {name:'Tomáš', day:13, month:4, nick:'Gučimu', app:'Guči'},
-  {name:'Veronika', day:10, month:5, nick:'Verči', app:null},
+  {name:'Veronika', day:10, month:5, nick:'Verči', app:null, list:'Verča'},
   {name:'Miroslav', day:17, month:2, nick:'Mírovi', app:'Míra'},
   {name:'Josef', day:29, month:11, nick:'Bazimu', app:'Bazi'},
   {name:'Lenka', day:null, month:null, nick:'Lence', app:null},
   {name:'Pavel', day:15, month:3, nick:'Čentovi', app:'Čento'},
-  {name:'Lenka', day:2, month:11, nick:'Bugině', app:null},
+  {name:'Lenka', day:2, month:11, nick:'Bugině', app:null, list:'Bugina'},
   {name:'Pavel', day:22, month:10, nick:'Pavlovi', app:'Pavel'},
   {name:'Petra', day:17, month:9, nick:'Petře', app:null},
-  {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null},
+  {name:'Vladimír', day:null, month:null, nick:'Hugovi', app:null, list:'Hugo'},
   {name:'David', day:3, month:11, nick:'Dejvovi', app:'Dejv'},
   {name:'Šárka', day:13, month:10, nick:'Šárce', app:null},
   {name:'Richard', day:14, month:7, nick:'Richardovi', app:null},
-  {name:'Josef', day:31, month:1, nick:'Joskovi', app:null},
+  {name:'Josef', day:31, month:1, nick:'Joskovi', app:null, list:'Joska'},
   {name:'Dagmar', day:null, month:null, nick:'Dagmar', app:null},
-  {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null},
-  {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null},
-  {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null},
-  {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null},
-  {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null},
-  {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null},
+  {name:'Pavel', day:null, month:null, nick:'Bormenovi', app:null, list:'Bormen'},
+  {name:'Vladimír', day:null, month:null, nick:'Rosomákovi', app:null, list:'Rosomák'},
+  {name:'Aleš', day:24, month:12, nick:'Ájisovi', app:null, list:'Ája'},
+  {name:'Lukáš', day:null, month:null, nick:'manželovi Jany Gazdové', app:null, list:'Manžel Jany Gazdové'},
+  {name:'Jana', day:null, month:null, nick:'manželce Lukáše Konečného', app:null, list:'Manželka Lukáše Konečného'},
+  {name:'Vojtěch', day:null, month:null, nick:'Těchovi', app:null, list:'Těch'},
   {name:'Dagmar', day:2, month:8, nick:'Dáši', app:'Dáša'},
 ];
 
@@ -9416,10 +9418,9 @@ async function openAttendeesEditor(evIdx, key){
     // svátků, kteří aplikaci nepoužívají (jméno, u stejných jmen s přezdívkou),
     // a nakonec ručně dopsaní z dřívějška, co už mají účast uloženou.
     const extra = [];
-    const nameCount = {};
-    PARTY_PEOPLE.forEach(p => { nameCount[p.name] = (nameCount[p.name] || 0) + 1; });
     PARTY_PEOPLE.forEach(p => {
-      const label = p.app ? p.app : ((nameCount[p.name] > 1 || have.has(loose(p.name))) && p.nick !== p.name ? `${p.name} (${p.nick})` : p.name);
+      // Jméno v aplikaci, jinak jméno pro seznam docházky (pole list), jinak křestní.
+      const label = p.app || p.list || p.name;
       if(have.has(loose(label))) return;
       have.add(loose(label)); extra.push(label);
     });
