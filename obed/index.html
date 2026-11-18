@@ -72,21 +72,6 @@
   .banner{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
   .back{background:none;border:0;font:inherit;color:var(--tg-theme-link-color,var(--accent));padding:0 0 12px;cursor:pointer}
   .hidden{display:none!important}
-  #tisk{display:none}
-  @media print{
-    @page{size:A4;margin:18mm}
-    body{background:#fff!important;color:#000!important;padding:0;font-size:13pt}
-    main{display:none!important}
-    #tisk{display:block}
-    #tisk h1{font-size:20pt;margin:0 0 4pt}
-    #tisk .meta{color:#444;font-size:11pt;margin:0 0 16pt}
-    #tisk table{width:100%;border-collapse:collapse;margin-bottom:18pt}
-    #tisk th,#tisk td{border:1px solid #999;padding:6pt 8pt;text-align:left;background:#fff;color:#000;font-size:12pt}
-    #tisk th{background:#eee}
-    #tisk td.c,#tisk th.c{text-align:center;width:22%}
-    #tisk tr.s td{font-weight:700}
-    #tisk h2{font-size:14pt;margin:0 0 6pt}
-  }
 </style>
 </head>
 <body>
@@ -154,14 +139,13 @@
       <button class="btn" id="btnCopy">Kopírovat pro restauraci</button>
       <button class="btn sec" id="btnCsv">Stáhnout CSV</button>
     </div>
-    <button class="btn sec" id="btnPdf">Objednávka do PDF / tisk</button>
+    <button class="btn sec" id="btnPdf">Vytvořit PDF objednávku</button>
     <p class="msg" id="listMsg"></p>
     <div class="card" id="people"></div>
   </section>
 
   <p class="muted hidden" id="loading" style="text-align:center">Načítám…</p>
 </main>
-<div id="tisk"></div>
 
 <script type="module">
 /* ====== NASTAVENÍ ====== */
@@ -351,7 +335,7 @@ function vykresliMoji() {
 }
 
 /* ====== Soupis ====== */
-let soupisText = "", radkyCsv = [], tiskHtml = "";
+let soupisText = "", radkyCsv = [], pdfData = null, pdfSoubor = null;
 function vykresliSoupis(list) {
   list.sort((a, b) => a.jmeno.localeCompare(b.jmeno, "cs"));
   const tot = Object.fromEntries(VSE.map(([k]) => [k, 0]));
@@ -390,16 +374,9 @@ function vykresliSoupis(list) {
               ...radky.map(r => [r.jmeno, ...VSE.map(([k]) => ma(r, k) ? 1 : "")]),
               ["Celkem", ...VSE.map(([k]) => tot[k])]];
 
-  const dnes = new Date().toLocaleDateString("cs-CZ");
-  tiskHtml = `<h1>Objednávka obědů</h1>
-    <p class="meta">Vystaveno ${dnes} · ${nPorci} ${slovoPorce(nPorci)}</p>
-    <table><tr><th>Porce (jídlo + příloha)</th><th class="c">Počet</th></tr>
-    ${kombiText.map(([t, n]) => `<tr><td>${esc(t)}</td><td class="c">${n}</td></tr>`).join("")}
-    <tr class="s"><td>Celkem porcí</td><td class="c">${nPorci}</td></tr>
-    <tr class="s"><td>Cena celkem (${CENA} Kč / porce)</td><td class="c">${kc(castka)}</td></tr></table>
-    <h2>Rozpis podle jmen</h2>
-    <table><tr><th>Jméno</th><th>Porce</th></tr>
-    ${list.map(o => `<tr><td>${esc(o.jmeno)}</td><td>${textPolozek(o.polozky).map(esc).join("<br>")}</td></tr>`).join("")}</table>`;
+  pdfData = { kombiText, nPorci, castka, lide: list.map(o => [o.jmeno, textPolozek(o.polozky).join("\n")]) };
+  pdfSoubor = null;
+  $("btnPdf").textContent = "Vytvořit PDF objednávku";
 
   soupisText = "Objednávka oběda\n" + kombiText.map(([t, n]) => `${n}× ${t}`).join("\n") +
     `\nPorcí celkem: ${nPorci}`;
@@ -440,7 +417,7 @@ function ukaz(v) {
   if (v === "mine") { vykresliMoji(); $("vMine").classList.remove("hidden"); }
   if (v === "list") {
     $("vList").classList.remove("hidden");
-    if (!soupisBezi) { soupisBezi = true; api.watchAll(vykresliSoupis); }
+    if (!soupisBezi) { soupisBezi = true; api.watchAll(vykresliSoupis); nactiPdfmake().catch(() => {}); }
   }
 }
 const vychozi = () => (location.hash === "#soupis" ? "list" : moje ? "mine" : "form");
@@ -472,11 +449,66 @@ $("btnCopy").onclick = async () => {
   catch (e) { $("listMsg").className = "msg err"; $("listMsg").textContent = "Kopírování se nepovedlo."; }
 };
 $("btnCsv").onclick = stahniCsv;
-$("btnPdf").onclick = () => {
-  if (!tiskHtml) return;
-  $("tisk").innerHTML = tiskHtml;
-  try { window.print(); }
-  catch (e) { $("listMsg").className = "msg err"; $("listMsg").textContent = "Tisk tady nejde – otevři stránku v prohlížeči."; }
+/* ====== PDF (pdfmake – obsahuje písmo s češtinou) ====== */
+let pdfLib = null;
+function nactiSkript(src) {
+  return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+}
+function nactiPdfmake() {
+  if (!pdfLib) {
+    const b = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/";
+    pdfLib = nactiSkript(b + "pdfmake.min.js").then(() => nactiSkript(b + "vfs_fonts.js"));
+    pdfLib.catch(() => { pdfLib = null; });
+  }
+  return pdfLib;
+}
+function pdfDefinice(d) {
+  const dnes = new Date().toLocaleDateString("cs-CZ");
+  const hl = t => ({ text: t, bold: true, fillColor: "#eeeeee" });
+  return {
+    pageSize: "A4", pageMargins: [40, 40, 40, 40],
+    defaultStyle: { fontSize: 12 },
+    content: [
+      { text: "Objednávka obědů", fontSize: 20, bold: true },
+      { text: `Vystaveno ${dnes} · ${d.nPorci} ${slovoPorce(d.nPorci)}`, fontSize: 10, color: "#555555", margin: [0, 4, 0, 16] },
+      { table: { headerRows: 1, widths: ["*", 90], body: [
+          [hl("Porce (jídlo + příloha)"), { ...hl("Počet"), alignment: "center" }],
+          ...d.kombiText.map(([t, n]) => [t, { text: String(n), alignment: "center" }]),
+          [{ text: "Celkem porcí", bold: true }, { text: String(d.nPorci), bold: true, alignment: "center" }],
+          [{ text: `Cena celkem (${CENA} Kč / porce)`, bold: true }, { text: kc(d.castka), bold: true, alignment: "center" }]
+      ] } },
+      { text: "Rozpis podle jmen", fontSize: 14, bold: true, margin: [0, 22, 0, 6] },
+      { table: { headerRows: 1, widths: [150, "*"], body: [[hl("Jméno"), hl("Porce")], ...d.lide] } }
+    ]
+  };
+}
+function pdfZprava(t, err) { $("listMsg").className = "msg" + (err ? " err" : " ok"); $("listMsg").textContent = t; }
+$("btnPdf").onclick = async () => {
+  if (!pdfData || !pdfData.nPorci) return pdfZprava("Zatím nejsou žádné objednávky.", true);
+  /* 2. klepnutí: PDF je připravené → sdílet / uložit (musí proběhnout hned v rámci klepnutí) */
+  if (pdfSoubor) {
+    if (navigator.canShare && navigator.canShare({ files: [pdfSoubor] })) {
+      try { await navigator.share({ files: [pdfSoubor], title: "Objednávka obědů" }); return; }
+      catch (e) { if (e.name === "AbortError") return; }
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(pdfSoubor); a.download = pdfSoubor.name; a.target = "_blank";
+    document.body.appendChild(a); a.click(); a.remove();
+    return;
+  }
+  /* 1. klepnutí: vygenerovat PDF */
+  const btn = $("btnPdf");
+  btn.disabled = true; btn.textContent = "Připravuji PDF…";
+  try {
+    await nactiPdfmake();
+    const blob = await new Promise(res => window.pdfMake.createPdf(pdfDefinice(pdfData)).getBlob(res));
+    pdfSoubor = new File([blob], `objednavka-obedu-${new Date().toISOString().slice(0, 10)}.pdf`, { type: "application/pdf" });
+    btn.textContent = "Uložit / sdílet PDF";
+    pdfZprava("PDF je připravené – klepni na „Uložit / sdílet PDF“.");
+  } catch (e) {
+    btn.textContent = "Vytvořit PDF objednávku";
+    pdfZprava("PDF se nepodařilo vytvořit. Zkontroluj připojení a zkus to znovu.", true);
+  } finally { btn.disabled = false; }
 };
 
 /* ====== Start ====== */
