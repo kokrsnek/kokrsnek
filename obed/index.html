@@ -72,6 +72,21 @@
   .banner{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
   .back{background:none;border:0;font:inherit;color:var(--tg-theme-link-color,var(--accent));padding:0 0 12px;cursor:pointer}
   .hidden{display:none!important}
+  #tisk{display:none}
+  @media print{
+    @page{size:A4;margin:18mm}
+    body{background:#fff!important;color:#000!important;padding:0;font-size:13pt}
+    main{display:none!important}
+    #tisk{display:block}
+    #tisk h1{font-size:20pt;margin:0 0 4pt}
+    #tisk .meta{color:#444;font-size:11pt;margin:0 0 16pt}
+    #tisk table{width:100%;border-collapse:collapse;margin-bottom:18pt}
+    #tisk th,#tisk td{border:1px solid #999;padding:6pt 8pt;text-align:left;background:#fff;color:#000;font-size:12pt}
+    #tisk th{background:#eee}
+    #tisk td.c,#tisk th.c{text-align:center;width:22%}
+    #tisk tr.s td{font-weight:700}
+    #tisk h2{font-size:14pt;margin:0 0 6pt}
+  }
 </style>
 </head>
 <body>
@@ -136,15 +151,17 @@
       <table class="pt" id="ptTab"></table>
     </div>
     <div class="row2">
-      <button class="btn" id="btnCopy">Kopírovat souhrn</button>
+      <button class="btn" id="btnCopy">Kopírovat pro restauraci</button>
       <button class="btn sec" id="btnCsv">Stáhnout CSV</button>
     </div>
+    <button class="btn sec" id="btnPdf">Objednávka do PDF / tisk</button>
     <p class="msg" id="listMsg"></p>
     <div class="card" id="people"></div>
   </section>
 
   <p class="muted hidden" id="loading" style="text-align:center">Načítám…</p>
 </main>
+<div id="tisk"></div>
 
 <script type="module">
 /* ====== NASTAVENÍ ====== */
@@ -334,7 +351,7 @@ function vykresliMoji() {
 }
 
 /* ====== Soupis ====== */
-let soupisText = "", radkyCsv = [];
+let soupisText = "", radkyCsv = [], tiskHtml = "";
 function vykresliSoupis(list) {
   list.sort((a, b) => a.jmeno.localeCompare(b.jmeno, "cs"));
   const tot = Object.fromEntries(VSE.map(([k]) => [k, 0]));
@@ -349,9 +366,15 @@ function vykresliSoupis(list) {
     nPorci += o.porce; castka += o.castka;
   });
 
+  /* Pro restauraci: konkrétní porce (jídlo + příloha) a jejich počty */
+  const kombinace = rozbal(zabal(radky.map(({ j, p }) => ({ j, p }))));
+  const kombiMapa = zabal(kombinace);
+  const kombiText = Object.entries(kombiMapa).map(([k, n]) => { const [j, p] = k.split("+"); return [`${NAZEV[j]}${p ? " + " + NAZEV[p] : ""}`, n]; });
+
   $("totTab").innerHTML =
-    `<tr><th colspan="2">Celkem pro restauraci</th></tr>` +
-    VSE.map(([k, n]) => `<tr><td>${n}</td><td>${tot[k]}</td></tr>`).join("") +
+    `<tr><th colspan="2">Pro restauraci – porce</th></tr>` +
+    (kombiText.length ? kombiText.map(([t, n]) => `<tr><td>${esc(t)}</td><td>${n}×</td></tr>`).join("")
+                      : `<tr><td class="muted" colspan="2">Zatím nic</td></tr>`) +
     `<tr><td><b>Porcí celkem</b></td><td>${nPorci}</td></tr>` +
     `<tr><td>Lidí / k vybrání</td><td>${list.length} / ${kc(castka)}</td></tr>`;
 
@@ -367,8 +390,19 @@ function vykresliSoupis(list) {
               ...radky.map(r => [r.jmeno, ...VSE.map(([k]) => ma(r, k) ? 1 : "")]),
               ["Celkem", ...VSE.map(([k]) => tot[k])]];
 
-  soupisText = "Objednávka oběda\n" + VSE.filter(([k]) => tot[k]).map(([k, n]) => `${n}: ${tot[k]}`).join("\n") +
-    `\nPorcí celkem: ${nPorci}\n\n` + list.map(o => `${o.jmeno} – ${textPolozek(o.polozky).join(", ")} – ${kc(o.castka)}`).join("\n");
+  const dnes = new Date().toLocaleDateString("cs-CZ");
+  tiskHtml = `<h1>Objednávka obědů</h1>
+    <p class="meta">Vystaveno ${dnes} · ${nPorci} ${slovoPorce(nPorci)}</p>
+    <table><tr><th>Porce (jídlo + příloha)</th><th class="c">Počet</th></tr>
+    ${kombiText.map(([t, n]) => `<tr><td>${esc(t)}</td><td class="c">${n}</td></tr>`).join("")}
+    <tr class="s"><td>Celkem porcí</td><td class="c">${nPorci}</td></tr>
+    <tr class="s"><td>Cena celkem (${CENA} Kč / porce)</td><td class="c">${kc(castka)}</td></tr></table>
+    <h2>Rozpis podle jmen</h2>
+    <table><tr><th>Jméno</th><th>Porce</th></tr>
+    ${list.map(o => `<tr><td>${esc(o.jmeno)}</td><td>${textPolozek(o.polozky).map(esc).join("<br>")}</td></tr>`).join("")}</table>`;
+
+  soupisText = "Objednávka oběda\n" + kombiText.map(([t, n]) => `${n}× ${t}`).join("\n") +
+    `\nPorcí celkem: ${nPorci}`;
 
   const box = $("people");
   if (!list.length) { box.innerHTML = `<div class="person muted">Zatím nikdo neobjednal.</div>`; return; }
@@ -438,6 +472,12 @@ $("btnCopy").onclick = async () => {
   catch (e) { $("listMsg").className = "msg err"; $("listMsg").textContent = "Kopírování se nepovedlo."; }
 };
 $("btnCsv").onclick = stahniCsv;
+$("btnPdf").onclick = () => {
+  if (!tiskHtml) return;
+  $("tisk").innerHTML = tiskHtml;
+  try { window.print(); }
+  catch (e) { $("listMsg").className = "msg err"; $("listMsg").textContent = "Tisk tady nejde – otevři stránku v prohlížeči."; }
+};
 
 /* ====== Start ====== */
 (async () => {
