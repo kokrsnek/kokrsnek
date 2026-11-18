@@ -162,6 +162,7 @@ const IBAN = "CZ7930300000001518140045";   // = 1518140045/3030
 const UZAVERKA = new Date("2026-11-27T00:00:00+01:00"); // objednávky do 26. 11. 2026 včetně
 const KOLEKCE = "objednavky";
 const MAX_PORCI = 20;
+const TERMIN = "v sobotu 5. 12. 2026 ve 12:30 hodin"; // zobrazí se v PDF pod nadpisem
 
 /* [klíč, celý název, krátký název na tlačítko, zkratka do tabulky] */
 const JIDLA   = [["vepr","Řízek vepřový","Vepřový","Vepř."],["kure","Řízek kuřecí","Kuřecí","Kuř."],["syr","Smažený sýr","Sýr","Sýr"]];
@@ -470,6 +471,7 @@ function pdfDefinice(d) {
     defaultStyle: { fontSize: 12 },
     content: [
       { text: "Objednávka obědů", fontSize: 20, bold: true },
+      { text: TERMIN, fontSize: 14, margin: [0, 4, 0, 0] },
       { text: `Vystaveno ${dnes} · ${d.nPorci} ${slovoPorce(d.nPorci)}`, fontSize: 10, color: "#555555", margin: [0, 4, 0, 16] },
       { table: { headerRows: 1, widths: ["*", 90], body: [
           [hl("Porce (jídlo + příloha)"), { ...hl("Počet"), alignment: "center" }],
