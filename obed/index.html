@@ -262,11 +262,23 @@ async function initBackend() {
   });
   await user.getIdToken();
   const ref = doc(db, KOLEKCE, user.uid);
+  /* U čerstvě přihlášeného uživatele první zápis občas neprojde (permission-denied),
+     protože databáze ještě nemá jeho token – obnovíme token a zkusíme to znovu. */
+  const sOpakovanim = async fn => {
+    for (let pokus = 0; ; pokus++) {
+      try { return await fn(); }
+      catch (e) {
+        if (e.code !== "permission-denied" || pokus >= 2) throw e;
+        await user.getIdToken(true);
+        await new Promise(r => setTimeout(r, 1000 * (pokus + 1)));
+      }
+    }
+  };
   api = {
     uid: user.uid,
     load: async () => { const s = await getDoc(ref); return s.exists() ? s.data() : null; },
-    save: d => setDoc(ref, { ...d, upraveno: serverTimestamp() }),
-    remove: () => deleteDoc(ref),
+    save: d => sOpakovanim(() => setDoc(ref, { ...d, upraveno: serverTimestamp() })),
+    remove: () => sOpakovanim(() => deleteDoc(ref)),
     watchAll: cb => onSnapshot(collection(db, KOLEKCE), s => cb(s.docs.map(x => ({ id: x.id, ...x.data() }))),
                                 e => { $("listMsg").className = "msg err"; $("listMsg").textContent = "Soupis nelze načíst: " + e.message; })
   };
