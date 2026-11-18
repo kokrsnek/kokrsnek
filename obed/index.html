@@ -19,7 +19,7 @@
   body{margin:0;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     background:var(--tg-theme-secondary-bg-color,var(--bg));color:var(--tg-theme-text-color,var(--text));
     padding:16px 12px calc(24px + env(safe-area-inset-bottom))}
-  main{max-width:520px;margin:0 auto}
+  main{max-width:560px;margin:0 auto}
   h1{font-size:22px;margin:4px 0 2px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .sub{color:var(--tg-theme-hint-color,var(--hint));font-size:14px;margin:0 0 16px}
   .card{background:var(--tg-theme-bg-color,var(--card));border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
@@ -28,16 +28,20 @@
   input[type=text]{width:100%;font:inherit;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
     background:transparent;color:inherit}
   input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .por{padding:12px 14px;border-top:1px solid var(--line)}
+  .por:first-child{border-top:0}
+  .porHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .porHead b{font-size:15px}
+  .del{background:none;border:0;color:var(--tg-theme-hint-color,var(--hint));font:inherit;font-size:14px;padding:4px 0 4px 10px;cursor:pointer}
+  .lbl{font-size:12px;color:var(--tg-theme-hint-color,var(--hint));margin:6px 0 4px}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .chip{font:inherit;font-size:14px;padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer;touch-action:manipulation}
+  .chip.on{background:var(--tg-theme-button-color,var(--accent));border-color:var(--tg-theme-button-color,var(--accent));color:var(--tg-theme-button-text-color,var(--accent-text));font-weight:600}
+  .add{display:block;width:100%;font:inherit;font-weight:600;padding:12px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--tg-theme-link-color,var(--accent));cursor:pointer}
   table{width:100%;border-collapse:collapse}
   th{text-align:left;font-size:12px;font-weight:600;color:var(--tg-theme-hint-color,var(--hint));
-    background:var(--tg-theme-secondary-bg-color,var(--bg));padding:7px 14px;text-transform:none}
+    background:var(--tg-theme-secondary-bg-color,var(--bg));padding:7px 14px}
   td{padding:10px 14px;border-top:1px solid var(--line)}
-  td.ct{width:132px;text-align:right;white-space:nowrap}
-  .stp{display:inline-flex;align-items:center;gap:10px}
-  .stp button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;
-    color:inherit;font-size:20px;line-height:1;cursor:pointer;touch-action:manipulation}
-  .stp button.plus{border-color:var(--accent);color:var(--accent)}
-  .stp output{min-width:18px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
   .sum{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--tg-theme-hint-color,var(--hint))}
   .msg{font-size:14px;margin:8px 0 0;min-height:20px}
   .msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
@@ -55,11 +59,19 @@
   .big{font-size:22px;font-weight:700}
   .tot td{padding:7px 14px}
   .tot td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .pt{table-layout:fixed;font-size:13px}
+  .pt th{text-align:center;padding:7px 2px;font-size:11px;line-height:1.2}
+  .pt td{text-align:center;padding:8px 2px;font-variant-numeric:tabular-nums}
+  .pt th.n,.pt td.n{text-align:left;width:31%;padding-left:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pt td.x{color:var(--accent);font-weight:700}
+  .pt .sep{border-left:1px solid var(--line)}
+  .pt tr.g td{border-top:2px solid var(--line)}
+  .pt tr.s td{font-weight:700;background:var(--tg-theme-secondary-bg-color,var(--bg))}
   .person{padding:14px;border-top:1px solid var(--line)}
   .person:first-child{border-top:0}
   .banner{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+  .back{background:none;border:0;font:inherit;color:var(--tg-theme-link-color,var(--accent));padding:0 0 12px;cursor:pointer}
   .hidden{display:none!important}
-  a{color:var(--tg-theme-link-color,var(--accent))}
 </style>
 </head>
 <body>
@@ -75,10 +87,11 @@
       <input type="text" id="jmeno" autocomplete="name" maxlength="40" placeholder="Jan Novák">
     </div>
     <div class="card">
-      <table id="tab"></table>
+      <div id="porceBox"></div>
+      <button type="button" class="add" id="btnAdd">+ Přidat další porci</button>
     </div>
     <div class="card pad">
-      <div class="sum"><span id="sumInfo">Porcí: 0</span><span id="sumPril"></span></div>
+      <div class="sum"><span id="sumInfo"></span><span id="sumKc"></span></div>
       <p class="msg" id="formMsg"></p>
       <button class="btn" id="btnSend">Odeslat objednávku</button>
       <button class="btn sec hidden" id="btnCancelEdit">Zpět bez změn</button>
@@ -112,12 +125,19 @@
 
   <!-- Soupis pro organizátora -->
   <section id="vList" class="hidden">
+    <button class="back" id="btnBack">← Zpět na objednávku</button>
     <div class="card">
       <table class="tot" id="totTab"></table>
     </div>
+    <div class="card">
+      <div class="pad" style="padding-bottom:6px;display:flex;justify-content:space-between;align-items:baseline">
+        <b>Soupis po porcích</b><span class="muted" id="ptInfo" style="font-size:13px"></span>
+      </div>
+      <table class="pt" id="ptTab"></table>
+    </div>
     <div class="row2">
       <button class="btn" id="btnCopy">Kopírovat souhrn</button>
-      <button class="btn sec" id="btnBack">Zpět</button>
+      <button class="btn sec" id="btnCsv">Stáhnout CSV</button>
     </div>
     <p class="msg" id="listMsg"></p>
     <div class="card" id="people"></div>
@@ -140,15 +160,18 @@ const CENA = 180;
 const IBAN = "CZ7930300000001518140045";   // = 1518140045/3030
 const UZAVERKA = new Date("2026-11-27T00:00:00+01:00"); // objednávky do 26. 11. 2026 včetně
 const KOLEKCE = "objednavky";
+const MAX_PORCI = 20;
 
-const JIDLA   = [["vepr","Řízek vepřový"],["kure","Řízek kuřecí"],["syr","Smažený sýr"]];
-const PRILOHY = [["salat","Bramborový salát"],["brambory","Brambory"],["hranolky","Hranolky"]];
+/* [klíč, celý název, krátký název na tlačítko, zkratka do tabulky] */
+const JIDLA   = [["vepr","Řízek vepřový","Vepřový","Vepř."],["kure","Řízek kuřecí","Kuřecí","Kuř."],["syr","Smažený sýr","Sýr","Sýr"]];
+const PRILOHY = [["salat","Bramborový salát","Salát","Salát"],["brambory","Brambory","Brambory","Bramb."],["hranolky","Hranolky","Hranolky","Hran."]];
 const VSE = [...JIDLA, ...PRILOHY];
+const NAZEV = Object.fromEntries(VSE.map(([k, n]) => [k, n]));
 
 /* ====== Pomocné funkce ====== */
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const bezDiakritiky = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const bezDiakritiky = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 const kc = n => n.toLocaleString("cs-CZ") + " Kč";
 const slovoPorce = n => n === 1 ? "porce" : (n >= 2 && n <= 4 ? "porce" : "porcí");
 const poUzaverce = () => new Date() >= UZAVERKA;
@@ -171,8 +194,30 @@ function vykresliQr(el, text) {
     svg.setAttribute("viewBox", `0 0 ${q.getModuleCount() * 4} ${q.getModuleCount() * 4}`);
   } catch (e) { el.textContent = "QR nelze vytvořit"; }
 }
-function textPolozek(p) {
-  return VSE.filter(([k]) => (p[k] || 0) > 0).map(([k, n]) => `${p[k]}× ${n}`);
+
+/* Položky se ukládají jako mapa kombinací, např. { "vepr+salat": 2, "syr+hranolky": 1 }.
+   Starší objednávky mají jen počty kusů ({ vepr: 1, salat: 1 }) – ty se spárují podle pořadí. */
+function rozbal(polozky = {}) {
+  const klice = Object.keys(polozky);
+  if (klice.some(k => k.includes("+"))) {
+    const out = [];
+    klice.forEach(k => { const [j, p] = k.split("+"); for (let i = 0; i < (polozky[k] || 0); i++) out.push({ j, p }); });
+    const poradi = k => VSE.findIndex(([x]) => x === k);
+    return out.sort((a, b) => poradi(a.j) - poradi(b.j) || poradi(a.p) - poradi(b.p));
+  }
+  const j = [], p = [];
+  JIDLA.forEach(([k]) => { for (let i = 0; i < (polozky[k] || 0); i++) j.push(k); });
+  PRILOHY.forEach(([k]) => { for (let i = 0; i < (polozky[k] || 0); i++) p.push(k); });
+  return j.map((x, i) => ({ j: x, p: p[i] || "" }));
+}
+function zabal(seznam) {
+  const m = {};
+  seznam.forEach(({ j, p }) => { const k = `${j}+${p}`; m[k] = (m[k] || 0) + 1; });
+  return m;
+}
+function textPolozek(polozky) {
+  const m = zabal(rozbal(polozky));
+  return Object.entries(m).map(([k, n]) => { const [j, p] = k.split("+"); return `${n}× ${NAZEV[j]}${p ? " + " + NAZEV[p] : ""}`; });
 }
 
 /* ====== Telegram ====== */
@@ -213,6 +258,7 @@ async function initBackend() {
     const off = onAuthStateChanged(auth, u => { if (u) { off(); res(u); } });
     signInAnonymously(auth).catch(rej);
   });
+  await user.getIdToken();
   const ref = doc(db, KOLEKCE, user.uid);
   api = {
     uid: user.uid,
@@ -224,55 +270,55 @@ async function initBackend() {
   };
 }
 
-/* ====== Formulář ====== */
-const pocty = Object.fromEntries(VSE.map(([k]) => [k, 0]));
+/* ====== Formulář – porce ====== */
+let porce = [{ j: "", p: "" }];
 let moje = null;
 
-function postavTabulku() {
-  const radky = (nadpis, seznam) => `<tr><th colspan="2">${nadpis}</th></tr>` + seznam.map(([k, n]) =>
-    `<tr><td>${n}</td><td class="ct"><span class="stp">
-       <button type="button" data-k="${k}" data-d="-1" aria-label="Ubrat ${n}">−</button>
-       <output id="o-${k}">0</output>
-       <button type="button" class="plus" data-k="${k}" data-d="1" aria-label="Přidat ${n}">+</button>
-     </span></td></tr>`).join("");
-  $("tab").innerHTML = radky("Hlavní jídlo", JIDLA) + radky("Příloha", PRILOHY);
-  $("tab").addEventListener("click", e => {
-    const b = e.target.closest("button[data-k]"); if (!b) return;
-    const k = b.dataset.k;
-    pocty[k] = Math.max(0, Math.min(20, pocty[k] + Number(b.dataset.d)));
-    tg?.HapticFeedback?.selectionChanged?.();
-    obnovSoucet();
-  });
+function vykresliPorce() {
+  const chips = (i, typ, seznam, vybrano) => `<div class="chips">` + seznam.map(([k, , kratky]) =>
+    `<button type="button" class="chip${vybrano === k ? " on" : ""}" data-i="${i}" data-t="${typ}" data-v="${k}">${kratky}</button>`).join("") + `</div>`;
+  $("porceBox").innerHTML = porce.map((x, i) => `
+    <div class="por">
+      <div class="porHead"><b>Porce ${i + 1}</b>${porce.length > 1 ? `<button type="button" class="del" data-del="${i}">Odebrat</button>` : ""}</div>
+      <div class="lbl">Jídlo</div>${chips(i, "j", JIDLA, x.j)}
+      <div class="lbl">Příloha</div>${chips(i, "p", PRILOHY, x.p)}
+    </div>`).join("");
+  $("btnAdd").classList.toggle("hidden", porce.length >= MAX_PORCI);
+  const n = porce.length;
+  $("sumInfo").textContent = `${n} ${slovoPorce(n)}`;
+  $("sumKc").textContent = kc(n * CENA);
+  $("btnSend").textContent = `Odeslat objednávku · ${kc(n * CENA)}`;
 }
-const soucet = list => list.reduce((s, [k]) => s + pocty[k], 0);
-function obnovSoucet() {
-  VSE.forEach(([k]) => $("o-" + k).textContent = pocty[k]);
-  const j = soucet(JIDLA), p = soucet(PRILOHY);
-  $("sumInfo").textContent = `Porcí: ${j}`;
-  $("sumPril").textContent = `Přílohy: ${p} / ${j}`;
-  $("btnSend").textContent = j > 0 ? `Odeslat objednávku · ${kc(j * CENA)}` : "Odeslat objednávku";
-  $("formMsg").textContent = ""; $("formMsg").className = "msg";
-}
+$("porceBox").addEventListener("click", e => {
+  const del = e.target.closest("[data-del]");
+  if (del) { porce.splice(Number(del.dataset.del), 1); vykresliPorce(); return; }
+  const b = e.target.closest(".chip"); if (!b) return;
+  porce[Number(b.dataset.i)][b.dataset.t] = b.dataset.v;
+  tg?.HapticFeedback?.selectionChanged?.();
+  $("formMsg").textContent = "";
+  vykresliPorce();
+});
+$("btnAdd").onclick = () => { porce.push({ j: "", p: "" }); vykresliPorce(); };
+
 function chyba(t) { $("formMsg").className = "msg err"; $("formMsg").textContent = t; }
 
 async function odeslat() {
   if (poUzaverce()) return chyba("Objednávky jsou už uzavřené.");
   const jmeno = $("jmeno").value.trim().replace(/\s+/g, " ");
-  const j = soucet(JIDLA), p = soucet(PRILOHY);
   if (jmeno.length < 2) { $("jmeno").focus(); return chyba("Vyplň jméno."); }
-  if (j === 0) return chyba("Vyber aspoň jedno jídlo.");
-  if (p !== j) return chyba(p < j ? `Chybí ${j - p} ${j - p === 1 ? "příloha" : "přílohy"} – ke každému jídlu patří jedna.`
-                                  : `Příloh je o ${p - j} víc než jídel.`);
+  const chybi = porce.findIndex(x => !x.j || !x.p);
+  if (chybi >= 0) return chyba(`U porce ${chybi + 1} vyber ${!porce[chybi].j ? "jídlo" : "přílohu"}.`);
   $("btnSend").disabled = true;
   try {
-    const d = { jmeno, polozky: { ...pocty }, porce: j, castka: j * CENA };
+    const n = porce.length;
+    const d = { jmeno, polozky: zabal(porce), porce: n, castka: n * CENA };
     await api.save(d);
     try { localStorage.setItem("obed-jmeno", jmeno); } catch (e) {}
     moje = d;
     tg?.HapticFeedback?.notificationOccurred?.("success");
     ukaz("mine");
   } catch (e) {
-    chyba("Odeslání se nepovedlo. Zkus to znovu. (" + (e.code || e.message) + ")");
+    chyba("Odeslání se nepovedlo. Obnov stránku a zkus to znovu. (" + (e.code || e.message) + ")");
   } finally { $("btnSend").disabled = false; }
 }
 
@@ -288,19 +334,42 @@ function vykresliMoji() {
 }
 
 /* ====== Soupis ====== */
-let soupisText = "";
+let soupisText = "", radkyCsv = [];
 function vykresliSoupis(list) {
   list.sort((a, b) => a.jmeno.localeCompare(b.jmeno, "cs"));
   const tot = Object.fromEntries(VSE.map(([k]) => [k, 0]));
-  let porce = 0, castka = 0;
-  list.forEach(o => { VSE.forEach(([k]) => tot[k] += o.polozky?.[k] || 0); porce += o.porce; castka += o.castka; });
+  let nPorci = 0, castka = 0;
+  const radky = [];
+  list.forEach(o => {
+    rozbal(o.polozky).forEach((x, i) => {
+      if (x.j) tot[x.j]++;
+      if (x.p) tot[x.p]++;
+      radky.push({ jmeno: o.jmeno, ...x, prvni: i === 0 });
+    });
+    nPorci += o.porce; castka += o.castka;
+  });
+
   $("totTab").innerHTML =
     `<tr><th colspan="2">Celkem pro restauraci</th></tr>` +
     VSE.map(([k, n]) => `<tr><td>${n}</td><td>${tot[k]}</td></tr>`).join("") +
-    `<tr><td><b>Porcí celkem</b></td><td>${porce}</td></tr>` +
+    `<tr><td><b>Porcí celkem</b></td><td>${nPorci}</td></tr>` +
     `<tr><td>Lidí / k vybrání</td><td>${list.length} / ${kc(castka)}</td></tr>`;
+
+  $("ptInfo").textContent = `${nPorci} ${slovoPorce(nPorci)} · ${kc(castka)}`;
+  const ma = (r, k) => r.j === k || r.p === k;
+  const bunka = (r, k, i) => `<td class="${ma(r, k) ? "x" : ""}${i === 3 ? " sep" : ""}">${ma(r, k) ? "1" : ""}</td>`;
+  $("ptTab").innerHTML =
+    `<tr><th class="n">Jméno</th>${VSE.map(([, , , z], i) => `<th${i === 3 ? ' class="sep"' : ""}>${z}</th>`).join("")}</tr>` +
+    radky.map((r, idx) => `<tr${r.prvni && idx > 0 ? ' class="g"' : ""}><td class="n">${esc(r.jmeno)}</td>${VSE.map(([k], i) => bunka(r, k, i)).join("")}</tr>`).join("") +
+    `<tr class="s"><td class="n">Celkem</td>${VSE.map(([k], i) => `<td${i === 3 ? ' class="sep"' : ""}>${tot[k]}</td>`).join("")}</tr>`;
+
+  radkyCsv = [["Jméno", ...VSE.map(([, n]) => n)],
+              ...radky.map(r => [r.jmeno, ...VSE.map(([k]) => ma(r, k) ? 1 : "")]),
+              ["Celkem", ...VSE.map(([k]) => tot[k])]];
+
   soupisText = "Objednávka oběda\n" + VSE.filter(([k]) => tot[k]).map(([k, n]) => `${n}: ${tot[k]}`).join("\n") +
-    `\nPorcí celkem: ${porce}\n\n` + list.map(o => `${o.jmeno} – ${textPolozek(o.polozky).join(", ")} – ${kc(o.castka)}`).join("\n");
+    `\nPorcí celkem: ${nPorci}\n\n` + list.map(o => `${o.jmeno} – ${textPolozek(o.polozky).join(", ")} – ${kc(o.castka)}`).join("\n");
+
   const box = $("people");
   if (!list.length) { box.innerHTML = `<div class="person muted">Zatím nikdo neobjednal.</div>`; return; }
   box.innerHTML = list.map((o, i) => `
@@ -314,6 +383,15 @@ function vykresliSoupis(list) {
       </div></div></div>`).join("");
   list.forEach((o, i) => vykresliQr($("q" + i), spayd(o.castka, zprava(o.jmeno, o.porce))));
 }
+function stahniCsv() {
+  const pole = v => { const s = String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = "﻿" + radkyCsv.map(r => r.map(pole).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "objednavka-obeda.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 let soupisBezi = false;
 
 /* ====== Přepínání pohledů ====== */
@@ -322,6 +400,7 @@ function ukaz(v) {
   if (v === "form") {
     $("vForm").classList.remove("hidden");
     $("btnCancelEdit").classList.toggle("hidden", !moje);
+    vykresliPorce();
     if (poUzaverce()) { $("btnSend").disabled = true; chyba("Objednávky byly uzavřeny 26. 11. 2026."); }
   }
   if (v === "mine") { vykresliMoji(); $("vMine").classList.remove("hidden"); }
@@ -340,11 +419,17 @@ title.addEventListener("pointerdown", () => { tmr = setTimeout(() => { location.
 window.addEventListener("hashchange", () => ukaz(vychozi()));
 
 $("btnSend").onclick = odeslat;
-$("btnEdit").onclick = () => { VSE.forEach(([k]) => pocty[k] = moje.polozky[k] || 0); $("jmeno").value = moje.jmeno; obnovSoucet(); ukaz("form"); };
+$("btnEdit").onclick = () => {
+  porce = rozbal(moje.polozky).map(x => ({ ...x }));
+  if (!porce.length) porce = [{ j: "", p: "" }];
+  $("jmeno").value = moje.jmeno;
+  $("formMsg").textContent = "";
+  ukaz("form");
+};
 $("btnCancelEdit").onclick = () => ukaz("mine");
 $("btnDelete").onclick = async () => {
   if (!confirm("Opravdu zrušit objednávku?")) return;
-  try { await api.remove(); moje = null; VSE.forEach(([k]) => pocty[k] = 0); obnovSoucet(); ukaz("form"); }
+  try { await api.remove(); moje = null; porce = [{ j: "", p: "" }]; ukaz("form"); }
   catch (e) { $("mineMsgBox").className = "msg err"; $("mineMsgBox").textContent = "Zrušení se nepovedlo."; }
 };
 $("btnBack").onclick = () => { history.replaceState(null, "", location.pathname + location.search); ukaz(vychozi()); };
@@ -352,11 +437,11 @@ $("btnCopy").onclick = async () => {
   try { await navigator.clipboard.writeText(soupisText); $("listMsg").className = "msg ok"; $("listMsg").textContent = "Souhrn zkopírován."; }
   catch (e) { $("listMsg").className = "msg err"; $("listMsg").textContent = "Kopírování se nepovedlo."; }
 };
+$("btnCsv").onclick = stahniCsv;
 
 /* ====== Start ====== */
 (async () => {
   $("loading").classList.remove("hidden");
-  postavTabulku(); obnovSoucet();
   const tgJmeno = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") : "";
   let ulozene = ""; try { ulozene = localStorage.getItem("obed-jmeno") || ""; } catch (e) {}
   $("jmeno").value = tgJmeno || ulozene;
